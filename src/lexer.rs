@@ -138,4 +138,21 @@ mod test {
         assert_eq!(expected, actual);
         Ok(())
     }
+
+    #[test]
+    fn test_statement_is_tokenized_correctly() -> Result<(), String> {
+        let expected = vec![
+            Token::Parenthesis('('),
+            Token::Symbol("multiply".to_string()),
+            Token::Number(123),
+            Token::Parenthesis('('),
+            Token::Symbol("+".to_string()),
+            Token::Number(321),
+            Token::Number(1),
+            Token::Parenthesis(')'),
+            Token::Parenthesis(')')];
+        let actual = tokenize(&"(multiply 123 (+ 321 1))".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
 }
