@@ -55,7 +55,11 @@ fn tokenize_number(chars: &mut Peekable<Chars>, last: char) -> Result<u32, Strin
     let mut result = last.to_digit(10).expect("Invalid digit");
     let mut current;
     loop {
-        current = chars.peek().expect("lex_number: No chars left");
+        let next = chars.peek();
+        if next.is_none() {
+            return Ok(result);
+        }
+        current = next.unwrap();
         match current {
             '0'..='9' => result = result * 10 + current.to_digit(10).expect("Invalid digit"),
             ' ' | ')' => return Ok(result),
@@ -70,7 +74,11 @@ fn tokenize_symbol(chars: &mut Peekable<Chars>, last: char) -> Result<String, St
     result.push(last);
     let mut current;
     loop {
-        current = chars.peek().expect("lex_symbol: No chars left");
+        let next = chars.peek();
+        if next.is_none() {
+            return Ok(result);
+        }
+        current = next.unwrap();
         match current {
             ' ' | ')' => return Ok(result),
             _ => result.push(*current),
