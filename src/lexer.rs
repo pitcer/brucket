@@ -78,3 +78,56 @@ fn tokenize_symbol(chars: &mut Peekable<Chars>, last: char) -> Result<String, St
         chars.next();
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_tokenized_open_bracket_is_bracket_token() -> Result<(), String> {
+        let expected = vec![Token::Parenthesis('(')];
+        let actual = tokenize(&"(".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_tokenized_closing_bracket_is_bracket_token() -> Result<(), String> {
+        let expected = vec![Token::Parenthesis(')')];
+        let actual = tokenize(&")".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_tokenized_single_character_number_is_number_token() -> Result<(), String> {
+        let expected = vec![Token::Number(7)];
+        let actual = tokenize(&"7".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_tokenized_multi_character_number_is_number_token() -> Result<(), String> {
+        let expected = vec![Token::Number(4224)];
+        let actual = tokenize(&"4224".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_tokenized_single_character_symbol_is_symbol_token() -> Result<(), String> {
+        let expected = vec![Token::Symbol("x".to_string())];
+        let actual = tokenize(&"x".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_tokenized_multi_character_symbol_is_symbol_token() -> Result<(), String> {
+        let expected = vec![Token::Symbol("xyz".to_string())];
+        let actual = tokenize(&"xyz".to_string())?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+}
