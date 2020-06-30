@@ -45,7 +45,6 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
     loop {
         let next = tokens_iterator.next();
         if next.is_none() {
-            println!("{:?}", arguments);
             return Ok(arguments[0].clone());
         }
         current = next.unwrap();
