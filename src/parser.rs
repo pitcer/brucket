@@ -33,7 +33,7 @@ pub enum Expression {
     Function(Box<Expression>, Vec<Expression>),
 }
 
-pub fn parse(tokens: &Vec<Token>) -> Result<Expression, String> {
+pub fn parse(tokens: &[Token]) -> Result<Expression, String> {
     let mut iterator = tokens.iter();
     parse_iterator(&mut iterator)
 }
