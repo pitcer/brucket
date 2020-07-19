@@ -24,14 +24,13 @@
 
 use std::io::{Read, Stdin};
 use std::io;
-use std::io::stdin;
 
 mod lexer;
 mod parser;
 mod evaluator;
 
 fn main() {
-    let mut input = stdin();
+    let mut input = io::stdin();
     let input_data = read(&mut input).expect("Cannot read syntax from stdin");
     let tokens = lexer::tokenize(&input_data).expect("Cannot lex syntax");
     println!("Tokens: {:?}", tokens);
