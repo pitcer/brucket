@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-use brucket::{evaluator, lexer, parser};
 use brucket::evaluator::Value;
+use brucket::{evaluator, lexer, parser};
 
 #[test]
 fn test_interpret_simple_arithmetic_expression() -> Result<(), String> {

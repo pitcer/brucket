@@ -22,12 +22,12 @@
  * SOFTWARE.
  */
 
-use std::io::{Read, Stdin};
 use std::io;
+use std::io::{Read, Stdin};
 
+mod evaluator;
 mod lexer;
 mod parser;
-mod evaluator;
 
 fn main() {
     let mut input = io::stdin();

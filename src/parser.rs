@@ -30,7 +30,7 @@ use crate::lexer::Token;
 pub enum Expression {
     Constant(u32),
     Symbol(String),
-    Function(Box<Expression>, Vec<Expression>)
+    Function(Box<Expression>, Vec<Expression>),
 }
 
 pub fn parse(tokens: &Vec<Token>) -> Result<Expression, String> {
@@ -50,7 +50,12 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
         current = next.unwrap();
         match current {
             Token::Parenthesis('(') => arguments.push(parse_iterator(tokens_iterator)?),
-            Token::Parenthesis(')') => return Ok(Expression::Function(function_name.expect("No function name"), arguments)),
+            Token::Parenthesis(')') => {
+                return Ok(Expression::Function(
+                    function_name.expect("No function name"),
+                    arguments,
+                ))
+            }
             Token::Number(number) => arguments.push(Expression::Constant(*number)),
             Token::Symbol(symbol) => {
                 if function_name.is_none() {

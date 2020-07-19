@@ -29,7 +29,7 @@ use std::str::Chars;
 pub enum Token {
     Parenthesis(char),
     Number(u32),
-    Symbol(String)
+    Symbol(String),
 }
 
 pub fn tokenize(syntax: &String) -> Result<Vec<Token>, String> {
@@ -45,8 +45,10 @@ pub fn tokenize(syntax: &String) -> Result<Vec<Token>, String> {
         match current {
             '(' | ')' => result.push(Token::Parenthesis(current)),
             '0'..='9' => result.push(Token::Number(tokenize_number(&mut chars, current)?)),
-            'A'..='Z' | 'a'..='z' | '_' | '+' | '-' | '*' | '/' | '%' => result.push(Token::Symbol(tokenize_symbol(&mut chars, current)?)),
-            _ => ()
+            'A'..='Z' | 'a'..='z' | '_' | '+' | '-' | '*' | '/' | '%' => {
+                result.push(Token::Symbol(tokenize_symbol(&mut chars, current)?))
+            }
+            _ => (),
         }
     }
 }
@@ -63,7 +65,7 @@ fn tokenize_number(chars: &mut Peekable<Chars>, last: char) -> Result<u32, Strin
         match current {
             '0'..='9' => result = result * 10 + current.to_digit(10).expect("Invalid digit"),
             ' ' | ')' => return Ok(result),
-            _ => ()
+            _ => (),
         }
         chars.next();
     }
@@ -150,7 +152,8 @@ mod test {
             Token::Number(321),
             Token::Number(1),
             Token::Parenthesis(')'),
-            Token::Parenthesis(')')];
+            Token::Parenthesis(')'),
+        ];
         let actual = tokenize(&"(multiply 123 (+ 321 1))".to_string())?;
         assert_eq!(expected, actual);
         Ok(())
