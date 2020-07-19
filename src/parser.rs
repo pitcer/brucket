@@ -26,7 +26,7 @@ use std::slice::Iter;
 
 use crate::lexer::Token;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Constant(u32),
     Symbol(String),

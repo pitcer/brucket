@@ -24,7 +24,7 @@
 
 use crate::parser::Expression;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Value {
     Numeric(i32),
     Textual(String)
