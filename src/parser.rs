@@ -68,3 +68,62 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parsed_number_token_is_constant_expression() -> Result<(), String> {
+        let expected = Expression::Constant(42);
+        let actual = parse(&[Token::Number(42)])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsed_symbol_token_is_symbol_expression() -> Result<(), String> {
+        let expected = Expression::Symbol("foobar".to_string());
+        let actual = parse(&[Token::Symbol("foobar".to_string())])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsed_unit_function_tokens_are_function_expression() -> Result<(), String> {
+        let expected = Expression::Function(Vec::new());
+        let actual = parse(&[Token::Parenthesis('('), Token::Parenthesis(')')])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsed_no_arguments_function_tokens_are_function_expression() -> Result<(), String> {
+        let expected = Expression::Function(vec![Expression::Symbol("foobar".to_string())]);
+        let actual = parse(&[
+            Token::Parenthesis('('),
+            Token::Symbol("foobar".to_string()),
+            Token::Parenthesis(')'),
+        ])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsed_function_tokens_are_function_expression() -> Result<(), String> {
+        let expected = Expression::Function(vec![
+            Expression::Symbol("foobar".to_string()),
+            Expression::Constant(42),
+            Expression::Constant(24),
+        ]);
+        let actual = parse(&[
+            Token::Parenthesis('('),
+            Token::Symbol("foobar".to_string()),
+            Token::Number(42),
+            Token::Number(24),
+            Token::Parenthesis(')'),
+        ])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+}
