@@ -104,3 +104,36 @@ fn concatenate_function(arguments: Vec<Value>) -> Value {
     }
     Value::Textual(result)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_evaluated_constant_expression_is_numeric_value() -> Result<(), String> {
+        let expected = Value::Numeric(42);
+        let actual = evaluate(&Expression::Constant(42))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluated_symbol_expression_is_textual_value() -> Result<(), String> {
+        let expected = Value::Textual("foobar".to_string());
+        let actual = evaluate(&Expression::Symbol("foobar".to_string()))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluated_addition_function_expression_is_numeric_value() -> Result<(), String> {
+        let expected = Value::Numeric(42 + 24);
+        let actual = evaluate(&Expression::Function(vec![
+            Expression::Symbol("+".to_string()),
+            Expression::Constant(42),
+            Expression::Constant(24),
+        ]))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+}
