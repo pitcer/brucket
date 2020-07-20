@@ -22,10 +22,11 @@
  * SOFTWARE.
  */
 
-use crate::parser::Expression;
+use crate::parser::{Expression, Function};
 
 #[derive(Debug, PartialEq)]
 pub enum Value {
+    Unit,
     Numeric(i32),
     Textual(String),
 }
@@ -50,19 +51,28 @@ pub fn evaluate(expression: &Expression) -> Result<Value, String> {
     match expression {
         Expression::Constant(value) => Ok(Value::Numeric(*value as i32)),
         Expression::Symbol(value) => Ok(Value::Textual(value.clone())),
-        Expression::Function(arguments) => {
-            let (name, arguments) = arguments
-                .split_first()
-                .expect("Cannot split function arguments");
-            let evaluated_name = evaluate(name)?;
-            let evaluated_arguments = arguments
-                .iter()
-                .map(|argument| evaluate(argument).expect("Cannot evaluate function argument"))
-                .collect();
-            let function = get_function(&evaluated_name)?;
-            Ok(function(evaluated_arguments))
-        }
+        Expression::Function(function) => match function {
+            Function::Unit => Ok(Value::Unit),
+            Function::Constant(name) => evaluate_constant_function(name),
+            Function::NAry(name, arguments) => evaluate_n_ary_function(name, arguments),
+        },
     }
+}
+
+fn evaluate_constant_function(name: &Expression) -> Result<Value, String> {
+    let name = evaluate(name)?;
+    let function = get_function(&name)?;
+    Ok(function(Vec::new()))
+}
+
+fn evaluate_n_ary_function(name: &Expression, arguments: &[Expression]) -> Result<Value, String> {
+    let name = evaluate(name)?;
+    let function = get_function(&name)?;
+    let evaluated_arguments = arguments
+        .iter()
+        .map(|argument| evaluate(argument).expect("Cannot evaluate function argument"))
+        .collect();
+    Ok(function(evaluated_arguments))
 }
 
 fn get_function(name_value: &Value) -> Result<fn(Vec<Value>) -> Value, String> {
@@ -100,6 +110,7 @@ fn concatenate_function(arguments: Vec<Value>) -> Value {
         match argument {
             Value::Textual(value) => result.push_str(value.as_str()),
             Value::Numeric(value) => result.push_str(value.to_string().as_str()),
+            Value::Unit => (),
         }
     }
     Value::Textual(result)
@@ -126,13 +137,20 @@ mod test {
     }
 
     #[test]
+    fn test_evaluated_unit_function_expression_is_unit_value() -> Result<(), String> {
+        let expected = Value::Unit;
+        let actual = evaluate(&Expression::Function(Function::Unit))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
     fn test_evaluated_addition_function_expression_is_numeric_value() -> Result<(), String> {
         let expected = Value::Numeric(42 + 24);
-        let actual = evaluate(&Expression::Function(vec![
-            Expression::Symbol("+".to_string()),
-            Expression::Constant(42),
-            Expression::Constant(24),
-        ]))?;
+        let actual = evaluate(&Expression::Function(Function::NAry(
+            Box::new(Expression::Symbol("+".to_string())),
+            vec![Expression::Constant(42), Expression::Constant(24)],
+        )))?;
         assert_eq!(expected, actual);
         Ok(())
     }

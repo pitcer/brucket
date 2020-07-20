@@ -26,6 +26,22 @@ use brucket::evaluator::Value;
 use brucket::{evaluator, lexer, parser};
 
 #[test]
+fn test_interpret_number() -> Result<(), String> {
+    let expected = Value::Numeric(42);
+    let actual = interpret("42")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_interpret_unit_function() -> Result<(), String> {
+    let expected = Value::Unit;
+    let actual = interpret("()")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_interpret_simple_arithmetic_expression() -> Result<(), String> {
     let expected = Value::Numeric(3);
     let actual = interpret("(+ 1 2)")?;

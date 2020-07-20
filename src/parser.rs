@@ -30,7 +30,14 @@ use crate::lexer::Token;
 pub enum Expression {
     Constant(u32),
     Symbol(String),
-    Function(Vec<Expression>),
+    Function(Function),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Function {
+    Unit,
+    Constant(Box<Expression>),
+    NAry(Box<Expression>, Vec<Expression>),
 }
 
 pub fn parse(tokens: &[Token]) -> Result<Expression, String> {
@@ -44,16 +51,46 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
     loop {
         let next = tokens_iterator.next();
         if next.is_none() {
-            return Ok(arguments[0].clone());
+            let first = arguments.remove_first().expect("Empty arguments");
+            return Ok(first);
         }
         current = next.unwrap();
         match current {
             Token::Parenthesis('(') => arguments.push(parse_iterator(tokens_iterator)?),
-            Token::Parenthesis(')') => return Ok(Expression::Function(arguments)),
+            Token::Parenthesis(')') => return Ok(Expression::Function(get_function(arguments))),
             Token::Number(number) => arguments.push(Expression::Constant(*number)),
             Token::Symbol(symbol) => arguments.push(Expression::Symbol(symbol.clone())),
             _ => {}
         }
+    }
+}
+
+trait RemoveFirst<T> {
+    fn remove_first(&mut self) -> Option<T>;
+}
+
+impl<T> RemoveFirst<T> for Vec<T> {
+    fn remove_first(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            let first = self.remove(0);
+            Some(first)
+        }
+    }
+}
+
+fn get_function(mut arguments: Vec<Expression>) -> Function {
+    let length = arguments.len();
+    if length == 0 {
+        return Function::Unit;
+    }
+    let name = arguments.remove(0);
+    let name = Box::new(name);
+    if length == 1 {
+        Function::Constant(name)
+    } else {
+        Function::NAry(name, arguments)
     }
 }
 
@@ -79,15 +116,17 @@ mod test {
 
     #[test]
     fn test_parsed_unit_function_tokens_are_function_expression() -> Result<(), String> {
-        let expected = Expression::Function(Vec::new());
+        let expected = Expression::Function(Function::Unit);
         let actual = parse(&[Token::Parenthesis('('), Token::Parenthesis(')')])?;
         assert_eq!(expected, actual);
         Ok(())
     }
 
     #[test]
-    fn test_parsed_no_arguments_function_tokens_are_function_expression() -> Result<(), String> {
-        let expected = Expression::Function(vec![Expression::Symbol("foobar".to_string())]);
+    fn test_parsed_constant_function_tokens_are_function_expression() -> Result<(), String> {
+        let expected = Expression::Function(Function::Constant(Box::new(Expression::Symbol(
+            "foobar".to_string(),
+        ))));
         let actual = parse(&[
             Token::Parenthesis('('),
             Token::Symbol("foobar".to_string()),
@@ -99,11 +138,10 @@ mod test {
 
     #[test]
     fn test_parsed_function_tokens_are_function_expression() -> Result<(), String> {
-        let expected = Expression::Function(vec![
-            Expression::Symbol("foobar".to_string()),
-            Expression::Constant(42),
-            Expression::Constant(24),
-        ]);
+        let expected = Expression::Function(Function::NAry(
+            Box::new(Expression::Symbol("foobar".to_string())),
+            vec![Expression::Constant(42), Expression::Constant(24)],
+        ));
         let actual = parse(&[
             Token::Parenthesis('('),
             Token::Symbol("foobar".to_string()),
