@@ -30,7 +30,7 @@ use crate::lexer::Token;
 pub enum Expression {
     Constant(u32),
     Symbol(String),
-    Function(Box<Expression>, Vec<Expression>),
+    Function(Vec<Expression>),
 }
 
 pub fn parse(tokens: &[Token]) -> Result<Expression, String> {
@@ -39,7 +39,6 @@ pub fn parse(tokens: &[Token]) -> Result<Expression, String> {
 }
 
 fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, String> {
-    let mut function_name: Option<Box<Expression>> = None;
     let mut arguments: Vec<Expression> = Vec::new();
     let mut current;
     loop {
@@ -50,20 +49,9 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
         current = next.unwrap();
         match current {
             Token::Parenthesis('(') => arguments.push(parse_iterator(tokens_iterator)?),
-            Token::Parenthesis(')') => {
-                return Ok(Expression::Function(
-                    function_name.expect("No function name"),
-                    arguments,
-                ))
-            }
+            Token::Parenthesis(')') => return Ok(Expression::Function(arguments)),
             Token::Number(number) => arguments.push(Expression::Constant(*number)),
-            Token::Symbol(symbol) => {
-                if function_name.is_none() {
-                    function_name = Some(Box::new(Expression::Symbol(symbol.clone())))
-                } else {
-                    arguments.push(Expression::Symbol(symbol.clone()));
-                }
-            }
+            Token::Symbol(symbol) => arguments.push(Expression::Symbol(symbol.clone())),
             _ => {}
         }
     }

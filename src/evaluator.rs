@@ -50,7 +50,10 @@ pub fn evaluate(expression: &Expression) -> Result<Value, String> {
     match expression {
         Expression::Constant(value) => Ok(Value::Numeric(*value as i32)),
         Expression::Symbol(value) => Ok(Value::Textual(value.clone())),
-        Expression::Function(name, arguments) => {
+        Expression::Function(arguments) => {
+            let (name, arguments) = arguments
+                .split_first()
+                .expect("Cannot split function arguments");
             let evaluated_name = evaluate(name)?;
             let evaluated_arguments = arguments
                 .iter()
