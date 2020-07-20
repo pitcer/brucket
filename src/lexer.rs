@@ -35,13 +35,9 @@ pub enum Token {
 pub fn tokenize(syntax: &str) -> Result<Vec<Token>, String> {
     let mut result = Vec::new();
     let mut chars = syntax.chars().peekable();
-    let mut current;
-    loop {
-        let next = chars.next();
-        if next.is_none() {
-            return Ok(result);
-        }
-        current = next.unwrap();
+    let mut next = chars.next();
+    while next.is_some() {
+        let current = next.unwrap();
         match current {
             '(' | ')' => result.push(Token::Parenthesis(current)),
             '0'..='9' => result.push(Token::Number(tokenize_number(&mut chars, current)?)),
@@ -50,7 +46,9 @@ pub fn tokenize(syntax: &str) -> Result<Vec<Token>, String> {
             }
             _ => (),
         }
+        next = chars.next();
     }
+    Ok(result)
 }
 
 fn tokenize_number(chars: &mut Peekable<Chars>, last: char) -> Result<u32, String> {
