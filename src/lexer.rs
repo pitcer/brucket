@@ -46,8 +46,7 @@ pub fn tokenize(syntax: &str) -> Vec<Token> {
     while next.is_some() {
         let current = next.unwrap();
         let token = match_token(&mut chars, current);
-        if token.is_some() {
-            let token = token.unwrap();
+        if let Some(token) = token {
             result.push(token);
         }
         next = chars.next();
