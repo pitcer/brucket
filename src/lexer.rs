@@ -56,14 +56,12 @@ pub fn tokenize(syntax: &str) -> Vec<Token> {
 
 fn match_token(chars: &mut Peekable<Chars>, current: char) -> Option<Token> {
     match current {
-        '(' | '[' | '{' | '<' => Some(Token::Parenthesis(Parenthesis::Open(current))),
-        ')' | ']' | '}' | '>' => Some(Token::Parenthesis(Parenthesis::Close(current))),
+        '(' | '[' | '{' => Some(Token::Parenthesis(Parenthesis::Open(current))),
+        ')' | ']' | '}' => Some(Token::Parenthesis(Parenthesis::Close(current))),
         '"' => Some(Token::String(tokenize_string(chars))),
         '0'..='9' => Some(Token::Number(tokenize_number(chars, current))),
-        'A'..='Z' | 'a'..='z' | '_' | '+' | '-' | '*' | '/' | '%' => {
-            Some(Token::Symbol(tokenize_symbol(chars, current)))
-        }
-        _ => None,
+        ' ' | '\n' | '\t' | '\r' => None,
+        _ => Some(Token::Symbol(tokenize_symbol(chars, current))),
     }
 }
 
