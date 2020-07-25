@@ -22,17 +22,17 @@
  * SOFTWARE.
  */
 
+use brucket::evaluator;
+use brucket::lexer::Lexer;
+use brucket::parser;
 use std::io;
 use std::io::{Read, Stdin};
-
-mod evaluator;
-mod lexer;
-mod parser;
 
 fn main() {
     let mut input = io::stdin();
     let input_data = read(&mut input).expect("Cannot read syntax from stdin");
-    let tokens = lexer::tokenize(&input_data);
+    let lexer = Lexer::default();
+    let tokens = lexer.tokenize(&input_data);
     println!("Tokens: {:?}", tokens);
     let expression = parser::parse(&tokens).expect("Cannot parse tokens");
     println!("Expression: {:?}", expression);

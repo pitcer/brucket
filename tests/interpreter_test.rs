@@ -23,7 +23,8 @@
  */
 
 use brucket::evaluator::Value;
-use brucket::{evaluator, lexer, parser};
+use brucket::lexer::Lexer;
+use brucket::{evaluator, parser};
 
 #[test]
 fn test_interpret_number() -> Result<(), String> {
@@ -58,7 +59,8 @@ fn test_interpret_arithmetic_expression() -> Result<(), String> {
 }
 
 fn interpret(syntax: &str) -> Result<Value, String> {
-    let tokenized = lexer::tokenize(syntax);
+    let lexer = Lexer::default();
+    let tokenized = lexer.tokenize(syntax);
     let parsed = parser::parse(&tokenized)?;
     evaluator::evaluate(&parsed)
 }

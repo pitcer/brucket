@@ -5,3 +5,4 @@ authors = ["Piotr Dobiech"]
 edition = "2018"
 
 [dependencies]
+maplit = "1.0.2"
