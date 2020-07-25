@@ -24,7 +24,7 @@
 
 use std::slice::Iter;
 
-use crate::lexer::Token;
+use crate::lexer::{Parenthesis, Token};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
@@ -56,11 +56,15 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
         }
         current = next.unwrap();
         match current {
-            Token::Parenthesis('(') => arguments.push(parse_iterator(tokens_iterator)?),
-            Token::Parenthesis(')') => return Ok(Expression::Function(get_function(arguments))),
+            Token::Parenthesis(Parenthesis::Open(_)) => {
+                arguments.push(parse_iterator(tokens_iterator)?)
+            }
+            Token::Parenthesis(Parenthesis::Close(_)) => {
+                return Ok(Expression::Function(get_function(arguments)))
+            }
             Token::Number(number) => arguments.push(Expression::Constant(*number)),
             Token::Symbol(symbol) => arguments.push(Expression::Symbol(symbol.clone())),
-            _ => {}
+            _ => (),
         }
     }
 }
@@ -117,7 +121,10 @@ mod test {
     #[test]
     fn test_parsed_unit_function_tokens_are_function_expression() -> Result<(), String> {
         let expected = Expression::Function(Function::Unit);
-        let actual = parse(&[Token::Parenthesis('('), Token::Parenthesis(')')])?;
+        let actual = parse(&[
+            Token::Parenthesis(Parenthesis::Open('(')),
+            Token::Parenthesis(Parenthesis::Close(')')),
+        ])?;
         assert_eq!(expected, actual);
         Ok(())
     }
@@ -128,9 +135,9 @@ mod test {
             "foobar".to_string(),
         ))));
         let actual = parse(&[
-            Token::Parenthesis('('),
+            Token::Parenthesis(Parenthesis::Open('(')),
             Token::Symbol("foobar".to_string()),
-            Token::Parenthesis(')'),
+            Token::Parenthesis(Parenthesis::Close(')')),
         ])?;
         assert_eq!(expected, actual);
         Ok(())
@@ -143,11 +150,11 @@ mod test {
             vec![Expression::Constant(42), Expression::Constant(24)],
         ));
         let actual = parse(&[
-            Token::Parenthesis('('),
+            Token::Parenthesis(Parenthesis::Open('(')),
             Token::Symbol("foobar".to_string()),
             Token::Number(42),
             Token::Number(24),
-            Token::Parenthesis(')'),
+            Token::Parenthesis(Parenthesis::Close(')')),
         ])?;
         assert_eq!(expected, actual);
         Ok(())

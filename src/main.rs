@@ -32,7 +32,7 @@ mod parser;
 fn main() {
     let mut input = io::stdin();
     let input_data = read(&mut input).expect("Cannot read syntax from stdin");
-    let tokens = lexer::tokenize(&input_data).expect("Cannot lex syntax");
+    let tokens = lexer::tokenize(&input_data);
     println!("Tokens: {:?}", tokens);
     let expression = parser::parse(&tokens).expect("Cannot parse tokens");
     println!("Expression: {:?}", expression);
