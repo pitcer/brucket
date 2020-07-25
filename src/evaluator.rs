@@ -29,6 +29,7 @@ pub enum Value {
     Unit,
     Numeric(i32),
     Textual(String),
+    Boolean(bool),
 }
 
 impl Value {
@@ -50,6 +51,8 @@ impl Value {
 pub fn evaluate(expression: &Expression) -> Result<Value, String> {
     match expression {
         Expression::Constant(value) => Ok(Value::Numeric(*value as i32)),
+        Expression::Boolean(value) => Ok(Value::Boolean(*value)),
+        Expression::String(value) => Ok(Value::Textual(value.clone())),
         Expression::Symbol(value) => Ok(Value::Textual(value.clone())),
         Expression::Function(function) => match function {
             Function::Unit => Ok(Value::Unit),
@@ -110,6 +113,7 @@ fn concatenate_function(arguments: Vec<Value>) -> Value {
         match argument {
             Value::Textual(value) => result.push_str(value.as_str()),
             Value::Numeric(value) => result.push_str(value.to_string().as_str()),
+            Value::Boolean(value) => result.push_str(value.to_string().as_str()),
             Value::Unit => (),
         }
     }
@@ -132,6 +136,14 @@ mod test {
     fn test_evaluated_symbol_expression_is_textual_value() -> Result<(), String> {
         let expected = Value::Textual("foobar".to_string());
         let actual = evaluate(&Expression::Symbol("foobar".to_string()))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluated_boolean_expression_is_boolean_value() -> Result<(), String> {
+        let expected = Value::Boolean(true);
+        let actual = evaluate(&Expression::Boolean(true))?;
         assert_eq!(expected, actual);
         Ok(())
     }

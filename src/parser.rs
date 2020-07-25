@@ -29,6 +29,8 @@ use crate::lexer::{Parenthesis, Token};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Constant(u32),
+    Boolean(bool),
+    String(String),
     Symbol(String),
     Function(Function),
 }
@@ -63,8 +65,9 @@ fn parse_iterator(tokens_iterator: &mut Iter<Token>) -> Result<Expression, Strin
                 return Ok(Expression::Function(get_function(arguments)))
             }
             Token::Number(number) => arguments.push(Expression::Constant(*number)),
+            Token::Boolean(boolean) => arguments.push(Expression::Boolean(*boolean)),
+            Token::String(string) => arguments.push(Expression::String(string.clone())),
             Token::Symbol(symbol) => arguments.push(Expression::Symbol(symbol.clone())),
-            _ => (),
         }
     }
 }
@@ -106,6 +109,22 @@ mod test {
     fn test_parsed_number_token_is_constant_expression() -> Result<(), String> {
         let expected = Expression::Constant(42);
         let actual = parse(&[Token::Number(42)])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsed_boolean_token_is_boolean_expression() -> Result<(), String> {
+        let expected = Expression::Boolean(true);
+        let actual = parse(&[Token::Boolean(true)])?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parsed_string_token_is_string_expression() -> Result<(), String> {
+        let expected = Expression::String("foobar".to_string());
+        let actual = parse(&[Token::String("foobar".to_string())])?;
         assert_eq!(expected, actual);
         Ok(())
     }
