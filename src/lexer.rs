@@ -56,12 +56,27 @@ pub fn tokenize(syntax: &str) -> Vec<Token> {
 
 fn match_token(chars: &mut Peekable<Chars>, current: char) -> Option<Token> {
     match current {
+        '#' => {
+            skip_comment(chars);
+            None
+        }
         '(' | '[' | '{' => Some(Token::Parenthesis(Parenthesis::Open(current))),
         ')' | ']' | '}' => Some(Token::Parenthesis(Parenthesis::Close(current))),
         '"' => Some(Token::String(tokenize_string(chars))),
         '0'..='9' => Some(Token::Number(tokenize_number(chars, current))),
         ' ' | '\n' | '\t' | '\r' => None,
         _ => Some(Token::Symbol(tokenize_symbol(chars, current))),
+    }
+}
+
+fn skip_comment(chars: &mut Peekable<Chars>) {
+    let mut next = chars.next();
+    while next.is_some() {
+        let current = next.unwrap();
+        if current == '\n' {
+            return;
+        }
+        next = chars.next();
     }
 }
 
@@ -123,6 +138,13 @@ fn tokenize_symbol(chars: &mut Peekable<Chars>, last: char) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_comment_is_skipped() {
+        let expected: Vec<Token> = Vec::new();
+        let actual = tokenize("# test \t comment \t \n # foo bar");
+        assert_eq!(expected, actual)
+    }
 
     #[test]
     fn test_tokenized_open_bracket_is_bracket_token() {
