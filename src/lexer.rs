@@ -95,7 +95,7 @@ fn tokenize_number(chars: &mut Peekable<Chars>, last: char) -> u32 {
         current = next.unwrap();
         match current {
             '0'..='9' => result = result * 10 + current.to_digit(10).expect("Invalid digit"),
-            ' ' | ')' | '\n' => return result,
+            ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' => return result,
             _ => (),
         }
         chars.next();
@@ -113,7 +113,7 @@ fn tokenize_symbol(chars: &mut Peekable<Chars>, last: char) -> String {
         }
         current = next.unwrap();
         match current {
-            ' ' | ')' | '\n' => return result,
+            ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' => return result,
             _ => result.push(*current),
         }
         chars.next();
