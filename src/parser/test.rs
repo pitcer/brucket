@@ -29,7 +29,7 @@ type TestResult = Result<(), String>;
 #[test]
 fn test_parsed_number_token_is_constant_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Constant(42);
+    let expected = Expression::Constant(Constant::Numeric(42));
     let actual = parser.parse(&[Token::Number(42)])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -38,7 +38,7 @@ fn test_parsed_number_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_boolean_token_is_boolean_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Boolean(true);
+    let expected = Expression::Constant(Constant::Boolean(true));
     let actual = parser.parse(&[Token::Boolean(true)])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -47,7 +47,7 @@ fn test_parsed_boolean_token_is_boolean_expression() -> TestResult {
 #[test]
 fn test_parsed_string_token_is_string_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::String("foobar".to_string());
+    let expected = Expression::Constant(Constant::String("foobar".to_string()));
     let actual = parser.parse(&[Token::String("foobar".to_string())])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -65,7 +65,7 @@ fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
 #[test]
 fn test_parsed_unit_function_tokens_are_function_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Function(Function::Unit);
+    let expected = Expression::Constant(Constant::Unit);
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Parenthesis(Parenthesis::Close(')')),
@@ -77,9 +77,10 @@ fn test_parsed_unit_function_tokens_are_function_expression() -> TestResult {
 #[test]
 fn test_parsed_constant_function_tokens_are_function_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Function(Function::Constant(Box::new(Expression::Symbol(
-        "foobar".to_string(),
-    ))));
+    let expected = Expression::Function(
+        Box::new(Expression::Symbol("foobar".to_string())),
+        Vec::new(),
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
@@ -92,10 +93,13 @@ fn test_parsed_constant_function_tokens_are_function_expression() -> TestResult 
 #[test]
 fn test_parsed_function_tokens_are_function_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Function(Function::NAry(
+    let expected = Expression::Function(
         Box::new(Expression::Symbol("foobar".to_string())),
-        vec![Expression::Constant(42), Expression::Constant(24)],
-    ));
+        vec![
+            Expression::Constant(Constant::Numeric(42)),
+            Expression::Constant(Constant::Numeric(24)),
+        ],
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
@@ -112,7 +116,7 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Let(
         "x".to_string(),
-        Box::new(Expression::Constant(42)),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
         Box::new(Expression::Symbol("x".to_string())),
     );
     let actual = parser.parse(&[
@@ -131,9 +135,9 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::If(
-        Box::new(Expression::Boolean(true)),
-        Box::new(Expression::Constant(42)),
-        Box::new(Expression::Constant(24)),
+        Box::new(Expression::Constant(Constant::Boolean(true))),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Constant(Constant::Numeric(24))),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),

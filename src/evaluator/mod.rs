@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::parser::{Expression, Function};
+use crate::parser::{Constant, Expression};
 use std::collections::HashMap;
 
 type ValueResult = Result<Value, String>;
@@ -66,19 +66,16 @@ impl Evaluator {
 
     fn evaluate_environment(expression: &Expression, environment: &mut Environment) -> ValueResult {
         match expression {
-            Expression::Constant(value) => Ok(Value::Numeric(*value as i32)),
-            Expression::Boolean(value) => Ok(Value::Boolean(*value)),
-            Expression::String(value) => Ok(Value::Textual(value.clone())),
-            Expression::Symbol(value) => Evaluator::get_from_environment(environment, value),
-            Expression::Function(function) => match function {
-                Function::Unit => Ok(Value::Unit),
-                Function::Constant(name) => {
-                    Evaluator::evaluate_constant_function(name, environment)
-                }
-                Function::NAry(name, arguments) => {
-                    Evaluator::evaluate_n_ary_function(name, arguments, environment)
-                }
+            Expression::Constant(value) => match value {
+                Constant::Unit => Ok(Value::Unit),
+                Constant::Numeric(value) => Ok(Value::Numeric(*value as i32)),
+                Constant::Boolean(value) => Ok(Value::Boolean(*value)),
+                Constant::String(value) => Ok(Value::Textual(value.clone())),
             },
+            Expression::Symbol(value) => Evaluator::get_from_environment(environment, value),
+            Expression::Function(name, arguments) => {
+                Evaluator::evaluate_function(name, arguments, environment)
+            }
             Expression::Let(name, value, then) => {
                 Evaluator::evaluate_let(name, value, then, environment)
             }
@@ -137,16 +134,7 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_constant_function(
-        name: &Expression,
-        environment: &mut Environment,
-    ) -> Result<Value, String> {
-        let name = Evaluator::evaluate_environment(name, environment)?;
-        let function = Evaluator::get_function(&name)?;
-        Ok(function(Vec::new()))
-    }
-
-    fn evaluate_n_ary_function(
+    fn evaluate_function(
         name: &Expression,
         arguments: &[Expression],
         environment: &mut Environment,

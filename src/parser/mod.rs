@@ -32,20 +32,19 @@ pub struct Parser;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    Constant(u32),
-    Boolean(bool),
-    String(String),
+    Constant(Constant),
     Symbol(String),
-    Function(Function),
+    Function(Box<Expression>, Vec<Expression>),
     Let(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Function {
+pub enum Constant {
     Unit,
-    Constant(Box<Expression>),
-    NAry(Box<Expression>, Vec<Expression>),
+    Numeric(u32),
+    Boolean(bool),
+    String(String),
 }
 
 impl Parser {
@@ -73,9 +72,9 @@ impl Parser {
                 Parenthesis::Open(_) => Parser::parse_section(tokens),
                 Parenthesis::Close(_) => Err("Unexpected close parenthesis".to_string()),
             },
-            Token::String(string) => Ok(Expression::String(string.to_string())),
-            Token::Number(number) => Ok(Expression::Constant(*number)),
-            Token::Boolean(boolean) => Ok(Expression::Boolean(*boolean)),
+            Token::String(value) => Ok(Expression::Constant(Constant::String(value.clone()))),
+            Token::Number(value) => Ok(Expression::Constant(Constant::Numeric(*value))),
+            Token::Boolean(value) => Ok(Expression::Constant(Constant::Boolean(*value))),
             Token::Keyword(_keyword) => Err("Unexpected keyword".to_string()),
             Token::Symbol(symbol) => Ok(Expression::Symbol(symbol.clone())),
         }
@@ -93,7 +92,7 @@ impl Parser {
                     let function_name = Parser::parse_section(tokens)?;
                     Parser::parse_function(function_name, tokens)
                 }
-                Parenthesis::Close(_) => Ok(Expression::Function(Function::Unit)),
+                Parenthesis::Close(_) => Ok(Expression::Constant(Constant::Unit)),
             },
             Token::Keyword(keyword) => match keyword {
                 Keyword::Let => Parser::parse_let(tokens),
@@ -120,12 +119,7 @@ impl Parser {
             next = tokens.next();
         }
         let name = Box::from(name);
-        let function = if arguments.is_empty() {
-            Function::Constant(name)
-        } else {
-            Function::NAry(name, arguments)
-        };
-        Ok(Expression::Function(function))
+        Ok(Expression::Function(name, arguments))
     }
 
     fn parse_let(tokens: &mut Iter<Token>) -> ExpressionResult {
