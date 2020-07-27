@@ -82,6 +82,9 @@ impl Evaluator {
             Expression::Let(name, value, then) => {
                 Evaluator::evaluate_let(name, value, then, environment)
             }
+            Expression::If(condition, if_true_then, if_false_then) => {
+                Evaluator::evaluate_if(condition, if_true_then, if_false_then, environment)
+            }
         }
     }
 
@@ -93,9 +96,27 @@ impl Evaluator {
     ) -> ValueResult {
         let value = Evaluator::evaluate_environment(value, environment)?;
         environment.insert(name.to_string(), value);
-        let result = Evaluator::evaluate_environment(then, environment);
+        let result = Evaluator::evaluate_environment(then, environment)?;
         environment.remove(name);
-        result
+        Ok(result)
+    }
+
+    fn evaluate_if(
+        condition: &Expression,
+        if_true_then: &Expression,
+        if_false_then: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let condition = Evaluator::evaluate_environment(condition, environment)?;
+        if let Value::Boolean(value) = condition {
+            if value {
+                Ok(Evaluator::evaluate_environment(if_true_then, environment)?)
+            } else {
+                Ok(Evaluator::evaluate_environment(if_false_then, environment)?)
+            }
+        } else {
+            Err("Invalid condition type".to_string())
+        }
     }
 
     fn get_from_environment(environment: &mut Environment, name: &str) -> ValueResult {

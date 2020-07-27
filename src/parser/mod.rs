@@ -38,6 +38,7 @@ pub enum Expression {
     Symbol(String),
     Function(Function),
     Let(String, Box<Expression>, Box<Expression>),
+    If(Box<Expression>, Box<Expression>, Box<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,6 +97,7 @@ impl Parser {
             },
             Token::Keyword(keyword) => match keyword {
                 Keyword::Let => Parser::parse_let(tokens),
+                Keyword::If => Parser::parse_if(tokens),
             },
             Token::Symbol(symbol) => {
                 let function_name = Expression::Symbol(symbol.clone());
@@ -126,11 +128,7 @@ impl Parser {
         Ok(Expression::Function(function))
     }
 
-    fn is_close_parenthesis(token: &Token) -> bool {
-        matches!(token, Token::Parenthesis(Parenthesis::Close(_)))
-    }
-
-    fn parse_let(tokens: &mut Iter<Token>) -> Result<Expression, String> {
+    fn parse_let(tokens: &mut Iter<Token>) -> ExpressionResult {
         let name = Parser::parse_let_name(tokens)?;
         let value = Parser::parse_first(tokens)?;
         let then = Parser::parse_first(tokens)?;
@@ -153,6 +151,26 @@ impl Parser {
         } else {
             Err("Name is not a symbol".to_string())
         }
+    }
+
+    fn parse_if(tokens: &mut Iter<Token>) -> ExpressionResult {
+        let condition = Parser::parse_first(tokens)?;
+        let if_true_then = Parser::parse_first(tokens)?;
+        let if_false_then = Parser::parse_first(tokens)?;
+        let next = tokens.next();
+        if next.is_none() || !Parser::is_close_parenthesis(next.unwrap()) {
+            Err("Invalid if expression".to_string())
+        } else {
+            Ok(Expression::If(
+                Box::new(condition),
+                Box::new(if_true_then),
+                Box::new(if_false_then),
+            ))
+        }
+    }
+
+    fn is_close_parenthesis(token: &Token) -> bool {
+        matches!(token, Token::Parenthesis(Parenthesis::Close(_)))
     }
 }
 

@@ -151,3 +151,42 @@ fn test_two_variables_can_be_used_in_function_evaluation() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_evaluated_if_expression_has_correct_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Numeric(42);
+    let actual = evaluator.evaluate(&Expression::If(
+        Box::new(Expression::Boolean(true)),
+        Box::new(Expression::Constant(42)),
+        Box::new(Expression::Constant(24)),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+#[should_panic(expected = "attempt to divide by zero")]
+fn test_division_by_zero_should_panic() {
+    let evaluator = Evaluator::default();
+    let _result = evaluator.evaluate(&Expression::Function(Function::NAry(
+        Box::new(Expression::Symbol("/".to_string())),
+        vec![Expression::Constant(1), Expression::Constant(0)],
+    )));
+}
+
+#[test]
+fn test_if_expression_is_evaluated_lazily() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Numeric(42);
+    let actual = evaluator.evaluate(&Expression::If(
+        Box::new(Expression::Boolean(false)),
+        Box::new(Expression::Function(Function::NAry(
+            Box::new(Expression::Symbol("/".to_string())),
+            vec![Expression::Constant(1), Expression::Constant(0)],
+        ))),
+        Box::new(Expression::Constant(42)),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

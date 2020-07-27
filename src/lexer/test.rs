@@ -81,6 +81,14 @@ fn test_tokenized_let_keyword_is_let_token() {
 }
 
 #[test]
+fn test_tokenized_if_keyword_is_if_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::If)];
+    let actual = lexer.tokenize("if");
+    assert_eq!(expected, actual);
+}
+
+#[test]
 fn test_tokenized_single_character_symbol_is_symbol_token() {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("x".to_string())];

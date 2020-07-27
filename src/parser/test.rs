@@ -126,3 +126,23 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_parsed_if_tokens_are_if_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::If(
+        Box::new(Expression::Boolean(true)),
+        Box::new(Expression::Constant(42)),
+        Box::new(Expression::Constant(24)),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::If),
+        Token::Boolean(true),
+        Token::Number(42),
+        Token::Number(24),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

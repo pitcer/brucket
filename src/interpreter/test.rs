@@ -85,3 +85,19 @@ fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_interpret_expression_with_constant_condition() -> TestResult {
+    let interpreter = Interpreter::default();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret(
+        r#"
+        (let x (+ 20 2)
+          (if false
+              (- x 2)
+              (+ 20 x)))
+        "#,
+    )?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

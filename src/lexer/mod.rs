@@ -49,6 +49,7 @@ pub enum Parenthesis {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
     Let,
+    If,
 }
 
 impl Lexer {
@@ -57,6 +58,7 @@ impl Lexer {
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
             "let" => Token::Keyword(Keyword::Let),
+            "if" => Token::Keyword(Keyword::If),
         };
         Lexer { symbol_map }
     }
