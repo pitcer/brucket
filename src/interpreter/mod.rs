@@ -22,22 +22,38 @@
  * SOFTWARE.
  */
 
-use brucket::interpreter::Interpreter;
-use std::io;
-use std::io::{Read, Stdin};
+pub use crate::evaluator::Value;
 
-fn main() {
-    let mut input = io::stdin();
-    let input_data = read(&mut input).expect("Cannot read syntax from stdin");
-    let interpreter = Interpreter::default();
-    let result = interpreter
-        .interpret(&input_data)
-        .expect("Cannot interpret input program");
-    println!("Result: {:?}", result);
+use crate::evaluator::Evaluator;
+use crate::lexer::Lexer;
+use crate::parser::Parser;
+
+type ValueResult = Result<Value, String>;
+
+pub struct Interpreter {
+    lexer: Lexer,
+    parser: Parser,
+    evaluator: Evaluator,
 }
 
-fn read(input: &mut Stdin) -> io::Result<String> {
-    let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
+impl Interpreter {
+    pub fn default() -> Interpreter {
+        let lexer = Lexer::default();
+        let parser = Parser::default();
+        let evaluator = Evaluator::default();
+        Interpreter {
+            lexer,
+            parser,
+            evaluator,
+        }
+    }
+
+    pub fn interpret(&self, syntax: &str) -> ValueResult {
+        let tokenized = self.lexer.tokenize(syntax);
+        let parsed = self.parser.parse(&tokenized)?;
+        self.evaluator.evaluate(&parsed)
+    }
 }
+
+#[cfg(test)]
+mod test;

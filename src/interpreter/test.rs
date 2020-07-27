@@ -22,56 +22,60 @@
  * SOFTWARE.
  */
 
-use brucket::evaluator::{Evaluator, Value};
-use brucket::lexer::Lexer;
-use brucket::parser::Parser;
+use crate::interpreter::{Interpreter, Value};
 
 type TestResult = Result<(), String>;
 
 #[test]
 fn test_interpret_number() -> TestResult {
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpret("42")?;
+    let actual = interpreter.interpret("42")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_unit_function() -> TestResult {
+    let interpreter = Interpreter::default();
     let expected = Value::Unit;
-    let actual = interpret("()")?;
+    let actual = interpreter.interpret("()")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_simple_arithmetic_expression() -> TestResult {
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(3);
-    let actual = interpret("(+ 1 2)")?;
+    let actual = interpreter.interpret("(+ 1 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_arithmetic_expression() -> TestResult {
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(9);
-    let actual = interpret("(+ (* 2 3) (- 7 4))")?;
+    let actual = interpreter.interpret("(+ (* 2 3) (- 7 4))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_expression_with_comment() -> TestResult {
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpret("# foobar\n(+ 40 2)\n#another comment")?;
+    let actual = interpreter.interpret("# foobar\n(+ 40 2)\n#another comment")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpret(
+    let actual = interpreter.interpret(
         r#"
         (let x (+ 40 2)
           (- (let y 2 (* x y))
@@ -80,13 +84,4 @@ fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
     )?;
     assert_eq!(expected, actual);
     Ok(())
-}
-
-fn interpret(syntax: &str) -> Result<Value, String> {
-    let lexer = Lexer::default();
-    let tokenized = lexer.tokenize(syntax);
-    let parser = Parser::default();
-    let parsed = parser.parse(&tokenized)?;
-    let evaluator = Evaluator::default();
-    evaluator.evaluate(&parsed)
 }
