@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-use brucket::evaluator::Value;
+use brucket::evaluator::{Evaluator, Value};
 use brucket::lexer::Lexer;
-use brucket::{evaluator, parser};
+use brucket::parser::Parser;
 
 type TestResult = Result<(), String>;
 
@@ -85,6 +85,8 @@ fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
 fn interpret(syntax: &str) -> Result<Value, String> {
     let lexer = Lexer::default();
     let tokenized = lexer.tokenize(syntax);
-    let parsed = parser::parse(&tokenized)?;
-    evaluator::evaluate(&parsed)
+    let parser = Parser::default();
+    let parsed = parser.parse(&tokenized)?;
+    let evaluator = Evaluator::default();
+    evaluator.evaluate(&parsed)
 }

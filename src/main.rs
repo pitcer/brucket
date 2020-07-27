@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-use brucket::evaluator;
+use brucket::evaluator::Evaluator;
 use brucket::lexer::Lexer;
-use brucket::parser;
+use brucket::parser::Parser;
 use std::io;
 use std::io::{Read, Stdin};
 
@@ -34,9 +34,13 @@ fn main() {
     let lexer = Lexer::default();
     let tokens = lexer.tokenize(&input_data);
     println!("Tokens: {:?}", tokens);
-    let expression = parser::parse(&tokens).expect("Cannot parse tokens");
+    let parser = Parser::default();
+    let expression = parser.parse(&tokens).expect("Cannot parse tokens");
     println!("Expression: {:?}", expression);
-    let result = evaluator::evaluate(&expression).expect("Cannot evaluate expression");
+    let evaluator = Evaluator::default();
+    let result = evaluator
+        .evaluate(&expression)
+        .expect("Cannot evaluate expression");
     println!("Result: {:?}", result);
 }
 

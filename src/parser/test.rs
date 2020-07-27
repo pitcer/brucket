@@ -28,40 +28,45 @@ type TestResult = Result<(), String>;
 
 #[test]
 fn test_parsed_number_token_is_constant_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Constant(42);
-    let actual = parse(&[Token::Number(42)])?;
+    let actual = parser.parse(&[Token::Number(42)])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_parsed_boolean_token_is_boolean_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Boolean(true);
-    let actual = parse(&[Token::Boolean(true)])?;
+    let actual = parser.parse(&[Token::Boolean(true)])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_parsed_string_token_is_string_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::String("foobar".to_string());
-    let actual = parse(&[Token::String("foobar".to_string())])?;
+    let actual = parser.parse(&[Token::String("foobar".to_string())])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Symbol("foobar".to_string());
-    let actual = parse(&[Token::Symbol("foobar".to_string())])?;
+    let actual = parser.parse(&[Token::Symbol("foobar".to_string())])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_parsed_unit_function_tokens_are_function_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Function(Function::Unit);
-    let actual = parse(&[
+    let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -71,10 +76,11 @@ fn test_parsed_unit_function_tokens_are_function_expression() -> TestResult {
 
 #[test]
 fn test_parsed_constant_function_tokens_are_function_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Function(Function::Constant(Box::new(Expression::Symbol(
         "foobar".to_string(),
     ))));
-    let actual = parse(&[
+    let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
@@ -85,11 +91,12 @@ fn test_parsed_constant_function_tokens_are_function_expression() -> TestResult 
 
 #[test]
 fn test_parsed_function_tokens_are_function_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Function(Function::NAry(
         Box::new(Expression::Symbol("foobar".to_string())),
         vec![Expression::Constant(42), Expression::Constant(24)],
     ));
-    let actual = parse(&[
+    let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
         Token::Number(42),
@@ -102,12 +109,13 @@ fn test_parsed_function_tokens_are_function_expression() -> TestResult {
 
 #[test]
 fn test_parsed_let_tokens_are_let_expression() -> TestResult {
+    let parser = Parser::default();
     let expected = Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(42)),
         Box::new(Expression::Symbol("x".to_string())),
     );
-    let actual = parse(&[
+    let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
         Token::Symbol("x".to_string()),

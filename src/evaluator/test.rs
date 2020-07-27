@@ -28,32 +28,36 @@ type TestResult = Result<(), String>;
 
 #[test]
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Numeric(42);
-    let actual = evaluate(&Expression::Constant(42))?;
+    let actual = evaluator.evaluate(&Expression::Constant(42))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Boolean(true);
-    let actual = evaluate(&Expression::Boolean(true))?;
+    let actual = evaluator.evaluate(&Expression::Boolean(true))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_evaluated_unit_function_expression_is_unit_value() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Unit;
-    let actual = evaluate(&Expression::Function(Function::Unit))?;
+    let actual = evaluator.evaluate(&Expression::Function(Function::Unit))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_evaluated_addition_function_expression_is_numeric_value() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Numeric(42 + 24);
-    let actual = evaluate(&Expression::Function(Function::NAry(
+    let actual = evaluator.evaluate(&Expression::Function(Function::NAry(
         Box::new(Expression::Symbol("+".to_string())),
         vec![Expression::Constant(42), Expression::Constant(24)],
     )))?;
@@ -63,8 +67,9 @@ fn test_evaluated_addition_function_expression_is_numeric_value() -> TestResult 
 
 #[test]
 fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Numeric(42);
-    let actual = evaluate(&Expression::Let(
+    let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(42)),
         Box::new(Expression::Symbol("x".to_string())),
@@ -76,7 +81,8 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
 #[test]
 #[should_panic(expected = "Cannot evaluate function argument: \"Undefined variable: x\"")]
 fn test_environment_is_cleared() {
-    let _result = evaluate(&Expression::Function(Function::NAry(
+    let evaluator = Evaluator::default();
+    let _result = evaluator.evaluate(&Expression::Function(Function::NAry(
         Box::new(Expression::Symbol("+".to_string())),
         vec![
             Expression::Let(
@@ -91,8 +97,9 @@ fn test_environment_is_cleared() {
 
 #[test]
 fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Numeric(40);
-    let actual = evaluate(&Expression::Let(
+    let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(40)),
         Box::new(Expression::Let(
@@ -107,8 +114,9 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
 
 #[test]
 fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Numeric(2);
-    let actual = evaluate(&Expression::Let(
+    let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(40)),
         Box::new(Expression::Let(
@@ -123,8 +131,9 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 
 #[test]
 fn test_two_variables_can_be_used_in_function_evaluation() -> TestResult {
+    let evaluator = Evaluator::default();
     let expected = Value::Numeric(42);
-    let actual = evaluate(&Expression::Let(
+    let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(40)),
         Box::new(Expression::Let(
