@@ -26,6 +26,8 @@ use std::slice::Iter;
 
 use crate::lexer::{Keyword, Parenthesis, Token};
 
+type ExpressionResult = Result<Expression, String>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     Constant(u32),
@@ -43,12 +45,12 @@ pub enum Function {
     NAry(Box<Expression>, Vec<Expression>),
 }
 
-pub fn parse(tokens: &[Token]) -> Result<Expression, String> {
+pub fn parse(tokens: &[Token]) -> ExpressionResult {
     let mut iterator = tokens.iter();
     parse_first(&mut iterator)
 }
 
-fn parse_first(tokens: &mut Iter<Token>) -> Result<Expression, String> {
+fn parse_first(tokens: &mut Iter<Token>) -> ExpressionResult {
     let next = tokens.next();
     if next.is_none() {
         return Err("Empty tokens".to_string());
@@ -57,7 +59,7 @@ fn parse_first(tokens: &mut Iter<Token>) -> Result<Expression, String> {
     parse_first_token(token, tokens)
 }
 
-fn parse_first_token(token: &Token, tokens: &mut Iter<Token>) -> Result<Expression, String> {
+fn parse_first_token(token: &Token, tokens: &mut Iter<Token>) -> ExpressionResult {
     match token {
         Token::Parenthesis(parenthesis) => match parenthesis {
             Parenthesis::Open(_) => parse_section(tokens),
@@ -71,7 +73,7 @@ fn parse_first_token(token: &Token, tokens: &mut Iter<Token>) -> Result<Expressi
     }
 }
 
-fn parse_section(tokens: &mut Iter<Token>) -> Result<Expression, String> {
+fn parse_section(tokens: &mut Iter<Token>) -> ExpressionResult {
     let next = tokens.next();
     if next.is_none() {
         return Err("Empty tokens".to_string());
@@ -96,7 +98,7 @@ fn parse_section(tokens: &mut Iter<Token>) -> Result<Expression, String> {
     }
 }
 
-fn parse_function(name: Expression, tokens: &mut Iter<Token>) -> Result<Expression, String> {
+fn parse_function(name: Expression, tokens: &mut Iter<Token>) -> ExpressionResult {
     let mut arguments = Vec::new();
     let mut next = tokens.next();
     while next.is_some() {
@@ -150,8 +152,10 @@ fn parse_let_name(tokens: &mut Iter<Token>) -> Result<String, String> {
 mod test {
     use super::*;
 
+    type TestResult = Result<(), String>;
+
     #[test]
-    fn test_parsed_number_token_is_constant_expression() -> Result<(), String> {
+    fn test_parsed_number_token_is_constant_expression() -> TestResult {
         let expected = Expression::Constant(42);
         let actual = parse(&[Token::Number(42)])?;
         assert_eq!(expected, actual);
@@ -159,7 +163,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_boolean_token_is_boolean_expression() -> Result<(), String> {
+    fn test_parsed_boolean_token_is_boolean_expression() -> TestResult {
         let expected = Expression::Boolean(true);
         let actual = parse(&[Token::Boolean(true)])?;
         assert_eq!(expected, actual);
@@ -167,7 +171,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_string_token_is_string_expression() -> Result<(), String> {
+    fn test_parsed_string_token_is_string_expression() -> TestResult {
         let expected = Expression::String("foobar".to_string());
         let actual = parse(&[Token::String("foobar".to_string())])?;
         assert_eq!(expected, actual);
@@ -175,7 +179,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_symbol_token_is_symbol_expression() -> Result<(), String> {
+    fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
         let expected = Expression::Symbol("foobar".to_string());
         let actual = parse(&[Token::Symbol("foobar".to_string())])?;
         assert_eq!(expected, actual);
@@ -183,7 +187,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_unit_function_tokens_are_function_expression() -> Result<(), String> {
+    fn test_parsed_unit_function_tokens_are_function_expression() -> TestResult {
         let expected = Expression::Function(Function::Unit);
         let actual = parse(&[
             Token::Parenthesis(Parenthesis::Open('(')),
@@ -194,7 +198,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_constant_function_tokens_are_function_expression() -> Result<(), String> {
+    fn test_parsed_constant_function_tokens_are_function_expression() -> TestResult {
         let expected = Expression::Function(Function::Constant(Box::new(Expression::Symbol(
             "foobar".to_string(),
         ))));
@@ -208,7 +212,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_function_tokens_are_function_expression() -> Result<(), String> {
+    fn test_parsed_function_tokens_are_function_expression() -> TestResult {
         let expected = Expression::Function(Function::NAry(
             Box::new(Expression::Symbol("foobar".to_string())),
             vec![Expression::Constant(42), Expression::Constant(24)],
@@ -225,7 +229,7 @@ mod test {
     }
 
     #[test]
-    fn test_parsed_let_tokens_are_let_expression() -> Result<(), String> {
+    fn test_parsed_let_tokens_are_let_expression() -> TestResult {
         let expected = Expression::Let(
             "x".to_string(),
             Box::new(Expression::Constant(42)),

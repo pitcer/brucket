@@ -26,8 +26,10 @@ use brucket::evaluator::Value;
 use brucket::lexer::Lexer;
 use brucket::{evaluator, parser};
 
+type TestResult = Result<(), String>;
+
 #[test]
-fn test_interpret_number() -> Result<(), String> {
+fn test_interpret_number() -> TestResult {
     let expected = Value::Numeric(42);
     let actual = interpret("42")?;
     assert_eq!(expected, actual);
@@ -35,7 +37,7 @@ fn test_interpret_number() -> Result<(), String> {
 }
 
 #[test]
-fn test_interpret_unit_function() -> Result<(), String> {
+fn test_interpret_unit_function() -> TestResult {
     let expected = Value::Unit;
     let actual = interpret("()")?;
     assert_eq!(expected, actual);
@@ -43,7 +45,7 @@ fn test_interpret_unit_function() -> Result<(), String> {
 }
 
 #[test]
-fn test_interpret_simple_arithmetic_expression() -> Result<(), String> {
+fn test_interpret_simple_arithmetic_expression() -> TestResult {
     let expected = Value::Numeric(3);
     let actual = interpret("(+ 1 2)")?;
     assert_eq!(expected, actual);
@@ -51,7 +53,7 @@ fn test_interpret_simple_arithmetic_expression() -> Result<(), String> {
 }
 
 #[test]
-fn test_interpret_arithmetic_expression() -> Result<(), String> {
+fn test_interpret_arithmetic_expression() -> TestResult {
     let expected = Value::Numeric(9);
     let actual = interpret("(+ (* 2 3) (- 7 4))")?;
     assert_eq!(expected, actual);
@@ -59,7 +61,7 @@ fn test_interpret_arithmetic_expression() -> Result<(), String> {
 }
 
 #[test]
-fn test_interpret_expression_with_comment() -> Result<(), String> {
+fn test_interpret_expression_with_comment() -> TestResult {
     let expected = Value::Numeric(42);
     let actual = interpret("# foobar\n(+ 40 2)\n#another comment")?;
     assert_eq!(expected, actual);
@@ -67,7 +69,7 @@ fn test_interpret_expression_with_comment() -> Result<(), String> {
 }
 
 #[test]
-fn test_interpret_arithmetic_expression_with_variables() -> Result<(), String> {
+fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
     let expected = Value::Numeric(42);
     let actual = interpret(
         r#"
