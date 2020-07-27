@@ -36,7 +36,7 @@ fn test_parsed_number_token_is_constant_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_boolean_token_is_boolean_expression() -> TestResult {
+fn test_parsed_boolean_token_is_constant_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Constant(Constant::Boolean(true));
     let actual = parser.parse(&[Token::Boolean(true)])?;
@@ -45,7 +45,7 @@ fn test_parsed_boolean_token_is_boolean_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_string_token_is_string_expression() -> TestResult {
+fn test_parsed_string_token_is_constant_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Constant(Constant::String("foobar".to_string()));
     let actual = parser.parse(&[Token::String("foobar".to_string())])?;
@@ -63,7 +63,7 @@ fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_unit_function_tokens_are_function_expression() -> TestResult {
+fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Constant(Constant::Unit);
     let actual = parser.parse(&[
