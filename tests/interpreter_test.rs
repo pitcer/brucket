@@ -66,6 +66,20 @@ fn test_interpret_expression_with_comment() -> Result<(), String> {
     Ok(())
 }
 
+#[test]
+fn test_interpret_arithmetic_expression_with_variables() -> Result<(), String> {
+    let expected = Value::Numeric(42);
+    let actual = interpret(
+        r#"
+        (let x (+ 40 2)
+          (- (let y 2 (* x y))
+             (let z 10 (- (+ x z) 10))))
+        "#,
+    )?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
 fn interpret(syntax: &str) -> Result<Value, String> {
     let lexer = Lexer::default();
     let tokenized = lexer.tokenize(syntax);

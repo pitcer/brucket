@@ -36,6 +36,7 @@ pub enum Token {
     String(String),
     Number(u32),
     Boolean(bool),
+    Keyword(Keyword),
     Symbol(String),
 }
 
@@ -45,11 +46,17 @@ pub enum Parenthesis {
     Close(char),
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Keyword {
+    Let,
+}
+
 impl Lexer {
     pub fn default() -> Lexer {
         let symbol_map = maplit::hashmap! {
             "true" => Token::Boolean(true),
-            "false" => Token::Boolean(false)
+            "false" => Token::Boolean(false),
+            "let" => Token::Keyword(Keyword::Let),
         };
         Lexer { symbol_map }
     }
@@ -208,6 +215,14 @@ mod test {
         let lexer = Lexer::default();
         let expected = vec![Token::Number(4224)];
         let actual = lexer.tokenize("4224");
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_tokenized_let_keyword_is_let_token() {
+        let lexer = Lexer::default();
+        let expected = vec![Token::Keyword(Keyword::Let)];
+        let actual = lexer.tokenize("let");
         assert_eq!(expected, actual);
     }
 

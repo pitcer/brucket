@@ -23,8 +23,12 @@
  */
 
 use crate::parser::{Expression, Function};
+use std::collections::HashMap;
 
-#[derive(Debug, PartialEq)]
+type ValueResult = Result<Value, String>;
+type Environment = HashMap<String, Value>;
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Unit,
     Numeric(i32),
@@ -48,32 +52,80 @@ impl Value {
     }
 }
 
-pub fn evaluate(expression: &Expression) -> Result<Value, String> {
+pub fn evaluate(expression: &Expression) -> ValueResult {
+    let mut environment = Environment::new();
+    evaluate_environment(expression, &mut environment)
+}
+
+fn evaluate_environment(expression: &Expression, environment: &mut Environment) -> ValueResult {
     match expression {
         Expression::Constant(value) => Ok(Value::Numeric(*value as i32)),
         Expression::Boolean(value) => Ok(Value::Boolean(*value)),
         Expression::String(value) => Ok(Value::Textual(value.clone())),
-        Expression::Symbol(value) => Ok(Value::Textual(value.clone())),
+        Expression::Symbol(value) => get_from_environment(environment, value),
         Expression::Function(function) => match function {
             Function::Unit => Ok(Value::Unit),
-            Function::Constant(name) => evaluate_constant_function(name),
-            Function::NAry(name, arguments) => evaluate_n_ary_function(name, arguments),
+            Function::Constant(name) => evaluate_constant_function(name, environment),
+            Function::NAry(name, arguments) => {
+                evaluate_n_ary_function(name, arguments, environment)
+            }
         },
+        Expression::Let(name, value, then) => evaluate_let(name, value, then, environment),
     }
 }
 
-fn evaluate_constant_function(name: &Expression) -> Result<Value, String> {
-    let name = evaluate(name)?;
+fn evaluate_let(
+    name: &str,
+    value: &Expression,
+    then: &Expression,
+    environment: &mut Environment,
+) -> ValueResult {
+    let value = evaluate_environment(value, environment)?;
+    environment.insert(name.to_string(), value);
+    let result = evaluate_environment(then, environment);
+    environment.remove(name);
+    result
+}
+
+fn get_from_environment(environment: &mut Environment, name: &str) -> ValueResult {
+    let value = environment.get(name);
+    if let Some(value) = value {
+        return Ok(value.clone());
+    }
+    if is_builtin_function(name) {
+        return Ok(Value::Textual(name.to_string()));
+    }
+    Err(format!("Undefined variable: {}", name))
+}
+
+fn is_builtin_function(name: &str) -> bool {
+    match name {
+        "+" | "-" | "*" | "/" | "%" | "concatenate" => true,
+        _ => false,
+    }
+}
+
+fn evaluate_constant_function(
+    name: &Expression,
+    environment: &mut Environment,
+) -> Result<Value, String> {
+    let name = evaluate_environment(name, environment)?;
     let function = get_function(&name)?;
     Ok(function(Vec::new()))
 }
 
-fn evaluate_n_ary_function(name: &Expression, arguments: &[Expression]) -> Result<Value, String> {
-    let name = evaluate(name)?;
+fn evaluate_n_ary_function(
+    name: &Expression,
+    arguments: &[Expression],
+    environment: &mut Environment,
+) -> ValueResult {
+    let name = evaluate_environment(name, environment)?;
     let function = get_function(&name)?;
     let evaluated_arguments = arguments
         .iter()
-        .map(|argument| evaluate(argument).expect("Cannot evaluate function argument"))
+        .map(|argument| {
+            evaluate_environment(argument, environment).expect("Cannot evaluate function argument")
+        })
         .collect();
     Ok(function(evaluated_arguments))
 }
@@ -124,8 +176,10 @@ fn concatenate_function(arguments: Vec<Value>) -> Value {
 mod test {
     use super::*;
 
+    type TestResult = Result<(), String>;
+
     #[test]
-    fn test_evaluated_constant_expression_is_numeric_value() -> Result<(), String> {
+    fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
         let expected = Value::Numeric(42);
         let actual = evaluate(&Expression::Constant(42))?;
         assert_eq!(expected, actual);
@@ -133,15 +187,7 @@ mod test {
     }
 
     #[test]
-    fn test_evaluated_symbol_expression_is_textual_value() -> Result<(), String> {
-        let expected = Value::Textual("foobar".to_string());
-        let actual = evaluate(&Expression::Symbol("foobar".to_string()))?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
-    fn test_evaluated_boolean_expression_is_boolean_value() -> Result<(), String> {
+    fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
         let expected = Value::Boolean(true);
         let actual = evaluate(&Expression::Boolean(true))?;
         assert_eq!(expected, actual);
@@ -149,7 +195,7 @@ mod test {
     }
 
     #[test]
-    fn test_evaluated_unit_function_expression_is_unit_value() -> Result<(), String> {
+    fn test_evaluated_unit_function_expression_is_unit_value() -> TestResult {
         let expected = Value::Unit;
         let actual = evaluate(&Expression::Function(Function::Unit))?;
         assert_eq!(expected, actual);
@@ -157,12 +203,94 @@ mod test {
     }
 
     #[test]
-    fn test_evaluated_addition_function_expression_is_numeric_value() -> Result<(), String> {
+    fn test_evaluated_addition_function_expression_is_numeric_value() -> TestResult {
         let expected = Value::Numeric(42 + 24);
         let actual = evaluate(&Expression::Function(Function::NAry(
             Box::new(Expression::Symbol("+".to_string())),
             vec![Expression::Constant(42), Expression::Constant(24)],
         )))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
+        let expected = Value::Numeric(42);
+        let actual = evaluate(&Expression::Let(
+            "x".to_string(),
+            Box::new(Expression::Constant(42)),
+            Box::new(Expression::Symbol("x".to_string())),
+        ))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "Cannot evaluate function argument: \"Undefined variable: x\"")]
+    fn test_environment_is_cleared() {
+        let _result = evaluate(&Expression::Function(Function::NAry(
+            Box::new(Expression::Symbol("+".to_string())),
+            vec![
+                Expression::Let(
+                    "x".to_string(),
+                    Box::new(Expression::Constant(42)),
+                    Box::new(Expression::Symbol("x".to_string())),
+                ),
+                Expression::Symbol("x".to_string()),
+            ],
+        )));
+    }
+
+    #[test]
+    fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
+        let expected = Value::Numeric(40);
+        let actual = evaluate(&Expression::Let(
+            "x".to_string(),
+            Box::new(Expression::Constant(40)),
+            Box::new(Expression::Let(
+                "y".to_string(),
+                Box::new(Expression::Constant(2)),
+                Box::new(Expression::Symbol("x".to_string())),
+            )),
+        ))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
+        let expected = Value::Numeric(2);
+        let actual = evaluate(&Expression::Let(
+            "x".to_string(),
+            Box::new(Expression::Constant(40)),
+            Box::new(Expression::Let(
+                "x".to_string(),
+                Box::new(Expression::Constant(2)),
+                Box::new(Expression::Symbol("x".to_string())),
+            )),
+        ))?;
+        assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_two_variables_can_be_used_in_function_evaluation() -> TestResult {
+        let expected = Value::Numeric(42);
+        let actual = evaluate(&Expression::Let(
+            "x".to_string(),
+            Box::new(Expression::Constant(40)),
+            Box::new(Expression::Let(
+                "y".to_string(),
+                Box::new(Expression::Constant(2)),
+                Box::new(Expression::Function(Function::NAry(
+                    Box::new(Expression::Symbol("+".to_string())),
+                    vec![
+                        Expression::Symbol("x".to_string()),
+                        Expression::Symbol("y".to_string()),
+                    ],
+                ))),
+            )),
+        ))?;
         assert_eq!(expected, actual);
         Ok(())
     }
