@@ -214,6 +214,20 @@ fn test_or_is_evaluated_lazily() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn test_negate_function_negates_correctly() -> TestResult {
+    let interpreter = create_interpreter();
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret("(negate true)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret("(negate false)")?
+    );
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let library_syntax = r#"
     (module base
@@ -266,6 +280,15 @@ fn create_interpreter() -> Interpreter {
         (internal is_less_or_equal first second))
 
       (constant <= is_less_or_equal)
+
+      (function negate |argument|
+        (if argument
+          false
+          true))
+
+      (constant not negate)
+
+      (constant ! negate)
     )"#;
     Interpreter::with_library(library_syntax).expect("Cannot create interpreter with library")
 }
