@@ -196,6 +196,24 @@ fn test_comparison_functions() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn test_and_is_evaluated_lazily() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Boolean(false);
+    let actual = interpreter.interpret("(and true false (/ 1 0))")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_or_is_evaluated_lazily() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Boolean(true);
+    let actual = interpreter.interpret("(or false true (/ 1 0))")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let library_syntax = r#"
     (module base

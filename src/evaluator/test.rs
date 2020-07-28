@@ -265,3 +265,59 @@ fn test_evaluated_identified_expression_is_identified_value() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_evaluated_and_expression_is_false_if_false_argument_exists() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Boolean(false);
+    let actual = evaluator.evaluate(&Expression::And(vec![
+        Expression::Constant(Constant::Boolean(true)),
+        Expression::Constant(Constant::Boolean(true)),
+        Expression::Constant(Constant::Boolean(false)),
+        Expression::Constant(Constant::Boolean(true)),
+    ]))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_and_expression_is_true_if_every_argument_is_true() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Boolean(true);
+    let actual = evaluator.evaluate(&Expression::And(vec![
+        Expression::Constant(Constant::Boolean(true)),
+        Expression::Constant(Constant::Boolean(true)),
+        Expression::Constant(Constant::Boolean(true)),
+        Expression::Constant(Constant::Boolean(true)),
+    ]))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_or_expression_is_true_if_true_argument_exists() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Boolean(true);
+    let actual = evaluator.evaluate(&Expression::Or(vec![
+        Expression::Constant(Constant::Boolean(false)),
+        Expression::Constant(Constant::Boolean(false)),
+        Expression::Constant(Constant::Boolean(true)),
+        Expression::Constant(Constant::Boolean(false)),
+    ]))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_or_expression_is_false_if_every_argument_is_false() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Boolean(false);
+    let actual = evaluator.evaluate(&Expression::Or(vec![
+        Expression::Constant(Constant::Boolean(false)),
+        Expression::Constant(Constant::Boolean(false)),
+        Expression::Constant(Constant::Boolean(false)),
+        Expression::Constant(Constant::Boolean(false)),
+    ]))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

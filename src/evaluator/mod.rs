@@ -122,6 +122,8 @@ impl Evaluator {
             Expression::Identified(identifier, value) => {
                 self.evaluate_identified(identifier, value, environment)
             }
+            Expression::And(arguments) => self.evaluate_and(arguments, environment),
+            Expression::Or(arguments) => self.evaluate_or(arguments, environment),
         }
     }
 
@@ -242,7 +244,17 @@ impl Evaluator {
             Expression::Identified(_, body) => {
                 identifiers.append(&mut Self::get_used_identifiers(body))
             }
-            _ => (),
+            Expression::Constant(_) => (),
+            Expression::And(arguments) => {
+                for argument in arguments {
+                    identifiers.append(&mut Self::get_used_identifiers(argument));
+                }
+            }
+            Expression::Or(arguments) => {
+                for argument in arguments {
+                    identifiers.append(&mut Self::get_used_identifiers(argument));
+                }
+            }
         }
         identifiers
     }
@@ -342,6 +354,34 @@ impl Evaluator {
             }
         }
         Ok(Value::Module(identifier.to_string(), module_environment))
+    }
+
+    fn evaluate_and(&self, arguments: &[Expression], environment: &mut Environment) -> ValueResult {
+        for argument in arguments {
+            let argument = self.evaluate_environment(argument, environment)?;
+            if let Value::Boolean(value) = argument {
+                if !value {
+                    return Ok(Value::Boolean(false));
+                }
+            } else {
+                return Err("Invalid argument type".to_string());
+            }
+        }
+        Ok(Value::Boolean(true))
+    }
+
+    fn evaluate_or(&self, arguments: &[Expression], environment: &mut Environment) -> ValueResult {
+        for argument in arguments {
+            let argument = self.evaluate_environment(argument, environment)?;
+            if let Value::Boolean(value) = argument {
+                if value {
+                    return Ok(Value::Boolean(true));
+                }
+            } else {
+                return Err("Invalid argument type".to_string());
+            }
+        }
+        Ok(Value::Boolean(false))
     }
 }
 

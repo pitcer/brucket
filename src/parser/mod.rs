@@ -40,6 +40,8 @@ pub enum Expression {
     Lambda(Lambda),
     Module(String, Vec<Expression>),
     Identified(String, Box<Expression>),
+    And(Vec<Expression>),
+    Or(Vec<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -120,6 +122,8 @@ impl Parser {
                 Keyword::Module => Self::parse_module(tokens),
                 Keyword::Function => Self::parse_function(tokens),
                 Keyword::Constant => Self::parse_constant(tokens),
+                Keyword::And => Self::parse_and(tokens),
+                Keyword::Or => Self::parse_or(tokens),
             },
             Token::Symbol(symbol) => {
                 let identifier = Expression::Identifier(symbol.clone());
@@ -222,6 +226,16 @@ impl Parser {
             return Err("Missing parameters section".to_string());
         }
         Ok(Expression::Identified(identifier, Box::from(value)))
+    }
+
+    fn parse_and(tokens: &mut Iter<Token>) -> ExpressionResult {
+        let arguments = Self::parse_arguments(tokens)?;
+        Ok(Expression::And(arguments))
+    }
+
+    fn parse_or(tokens: &mut Iter<Token>) -> ExpressionResult {
+        let arguments = Self::parse_arguments(tokens)?;
+        Ok(Expression::Or(arguments))
     }
 
     fn parse_identifier(tokens: &mut Iter<Token>) -> Result<String, String> {
