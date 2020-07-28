@@ -76,6 +76,11 @@ impl Evaluator {
         environment.insert("multiply", internal::multiply);
         environment.insert("divide", internal::divide);
         environment.insert("remainder", internal::remainder);
+        environment.insert("is_equal", internal::is_equal);
+        environment.insert("is_greater", internal::is_greater);
+        environment.insert("is_greater_or_equal", internal::is_greater_or_equal);
+        environment.insert("is_less", internal::is_less);
+        environment.insert("is_less_or_equal", internal::is_less_or_equal);
         environment
     }
 

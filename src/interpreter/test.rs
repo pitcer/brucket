@@ -178,6 +178,24 @@ fn test_interpret_function() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn test_comparison_functions() -> TestResult {
+    let interpreter = create_interpreter();
+    assert_eq!(Value::Boolean(false), interpreter.interpret("(= 42 24)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(= 42 42)")?);
+    assert_eq!(Value::Boolean(false), interpreter.interpret("(> 24 42)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(> 42 24)")?);
+    assert_eq!(Value::Boolean(false), interpreter.interpret("(>= 24 42)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(>= 42 24)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(>= 42 42)")?);
+    assert_eq!(Value::Boolean(false), interpreter.interpret("(< 42 24)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(< 24 42)")?);
+    assert_eq!(Value::Boolean(false), interpreter.interpret("(<= 42 24)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(<= 24 42)")?);
+    assert_eq!(Value::Boolean(true), interpreter.interpret("(<= 42 42)")?);
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let library_syntax = r#"
     (module base
@@ -205,6 +223,31 @@ fn create_interpreter() -> Interpreter {
         (internal remainder first second))
 
       (constant % remainder)
+
+      (function is_equal |first second|
+        (internal is_equal first second))
+
+      (constant = is_equal)
+
+      (function is_greater |first second|
+        (internal is_greater first second))
+
+      (constant > is_greater)
+
+      (function is_greater_or_equal |first second|
+        (internal is_greater_or_equal first second))
+
+      (constant >= is_greater_or_equal)
+
+      (function is_less |first second|
+        (internal is_less first second))
+
+      (constant < is_less)
+
+      (function is_less_or_equal |first second|
+        (internal is_less_or_equal first second))
+
+      (constant <= is_less_or_equal)
     )"#;
     Interpreter::with_library(library_syntax).expect("Cannot create interpreter with library")
 }

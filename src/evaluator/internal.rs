@@ -100,6 +100,64 @@ pub fn remainder(arguments: Vec<Value>) -> ValueResult {
     }
 }
 
+pub fn is_equal(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 2 {
+        let first = &arguments[0];
+        let second = &arguments[1];
+        Ok(Value::Boolean(first.eq(second)))
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
+pub fn is_greater(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 2 {
+        let first = &arguments[0];
+        let second = &arguments[1];
+        let first = first.as_number()?;
+        let second = second.as_number()?;
+        Ok(Value::Boolean(first > second))
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
+pub fn is_greater_or_equal(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 2 {
+        let first = &arguments[0];
+        let second = &arguments[1];
+        let first = first.as_number()?;
+        let second = second.as_number()?;
+        Ok(Value::Boolean(first >= second))
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
+pub fn is_less(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 2 {
+        let first = &arguments[0];
+        let second = &arguments[1];
+        let first = first.as_number()?;
+        let second = second.as_number()?;
+        Ok(Value::Boolean(first < second))
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
+pub fn is_less_or_equal(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 2 {
+        let first = &arguments[0];
+        let second = &arguments[1];
+        let first = first.as_number()?;
+        let second = second.as_number()?;
+        Ok(Value::Boolean(first <= second))
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
 impl Value {
     fn as_number(&self) -> Result<i32, &'static str> {
         if let Value::Numeric(value) = self {
@@ -237,6 +295,79 @@ mod test {
         let expected = Value::Numeric(3);
         let actual = remainder(vec![Value::Numeric(45), Value::Numeric(42)])?;
         assert_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_equal() -> TestResult {
+        assert_eq!(
+            Value::Boolean(false),
+            is_equal(vec![Value::Numeric(42), Value::Numeric(24)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_greater() -> TestResult {
+        assert_eq!(
+            Value::Boolean(false),
+            is_greater(vec![Value::Numeric(24), Value::Numeric(42)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_greater(vec![Value::Numeric(42), Value::Numeric(24)])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_greater_or_equal() -> TestResult {
+        assert_eq!(
+            Value::Boolean(false),
+            is_greater_or_equal(vec![Value::Numeric(24), Value::Numeric(42)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_greater_or_equal(vec![Value::Numeric(42), Value::Numeric(24)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_greater_or_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_less() -> TestResult {
+        assert_eq!(
+            Value::Boolean(false),
+            is_less(vec![Value::Numeric(42), Value::Numeric(24)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_less(vec![Value::Numeric(24), Value::Numeric(42)])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_less_or_equal() -> TestResult {
+        assert_eq!(
+            Value::Boolean(false),
+            is_less_or_equal(vec![Value::Numeric(42), Value::Numeric(24)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_less_or_equal(vec![Value::Numeric(24), Value::Numeric(42)])?
+        );
+        assert_eq!(
+            Value::Boolean(true),
+            is_less_or_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        );
         Ok(())
     }
 }
