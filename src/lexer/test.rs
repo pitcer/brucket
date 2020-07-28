@@ -137,6 +137,14 @@ fn test_tokenized_function_keyword_is_function_token() {
 }
 
 #[test]
+fn test_tokenized_constant_keyword_is_constant_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Constant)];
+    let actual = lexer.tokenize("constant");
+    assert_eq!(expected, actual);
+}
+
+#[test]
 fn test_tokenized_single_character_symbol_is_symbol_token() {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("x".to_string())];

@@ -55,6 +55,7 @@ pub enum Keyword {
     Internal,
     Module,
     Function,
+    Constant,
 }
 
 impl Lexer {
@@ -69,6 +70,7 @@ impl Lexer {
             "internal" => Token::Keyword(Keyword::Internal),
             "module" => Token::Keyword(Keyword::Module),
             "function" => Token::Keyword(Keyword::Function),
+            "constant" => Token::Keyword(Keyword::Constant),
         };
         Self { symbol_map }
     }

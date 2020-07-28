@@ -119,6 +119,7 @@ impl Parser {
                 Keyword::Internal => Self::parse_internal(tokens),
                 Keyword::Module => Self::parse_module(tokens),
                 Keyword::Function => Self::parse_function(tokens),
+                Keyword::Constant => Self::parse_constant(tokens),
             },
             Token::Symbol(symbol) => {
                 let identifier = Expression::Identifier(symbol.clone());
@@ -212,6 +213,12 @@ impl Parser {
         let identifier = Self::parse_identifier(tokens)?;
         let members = Self::parse_arguments(tokens)?;
         Ok(Expression::Module(identifier, members))
+    }
+
+    fn parse_constant(tokens: &mut Iter<Token>) -> ExpressionResult {
+        let identifier = Self::parse_identifier(tokens)?;
+        let value = Self::parse_first(tokens)?;
+        Ok(Expression::Identified(identifier, Box::from(value)))
     }
 
     fn parse_identifier(tokens: &mut Iter<Token>) -> Result<String, String> {

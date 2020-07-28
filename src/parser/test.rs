@@ -322,3 +322,21 @@ fn test_parsed_function_tokens_are_identified_lambda_expressions() -> TestResult
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_parsed_constant_tokens_are_identified_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Identified(
+        "foo".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Constant),
+        Token::Symbol("foo".to_string()),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
