@@ -148,7 +148,7 @@ fn test_evaluated_parametrized_lambda_expression_is_parametrized_closure_value()
     let expected = Value::Closure(Closure::Parametrized(
         "y".to_string(),
         Expression::Identifier("y".to_string()),
-        maplit::hashmap! {"x".to_string() => Value::Numeric(42)},
+        Environment::new(),
     ));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),

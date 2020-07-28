@@ -218,6 +218,9 @@ impl Parser {
     fn parse_constant(tokens: &mut Iter<Token>) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
+        if !Self::is_section_closed(tokens) {
+            return Err("Missing parameters section".to_string());
+        }
         Ok(Expression::Identified(identifier, Box::from(value)))
     }
 

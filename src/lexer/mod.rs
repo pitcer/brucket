@@ -155,7 +155,7 @@ impl Lexer {
             current = next.unwrap();
             match current {
                 '0'..='9' => result = result * 10 + current.to_digit(10).expect("Invalid digit"),
-                ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' => return result,
+                ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' | '|' => return result,
                 _ => (),
             }
             chars.next();
@@ -173,7 +173,7 @@ impl Lexer {
             }
             current = next.unwrap();
             match current {
-                ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' => return result,
+                ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' | '|' => return result,
                 _ => result.push(*current),
             }
             chars.next();

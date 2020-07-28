@@ -22,7 +22,9 @@
  * SOFTWARE.
  */
 
-use crate::interpreter::{Interpreter, Value};
+use super::*;
+use crate::evaluator::{Closure, Environment};
+use crate::parser::{Constant, Expression};
 
 type TestResult = Result<(), String>;
 
@@ -124,4 +126,54 @@ fn test_environment_is_cleared() {
     let expected = Err("Undefined variable: x".to_string());
     let actual = interpreter.interpret("(internal + (let x 42 x) x)");
     assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_interpret_module() -> TestResult {
+    let interpreter = Interpreter::default();
+    let expected = Value::Module(
+        "foo".to_string(),
+        maplit::hashmap! {
+        "bar".to_string() => Value::Numeric(1),
+        "barfoo".to_string() => Value::Closure(Closure::Parametrized(
+            "x".to_string(),
+            Expression::Constant(Constant::Numeric(2)),
+            Environment::new(),
+        )),
+        "foobar".to_string() => Value::Numeric(3),
+        "fooo".to_string() => Value::Closure(Closure::Parametrized(
+            "x".to_string(),
+            Expression::Constant(Constant::Numeric(4)),
+            Environment::new(),
+        ))
+        },
+    );
+    let actual = interpreter.interpret(
+        r#"
+        (module foo
+          (constant bar 1)
+          (function barfoo |x| 2)
+          (constant foobar 3)
+          (function fooo |x| 4)
+        )
+        "#,
+    )?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_interpret_function() -> TestResult {
+    let interpreter = Interpreter::default();
+    let expected = Value::Identified(
+        "foo".to_string(),
+        Box::new(Value::Closure(Closure::Parametrized(
+            "x".to_string(),
+            Expression::Identifier("x".to_string()),
+            Environment::new(),
+        ))),
+    );
+    let actual = interpreter.interpret("(function foo |x| x))")?;
+    assert_eq!(expected, actual);
+    Ok(())
 }

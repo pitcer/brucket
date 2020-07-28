@@ -28,8 +28,9 @@ use std::option::Option::Some;
 
 mod internal;
 
+pub type Environment = HashMap<String, Value>;
+
 type ValueResult = Result<Value, String>;
-type Environment = HashMap<String, Value>;
 type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
 
 pub struct Evaluator {
@@ -155,10 +156,8 @@ impl Evaluator {
     }
 
     fn evaluate_empty_lambda(body: &Expression, environment: &Environment) -> ValueResult {
-        Ok(Value::Closure(Closure::Empty(
-            body.clone(),
-            environment.clone(),
-        )))
+        let environment = Self::get_optimized_lambda_environment(body, environment);
+        Ok(Value::Closure(Closure::Empty(body.clone(), environment)))
     }
 
     fn evaluate_parametrized_lambda(
@@ -166,11 +165,74 @@ impl Evaluator {
         body: &Expression,
         environment: &Environment,
     ) -> ValueResult {
+        let environment = Self::get_optimized_lambda_environment(body, environment);
         Ok(Value::Closure(Closure::Parametrized(
             parameter.to_string(),
             body.clone(),
-            environment.clone(),
+            environment,
         )))
+    }
+
+    fn get_optimized_lambda_environment(
+        body: &Expression,
+        environment: &Environment,
+    ) -> Environment {
+        let identifiers = Self::get_used_identifiers(body);
+        identifiers
+            .into_iter()
+            .filter_map(|identifier| {
+                let value = environment.get(identifier)?;
+                Some((identifier.clone(), value.clone()))
+            })
+            .collect()
+    }
+
+    fn get_used_identifiers(expression: &Expression) -> Vec<&String> {
+        let mut identifiers = Vec::new();
+        match expression {
+            Expression::Identifier(identifier) => identifiers.push(identifier),
+            Expression::Call(call) => match call {
+                Call::Empty(identifier) => {
+                    identifiers.append(&mut Self::get_used_identifiers(identifier))
+                }
+                Call::Unary(identifier, argument) => {
+                    identifiers.append(&mut Self::get_used_identifiers(identifier));
+                    identifiers.append(&mut Self::get_used_identifiers(argument));
+                }
+                Call::Internal(_, arguments) => {
+                    for argument in arguments {
+                        identifiers.append(&mut Self::get_used_identifiers(argument));
+                    }
+                }
+            },
+            Expression::Let(_, value, body) => {
+                identifiers.append(&mut Self::get_used_identifiers(value));
+                identifiers.append(&mut Self::get_used_identifiers(body));
+            }
+            Expression::If(condition, if_true, if_false) => {
+                identifiers.append(&mut Self::get_used_identifiers(condition));
+                identifiers.append(&mut Self::get_used_identifiers(if_true));
+                identifiers.append(&mut Self::get_used_identifiers(if_false));
+            }
+            Expression::Lambda(lambda) => match lambda {
+                Lambda::Empty(body) => {
+                    identifiers.append(&mut Self::get_used_identifiers(body));
+                }
+                Lambda::Parametrized(_, body) => {
+                    identifiers.append(&mut Self::get_used_identifiers(body));
+                }
+            },
+            Expression::Module(_, members) => {
+                for member in members {
+                    identifiers.append(&mut Self::get_used_identifiers(member));
+                }
+            }
+            Expression::Identified(_, body) => {
+                identifiers.append(&mut Self::get_used_identifiers(body))
+            }
+            _ => (),
+        }
+        identifiers
     }
 
     fn get_from_environment(environment: &Environment, name: &str) -> ValueResult {
@@ -256,10 +318,12 @@ impl Evaluator {
         members: &[Expression],
         environment: &mut Environment,
     ) -> ValueResult {
+        let mut environment = environment.clone();
         let mut module_environment = Environment::new();
         for member in members {
-            let member = self.evaluate_environment(member, environment)?;
+            let member = self.evaluate_environment(member, &mut environment)?;
             if let Value::Identified(identifier, value) = member {
+                environment.insert(identifier.clone(), *value.clone());
                 module_environment.insert(identifier, *value);
             } else {
                 return Err("Cannot identify module member".to_string());
