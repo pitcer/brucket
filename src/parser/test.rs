@@ -260,3 +260,65 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_parsed_module_tokens_are_module_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Module(
+        "foo".to_string(),
+        vec![
+            Expression::Identifier("x".to_string()),
+            Expression::Identifier("y".to_string()),
+            Expression::Identifier("z".to_string()),
+        ],
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Module),
+        Token::Symbol("foo".to_string()),
+        Token::Symbol("x".to_string()),
+        Token::Symbol("y".to_string()),
+        Token::Symbol("z".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_function_tokens_are_identified_lambda_expressions() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Identified(
+        "foo".to_string(),
+        Box::new(Expression::Lambda(Lambda::Parametrized(
+            "x".to_string(),
+            Box::new(Expression::Lambda(Lambda::Parametrized(
+                "y".to_string(),
+                Box::from(Expression::Lambda(Lambda::Parametrized(
+                    "z".to_string(),
+                    Box::new(Expression::Call(Call::Unary(
+                        Box::new(Expression::Identifier("bar".to_string())),
+                        Box::new(Expression::Constant(Constant::Numeric(42))),
+                    ))),
+                ))),
+            ))),
+        ))),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Function),
+        Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Symbol("x".to_string()),
+        Token::Symbol("y".to_string()),
+        Token::Symbol("z".to_string()),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Symbol("bar".to_string()),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

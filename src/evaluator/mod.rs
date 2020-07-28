@@ -43,6 +43,8 @@ pub enum Value {
     Textual(String),
     Boolean(bool),
     Closure(Closure),
+    Module(String, Environment),
+    Identified(String, Box<Value>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -100,12 +102,13 @@ impl Evaluator {
             Expression::If(condition, if_true_then, if_false_then) => {
                 self.evaluate_if(condition, if_true_then, if_false_then, environment)
             }
-            Expression::Lambda(lambda) => match lambda {
-                Lambda::Empty(body) => Self::evaluate_empty_lambda(body, environment),
-                Lambda::Parametrized(parameter, body) => {
-                    Self::evaluate_parametrized_lambda(parameter, body, environment)
-                }
-            },
+            Expression::Lambda(lambda) => Self::evaluate_lambda(lambda, environment),
+            Expression::Module(identifier, members) => {
+                self.evaluate_module(identifier, members, environment)
+            }
+            Expression::Identified(identifier, value) => {
+                self.evaluate_identified(identifier, value, environment)
+            }
         }
     }
 
@@ -139,6 +142,15 @@ impl Evaluator {
             }
         } else {
             Err("Invalid condition type".to_string())
+        }
+    }
+
+    fn evaluate_lambda(lambda: &Lambda, environment: &Environment) -> ValueResult {
+        match lambda {
+            Lambda::Empty(body) => Self::evaluate_empty_lambda(body, environment),
+            Lambda::Parametrized(parameter, body) => {
+                Self::evaluate_parametrized_lambda(parameter, body, environment)
+            }
         }
     }
 
@@ -226,6 +238,34 @@ impl Evaluator {
             values.push(value);
         }
         function(values)
+    }
+
+    fn evaluate_identified(
+        &self,
+        identifier: &str,
+        value: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let value = self.evaluate_environment(value, environment)?;
+        Ok(Value::Identified(identifier.to_string(), Box::from(value)))
+    }
+
+    fn evaluate_module(
+        &self,
+        identifier: &str,
+        members: &[Expression],
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let mut module_environment = Environment::new();
+        for member in members {
+            let member = self.evaluate_environment(member, environment)?;
+            if let Value::Identified(identifier, value) = member {
+                module_environment.insert(identifier, *value);
+            } else {
+                return Err("Cannot identify module member".to_string());
+            }
+        }
+        Ok(Value::Module(identifier.to_string(), module_environment))
     }
 }
 

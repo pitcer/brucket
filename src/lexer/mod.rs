@@ -53,6 +53,8 @@ pub enum Keyword {
     If,
     Lambda,
     Internal,
+    Module,
+    Function,
 }
 
 impl Lexer {
@@ -65,6 +67,8 @@ impl Lexer {
             "lambda" => Token::Keyword(Keyword::Lambda),
             "->" => Token::Keyword(Keyword::Lambda),
             "internal" => Token::Keyword(Keyword::Internal),
+            "module" => Token::Keyword(Keyword::Module),
+            "function" => Token::Keyword(Keyword::Function),
         };
         Self { symbol_map }
     }

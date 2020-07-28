@@ -38,6 +38,8 @@ pub enum Expression {
     Let(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
     Lambda(Lambda),
+    Module(String, Vec<Expression>),
+    Identified(String, Box<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -115,6 +117,8 @@ impl Parser {
                 Keyword::If => Self::parse_if(tokens),
                 Keyword::Lambda => Self::parse_lambda(tokens),
                 Keyword::Internal => Self::parse_internal(tokens),
+                Keyword::Module => Self::parse_module(tokens),
+                Keyword::Function => Self::parse_function(tokens),
             },
             Token::Symbol(symbol) => {
                 let identifier = Expression::Identifier(symbol.clone());
@@ -148,7 +152,7 @@ impl Parser {
         let name = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         let then = Self::parse_first(tokens)?;
-        if Self::is_section_closed(tokens) {
+        if !Self::is_section_closed(tokens) {
             return Err("Invalid let expression".to_string());
         }
         Ok(Expression::Let(name, Box::new(value), Box::new(then)))
@@ -158,7 +162,7 @@ impl Parser {
         let condition = Self::parse_first(tokens)?;
         let if_true_then = Self::parse_first(tokens)?;
         let if_false_then = Self::parse_first(tokens)?;
-        if Self::is_section_closed(tokens) {
+        if !Self::is_section_closed(tokens) {
             return Err("Invalid if expression".to_string());
         }
         Ok(Expression::If(
@@ -168,10 +172,16 @@ impl Parser {
         ))
     }
 
+    fn parse_function(tokens: &mut Iter<Token>) -> ExpressionResult {
+        let identifier = Self::parse_identifier(tokens)?;
+        let lambda = Self::parse_lambda(tokens)?;
+        Ok(Expression::Identified(identifier, Box::from(lambda)))
+    }
+
     fn parse_lambda(tokens: &mut Iter<Token>) -> ExpressionResult {
-        let parameters = Self::parse_lambda_parameters(tokens)?;
+        let parameters = Self::parse_parameters(tokens)?;
         let body = Self::parse_first(tokens)?;
-        if Self::is_section_closed(tokens) {
+        if !Self::is_section_closed(tokens) {
             return Err("Invalid lambda expression".to_string());
         }
         let body = Box::new(body);
@@ -192,49 +202,25 @@ impl Parser {
         Ok(lambda)
     }
 
-    fn parse_lambda_parameters(tokens: &mut Iter<Token>) -> Result<Vec<String>, String> {
-        let mut parameters = Vec::new();
-        let mut next = tokens.next();
-        if next.is_none() || !Self::is_parameters_parenthesis(next.unwrap()) {
-            return Err("Missing parameters section".to_string());
-        }
-        next = tokens.next();
-        while next.is_some() {
-            let current = next.unwrap();
-            if Self::is_parameters_parenthesis(current) {
-                break;
-            }
-            if let Token::Symbol(parameter) = current {
-                parameters.push(parameter.clone())
-            } else {
-                return Err("Parameter is not a symbol".to_string());
-            }
-            next = tokens.next();
-        }
-        Ok(parameters)
-    }
-
-    fn is_parameters_parenthesis(token: &Token) -> bool {
-        matches!(token, Token::Parenthesis(Parenthesis::Parameters))
-    }
-
     fn parse_internal(tokens: &mut Iter<Token>) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let arguments = Self::parse_arguments(tokens)?;
         Ok(Expression::Call(Call::Internal(identifier, arguments)))
     }
 
+    fn parse_module(tokens: &mut Iter<Token>) -> ExpressionResult {
+        let identifier = Self::parse_identifier(tokens)?;
+        let members = Self::parse_arguments(tokens)?;
+        Ok(Expression::Module(identifier, members))
+    }
+
     fn parse_identifier(tokens: &mut Iter<Token>) -> Result<String, String> {
-        let name = tokens.next();
-        if name.is_none() {
+        let identifier = tokens.next();
+        if identifier.is_none() {
             return Err("Missing name token".to_string());
         }
-        let name = name.unwrap();
-        if let Token::Symbol(name) = name {
-            Ok(name.clone())
-        } else {
-            Err("Name is not a symbol".to_string())
-        }
+        let identifier = identifier.unwrap();
+        identifier.as_symbol()
     }
 
     fn parse_arguments(tokens: &mut Iter<Token>) -> Result<Vec<Expression>, String> {
@@ -252,13 +238,50 @@ impl Parser {
         Ok(arguments)
     }
 
+    fn parse_parameters(tokens: &mut Iter<Token>) -> Result<Vec<String>, String> {
+        let mut parameters = Vec::new();
+        if !Self::is_parameters_section(tokens) {
+            return Err("Missing parameters section".to_string());
+        }
+        let mut next = tokens.next();
+        while next.is_some() {
+            let current = next.unwrap();
+            if Self::is_parameters_parenthesis(current) {
+                break;
+            }
+            let parameter = current.as_symbol()?;
+            parameters.push(parameter);
+            next = tokens.next();
+        }
+        Ok(parameters)
+    }
+
     fn is_section_closed(tokens: &mut Iter<Token>) -> bool {
         let next = tokens.next();
-        next.is_none() || !Self::is_close_parenthesis(next.unwrap())
+        next.is_some() && Self::is_close_parenthesis(next.unwrap())
     }
 
     fn is_close_parenthesis(token: &Token) -> bool {
         matches!(token, Token::Parenthesis(Parenthesis::Close(_)))
+    }
+
+    fn is_parameters_section(tokens: &mut Iter<Token>) -> bool {
+        let next = tokens.next();
+        next.is_some() && Self::is_parameters_parenthesis(next.unwrap())
+    }
+
+    fn is_parameters_parenthesis(token: &Token) -> bool {
+        matches!(token, Token::Parenthesis(Parenthesis::Parameters))
+    }
+}
+
+impl Token {
+    fn as_symbol(&self) -> Result<String, String> {
+        if let Token::Symbol(symbol) = self {
+            Ok(symbol.clone())
+        } else {
+            Err("Token is not a symbol".to_string())
+        }
     }
 }
 

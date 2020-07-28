@@ -221,3 +221,47 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
     ));
     assert_eq!(expected, actual);
 }
+
+#[test]
+fn test_evaluated_module_expression_is_module_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Module(
+        "foo".to_string(),
+        maplit::hashmap! {
+           "bar".to_string() => Value::Closure(Closure::Empty(Expression::Constant(Constant::Numeric(42)), Environment::new()))
+        },
+    );
+    let actual = evaluator.evaluate(&Expression::Module(
+        "foo".to_string(),
+        vec![Expression::Identified(
+            "bar".to_string(),
+            Box::new(Expression::Lambda(Lambda::Empty(Box::new(
+                Expression::Constant(Constant::Numeric(42)),
+            )))),
+        )],
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_identified_expression_is_identified_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Identified(
+        "foo".to_string(),
+        Box::new(Value::Closure(Closure::Parametrized(
+            "x".to_string(),
+            Expression::Constant(Constant::Numeric(42)),
+            Environment::new(),
+        ))),
+    );
+    let actual = evaluator.evaluate(&Expression::Identified(
+        "foo".to_string(),
+        Box::new(Expression::Lambda(Lambda::Parametrized(
+            "x".to_string(),
+            Box::new(Expression::Constant(Constant::Numeric(42))),
+        ))),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

@@ -121,6 +121,22 @@ fn test_tokenized_internal_keyword_is_internal_token() {
 }
 
 #[test]
+fn test_tokenized_module_keyword_is_module_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Module)];
+    let actual = lexer.tokenize("module");
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_tokenized_function_keyword_is_function_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Function)];
+    let actual = lexer.tokenize("function");
+    assert_eq!(expected, actual);
+}
+
+#[test]
 fn test_tokenized_single_character_symbol_is_symbol_token() {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("x".to_string())];
