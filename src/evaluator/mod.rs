@@ -22,13 +22,19 @@
  * SOFTWARE.
  */
 
-use crate::parser::{Constant, Expression};
+use crate::parser::{Call, Constant, Expression, Lambda};
 use std::collections::HashMap;
+use std::option::Option::Some;
+
+mod internal;
 
 type ValueResult = Result<Value, String>;
 type Environment = HashMap<String, Value>;
+type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
 
-pub struct Evaluator;
+pub struct Evaluator {
+    internal_environment: InternalEnvironment,
+}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -36,35 +42,43 @@ pub enum Value {
     Numeric(i32),
     Textual(String),
     Boolean(bool),
+    Closure(Closure),
 }
 
-impl Value {
-    fn to_numeric(&self) -> Result<i32, String> {
-        match self {
-            Value::Numeric(value) => Ok(*value),
-            _ => Err(String::from("Value is not a number")),
-        }
-    }
-
-    fn to_textual(&self) -> Result<&String, String> {
-        match self {
-            Value::Textual(value) => Ok(value),
-            _ => Err(String::from("Value is not a text")),
-        }
-    }
+#[derive(Debug, PartialEq, Clone)]
+pub enum Closure {
+    Empty(Expression, Environment),
+    Parametrized(String, Expression, Environment),
 }
 
 impl Evaluator {
-    pub fn default() -> Evaluator {
-        Evaluator {}
+    pub fn default() -> Self {
+        let mut internal_environment = InternalEnvironment::new();
+        internal_environment.insert("add", internal::add);
+        internal_environment.insert("+", internal::add);
+        internal_environment.insert("subtract", internal::subtract);
+        internal_environment.insert("-", internal::subtract);
+        internal_environment.insert("multiply", internal::multiply);
+        internal_environment.insert("*", internal::multiply);
+        internal_environment.insert("divide", internal::divide);
+        internal_environment.insert("/", internal::divide);
+        internal_environment.insert("remainder", internal::remainder);
+        internal_environment.insert("%", internal::remainder);
+        Self {
+            internal_environment,
+        }
     }
 
     pub fn evaluate(&self, expression: &Expression) -> ValueResult {
         let mut environment = Environment::new();
-        Evaluator::evaluate_environment(expression, &mut environment)
+        self.evaluate_environment(expression, &mut environment)
     }
 
-    fn evaluate_environment(expression: &Expression, environment: &mut Environment) -> ValueResult {
+    fn evaluate_environment(
+        &self,
+        expression: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
         match expression {
             Expression::Constant(value) => match value {
                 Constant::Unit => Ok(Value::Unit),
@@ -72,125 +86,146 @@ impl Evaluator {
                 Constant::Boolean(value) => Ok(Value::Boolean(*value)),
                 Constant::String(value) => Ok(Value::Textual(value.clone())),
             },
-            Expression::Symbol(value) => Evaluator::get_from_environment(environment, value),
-            Expression::Function(name, arguments) => {
-                Evaluator::evaluate_function(name, arguments, environment)
-            }
-            Expression::Let(name, value, then) => {
-                Evaluator::evaluate_let(name, value, then, environment)
-            }
+            Expression::Identifier(value) => Self::get_from_environment(environment, value),
+            Expression::Call(call) => match call {
+                Call::Empty(identifier) => self.evaluate_empty_call(identifier, environment),
+                Call::Unary(identifier, argument) => {
+                    self.evaluate_unary_call(identifier, argument, environment)
+                }
+                Call::Internal(identifier, arguments) => {
+                    self.evaluate_internal_call(identifier, arguments, environment)
+                }
+            },
+            Expression::Let(name, value, then) => self.evaluate_let(name, value, then, environment),
             Expression::If(condition, if_true_then, if_false_then) => {
-                Evaluator::evaluate_if(condition, if_true_then, if_false_then, environment)
+                self.evaluate_if(condition, if_true_then, if_false_then, environment)
             }
+            Expression::Lambda(lambda) => match lambda {
+                Lambda::Empty(body) => Self::evaluate_empty_lambda(body, environment),
+                Lambda::Parametrized(parameter, body) => {
+                    Self::evaluate_parametrized_lambda(parameter, body, environment)
+                }
+            },
         }
     }
 
     fn evaluate_let(
+        &self,
         name: &str,
         value: &Expression,
         then: &Expression,
         environment: &mut Environment,
     ) -> ValueResult {
-        let value = Evaluator::evaluate_environment(value, environment)?;
+        let value = self.evaluate_environment(value, environment)?;
         environment.insert(name.to_string(), value);
-        let result = Evaluator::evaluate_environment(then, environment)?;
+        let result = self.evaluate_environment(then, environment);
         environment.remove(name);
-        Ok(result)
+        result
     }
 
     fn evaluate_if(
+        &self,
         condition: &Expression,
         if_true_then: &Expression,
         if_false_then: &Expression,
         environment: &mut Environment,
     ) -> ValueResult {
-        let condition = Evaluator::evaluate_environment(condition, environment)?;
+        let condition = self.evaluate_environment(condition, environment)?;
         if let Value::Boolean(value) = condition {
             if value {
-                Ok(Evaluator::evaluate_environment(if_true_then, environment)?)
+                Ok(self.evaluate_environment(if_true_then, environment)?)
             } else {
-                Ok(Evaluator::evaluate_environment(if_false_then, environment)?)
+                Ok(self.evaluate_environment(if_false_then, environment)?)
             }
         } else {
             Err("Invalid condition type".to_string())
         }
     }
 
-    fn get_from_environment(environment: &mut Environment, name: &str) -> ValueResult {
+    fn evaluate_empty_lambda(body: &Expression, environment: &Environment) -> ValueResult {
+        Ok(Value::Closure(Closure::Empty(
+            body.clone(),
+            environment.clone(),
+        )))
+    }
+
+    fn evaluate_parametrized_lambda(
+        parameter: &str,
+        body: &Expression,
+        environment: &Environment,
+    ) -> ValueResult {
+        Ok(Value::Closure(Closure::Parametrized(
+            parameter.to_string(),
+            body.clone(),
+            environment.clone(),
+        )))
+    }
+
+    fn get_from_environment(environment: &Environment, name: &str) -> ValueResult {
         let value = environment.get(name);
         if let Some(value) = value {
-            return Ok(value.clone());
-        }
-        if Evaluator::is_builtin_function(name) {
-            return Ok(Value::Textual(name.to_string()));
-        }
-        Err(format!("Undefined variable: {}", name))
-    }
-
-    fn is_builtin_function(name: &str) -> bool {
-        match name {
-            "+" | "-" | "*" | "/" | "%" | "concatenate" => true,
-            _ => false,
+            Ok(value.clone())
+        } else {
+            Err(format!("Undefined variable: {}", name))
         }
     }
 
-    fn evaluate_function(
-        name: &Expression,
+    fn evaluate_empty_call(
+        &self,
+        identifier: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let identifier = self.evaluate_environment(identifier, environment)?;
+        if let Value::Closure(closure) = identifier {
+            if let Closure::Empty(body, mut environment) = closure {
+                self.evaluate_environment(&body, &mut environment)
+            } else {
+                Err("Invalid closure type".to_string())
+            }
+        } else {
+            Err("Invalid identifier type".to_string())
+        }
+    }
+
+    fn evaluate_unary_call(
+        &self,
+        identifier: &Expression,
+        argument: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let identifier = self.evaluate_environment(identifier, environment)?;
+        if let Value::Closure(closure) = identifier {
+            if let Closure::Parametrized(parameter, body, mut closure_environment) = closure {
+                let argument = self.evaluate_environment(argument, environment)?;
+                closure_environment.insert(parameter.clone(), argument);
+                let result = self.evaluate_environment(&body, &mut closure_environment);
+                closure_environment.remove(&parameter);
+                result
+            } else {
+                Err("Invalid closure type".to_string())
+            }
+        } else {
+            Err("Invalid identifier type".to_string())
+        }
+    }
+
+    fn evaluate_internal_call(
+        &self,
+        identifier: &str,
         arguments: &[Expression],
         environment: &mut Environment,
     ) -> ValueResult {
-        let name = Evaluator::evaluate_environment(name, environment)?;
-        let function = Evaluator::get_function(&name)?;
-        let evaluated_arguments = arguments
-            .iter()
-            .map(|argument| {
-                Evaluator::evaluate_environment(argument, environment)
-                    .expect("Cannot evaluate function argument")
-            })
-            .collect();
-        Ok(function(evaluated_arguments))
-    }
-
-    fn get_function(name_value: &Value) -> Result<fn(Vec<Value>) -> Value, String> {
-        match name_value.to_textual()?.as_str() {
-            "+" => Ok(|arguments| {
-                Evaluator::calculate_numeric_function(arguments, |first, second| first + second)
-            }),
-            "-" => Ok(|arguments| {
-                Evaluator::calculate_numeric_function(arguments, |first, second| first - second)
-            }),
-            "*" => Ok(|arguments| {
-                Evaluator::calculate_numeric_function(arguments, |first, second| first * second)
-            }),
-            "/" => Ok(|arguments| {
-                Evaluator::calculate_numeric_function(arguments, |first, second| first / second)
-            }),
-            "%" => Ok(|arguments| {
-                Evaluator::calculate_numeric_function(arguments, |first, second| first % second)
-            }),
-            "concatenate" => Ok(Evaluator::concatenate_function),
-            _ => Err(format!("Cannot find function named {:?}", name_value)),
+        let function = self.internal_environment.get(identifier);
+        if function.is_none() {
+            return Err(format!("Undefined internal identifier: {}", identifier));
         }
-    }
-
-    fn calculate_numeric_function(arguments: Vec<Value>, function: fn(i32, i32) -> i32) -> Value {
-        let first = arguments[0].to_numeric().expect("Type error");
-        let second = arguments[1].to_numeric().expect("Type error");
-        let result = function(first, second);
-        Value::Numeric(result)
-    }
-
-    fn concatenate_function(arguments: Vec<Value>) -> Value {
-        let mut result = String::new();
+        let function = function.unwrap();
+        let mut values = Vec::new();
         for argument in arguments {
-            match argument {
-                Value::Textual(value) => result.push_str(value.as_str()),
-                Value::Numeric(value) => result.push_str(value.to_string().as_str()),
-                Value::Boolean(value) => result.push_str(value.to_string().as_str()),
-                Value::Unit => (),
-            }
+            let value = self.evaluate_environment(argument, environment)?;
+            values.push(value);
         }
-        Value::Textual(result)
+        function(values)
     }
 }
 

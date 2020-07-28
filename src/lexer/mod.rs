@@ -44,23 +44,29 @@ pub enum Token {
 pub enum Parenthesis {
     Open(char),
     Close(char),
+    Parameters,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
     Let,
     If,
+    Lambda,
+    Internal,
 }
 
 impl Lexer {
-    pub fn default() -> Lexer {
+    pub fn default() -> Self {
         let symbol_map = maplit::hashmap! {
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
             "let" => Token::Keyword(Keyword::Let),
             "if" => Token::Keyword(Keyword::If),
+            "lambda" => Token::Keyword(Keyword::Lambda),
+            "->" => Token::Keyword(Keyword::Lambda),
+            "internal" => Token::Keyword(Keyword::Internal),
         };
-        Lexer { symbol_map }
+        Self { symbol_map }
     }
 
     pub fn tokenize(&self, syntax: &str) -> Vec<Token> {
@@ -81,16 +87,17 @@ impl Lexer {
     fn match_token(&self, chars: &mut Peekable<Chars>, current: char) -> Option<Token> {
         match current {
             '#' => {
-                Lexer::skip_comment(chars);
+                Self::skip_comment(chars);
                 None
             }
             '(' | '[' | '{' => Some(Token::Parenthesis(Parenthesis::Open(current))),
             ')' | ']' | '}' => Some(Token::Parenthesis(Parenthesis::Close(current))),
-            '"' => Some(Token::String(Lexer::tokenize_string(chars))),
-            '0'..='9' => Some(Token::Number(Lexer::tokenize_number(chars, current))),
+            '|' => Some(Token::Parenthesis(Parenthesis::Parameters)),
+            '"' => Some(Token::String(Self::tokenize_string(chars))),
+            '0'..='9' => Some(Token::Number(Self::tokenize_number(chars, current))),
             ' ' | '\n' | '\t' | '\r' => None,
             _ => {
-                let symbol = Lexer::tokenize_symbol(chars, current);
+                let symbol = Self::tokenize_symbol(chars, current);
                 let token = self.symbol_map.get(symbol.as_str());
                 if let Some(token) = token {
                     Some(token.clone())

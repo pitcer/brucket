@@ -33,7 +33,7 @@ fn test_comment_is_skipped() {
 }
 
 #[test]
-fn test_tokenized_open_bracket_is_bracket_token() {
+fn test_tokenized_open_parenthesis_is_parenthesis_token() {
     let lexer = Lexer::default();
     let expected = vec![Token::Parenthesis(Parenthesis::Open('('))];
     let actual = lexer.tokenize("(");
@@ -41,10 +41,18 @@ fn test_tokenized_open_bracket_is_bracket_token() {
 }
 
 #[test]
-fn test_tokenized_closing_bracket_is_bracket_token() {
+fn test_tokenized_close_parenthesis_is_parenthesis_token() {
     let lexer = Lexer::default();
     let expected = vec![Token::Parenthesis(Parenthesis::Close(')'))];
     let actual = lexer.tokenize(")");
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_tokenized_parameters_parenthesis_is_parenthesis_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Parenthesis(Parenthesis::Parameters)];
+    let actual = lexer.tokenize("|");
     assert_eq!(expected, actual);
 }
 
@@ -85,6 +93,30 @@ fn test_tokenized_if_keyword_is_if_token() {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::If)];
     let actual = lexer.tokenize("if");
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_tokenized_lambda_keyword_is_lambda_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Lambda)];
+    let actual = lexer.tokenize("lambda");
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_tokenized_right_arrow_symbol_is_lambda_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Lambda)];
+    let actual = lexer.tokenize("->");
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_tokenized_internal_keyword_is_internal_token() {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Internal)];
+    let actual = lexer.tokenize("internal");
     assert_eq!(expected, actual);
 }
 

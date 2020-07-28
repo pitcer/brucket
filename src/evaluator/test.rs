@@ -45,25 +45,21 @@ fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
 }
 
 #[test]
-fn test_evaluated_unit_function_expression_is_unit_value() -> TestResult {
+fn test_evaluated_string_expression_is_textual_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Unit;
-    let actual = evaluator.evaluate(&Expression::Constant(Constant::Unit))?;
+    let expected = Value::Textual("foobar".to_string());
+    let actual = evaluator.evaluate(&Expression::Constant(Constant::String(
+        "foobar".to_string(),
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
-fn test_evaluated_addition_function_expression_is_numeric_value() -> TestResult {
+fn test_evaluated_unit_function_expression_is_unit_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42 + 24);
-    let actual = evaluator.evaluate(&Expression::Function(
-        Box::new(Expression::Symbol("+".to_string())),
-        vec![
-            Expression::Constant(Constant::Numeric(42)),
-            Expression::Constant(Constant::Numeric(24)),
-        ],
-    ))?;
+    let expected = Value::Unit;
+    let actual = evaluator.evaluate(&Expression::Constant(Constant::Unit))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -75,27 +71,10 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
-        Box::new(Expression::Symbol("x".to_string())),
+        Box::new(Expression::Identifier("x".to_string())),
     ))?;
     assert_eq!(expected, actual);
     Ok(())
-}
-
-#[test]
-#[should_panic(expected = "Cannot evaluate function argument: \"Undefined variable: x\"")]
-fn test_environment_is_cleared() {
-    let evaluator = Evaluator::default();
-    let _result = evaluator.evaluate(&Expression::Function(
-        Box::new(Expression::Symbol("+".to_string())),
-        vec![
-            Expression::Let(
-                "x".to_string(),
-                Box::new(Expression::Constant(Constant::Numeric(42))),
-                Box::new(Expression::Symbol("x".to_string())),
-            ),
-            Expression::Symbol("x".to_string()),
-        ],
-    ));
 }
 
 #[test]
@@ -108,7 +87,7 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
         Box::new(Expression::Let(
             "y".to_string(),
             Box::new(Expression::Constant(Constant::Numeric(2))),
-            Box::new(Expression::Symbol("x".to_string())),
+            Box::new(Expression::Identifier("x".to_string())),
         )),
     ))?;
     assert_eq!(expected, actual);
@@ -125,30 +104,7 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
         Box::new(Expression::Let(
             "x".to_string(),
             Box::new(Expression::Constant(Constant::Numeric(2))),
-            Box::new(Expression::Symbol("x".to_string())),
-        )),
-    ))?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_two_variables_can_be_used_in_function_evaluation() -> TestResult {
-    let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42);
-    let actual = evaluator.evaluate(&Expression::Let(
-        "x".to_string(),
-        Box::new(Expression::Constant(Constant::Numeric(40))),
-        Box::new(Expression::Let(
-            "y".to_string(),
-            Box::new(Expression::Constant(Constant::Numeric(2))),
-            Box::new(Expression::Function(
-                Box::new(Expression::Symbol("+".to_string())),
-                vec![
-                    Expression::Symbol("x".to_string()),
-                    Expression::Symbol("y".to_string()),
-                ],
-            )),
+            Box::new(Expression::Identifier("x".to_string())),
         )),
     ))?;
     assert_eq!(expected, actual);
@@ -169,33 +125,99 @@ fn test_evaluated_if_expression_has_correct_value() -> TestResult {
 }
 
 #[test]
-#[should_panic(expected = "attempt to divide by zero")]
-fn test_division_by_zero_should_panic() {
+fn test_evaluated_empty_lambda_expression_is_empty_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let _result = evaluator.evaluate(&Expression::Function(
-        Box::new(Expression::Symbol("/".to_string())),
-        vec![
-            Expression::Constant(Constant::Numeric(1)),
-            Expression::Constant(Constant::Numeric(0)),
-        ],
+    let expected = Value::Closure(Closure::Empty(
+        Expression::Identifier("x".to_string()),
+        maplit::hashmap! {"x".to_string() => Value::Numeric(42)},
     ));
-}
-
-#[test]
-fn test_if_expression_is_evaluated_lazily() -> TestResult {
-    let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42);
-    let actual = evaluator.evaluate(&Expression::If(
-        Box::new(Expression::Constant(Constant::Boolean(false))),
-        Box::new(Expression::Function(
-            Box::new(Expression::Symbol("/".to_string())),
-            vec![
-                Expression::Constant(Constant::Numeric(1)),
-                Expression::Constant(Constant::Numeric(0)),
-            ],
-        )),
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Lambda(Lambda::Empty(Box::new(
+            Expression::Identifier("x".to_string()),
+        )))),
     ))?;
     assert_eq!(expected, actual);
     Ok(())
+}
+
+#[test]
+fn test_evaluated_parametrized_lambda_expression_is_parametrized_closure_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Closure(Closure::Parametrized(
+        "y".to_string(),
+        Expression::Identifier("y".to_string()),
+        maplit::hashmap! {"x".to_string() => Value::Numeric(42)},
+    ));
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Lambda(Lambda::Parametrized(
+            "y".to_string(),
+            Box::new(Expression::Identifier("y".to_string())),
+        ))),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_empty_call_on_empty_lambda_expression_is_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Numeric(42);
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Call(Call::Empty(Box::new(Expression::Lambda(
+            Lambda::Empty(Box::new(Expression::Identifier("x".to_string()))),
+        ))))),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_unary_call_on_parametrized_lambda_expression_is_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Numeric(24);
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Call(Call::Unary(
+            Box::new(Expression::Lambda(Lambda::Parametrized(
+                "y".to_string(),
+                Box::new(Expression::Identifier("y".to_string())),
+            ))),
+            Box::new(Expression::Constant(Constant::Numeric(24))),
+        ))),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
+    let evaluator = Evaluator::default();
+    let expected = Err("Undefined variable: z".to_string());
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Let(
+            "y".to_string(),
+            Box::new(Expression::Lambda(Lambda::Parametrized(
+                "a".to_string(),
+                Box::new(Expression::Identifier("z".to_string())),
+            ))),
+            Box::new(Expression::Let(
+                "z".to_string(),
+                Box::new(Expression::Constant(Constant::Numeric(24))),
+                Box::new(Expression::Call(Call::Unary(
+                    Box::new(Expression::Identifier("y".to_string())),
+                    Box::new(Expression::Constant(Constant::Numeric(12))),
+                ))),
+            )),
+        )),
+    ));
+    assert_eq!(expected, actual);
 }
