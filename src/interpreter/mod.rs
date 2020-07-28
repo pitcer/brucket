@@ -24,7 +24,7 @@
 
 pub use crate::evaluator::Value;
 
-use crate::evaluator::Evaluator;
+use crate::evaluator::{Environment, Evaluator};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
@@ -37,7 +37,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn default() -> Interpreter {
+    pub fn default() -> Self {
         let lexer = Lexer::default();
         let parser = Parser::default();
         let evaluator = Evaluator::default();
@@ -45,6 +45,28 @@ impl Interpreter {
             lexer,
             parser,
             evaluator,
+        }
+    }
+
+    pub fn with_library(library_syntax: &str) -> Result<Self, String> {
+        let lexer = Lexer::default();
+        let parser = Parser::default();
+        let default_environment = Self::interpret_library(library_syntax)?;
+        let evaluator = Evaluator::new(default_environment);
+        Ok(Interpreter {
+            lexer,
+            parser,
+            evaluator,
+        })
+    }
+
+    fn interpret_library(library_syntax: &str) -> Result<Environment, String> {
+        let interpreter = Self::default();
+        let library = interpreter.interpret(library_syntax)?;
+        if let Value::Module(_identifier, environment) = library {
+            Ok(environment)
+        } else {
+            Err("Given library syntax is not a module".to_string())
         }
     }
 

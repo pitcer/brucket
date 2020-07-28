@@ -23,20 +23,24 @@
  */
 
 use brucket::interpreter::Interpreter;
+use std::fs::File;
 use std::io;
-use std::io::{Read, Stdin};
+use std::io::Read;
 
 fn main() {
-    let mut input = io::stdin();
-    let input_data = read(&mut input).expect("Cannot read syntax from stdin");
-    let interpreter = Interpreter::default();
+    let mut stdin = io::stdin();
+    let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
+    let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
+    let library_syntax = read(&mut library_file).expect("Cannot read library file");
+    let interpreter =
+        Interpreter::with_library(&library_syntax).expect("Cannot create interpreter");
     let result = interpreter
-        .interpret(&input_data)
+        .interpret(&input_syntax)
         .expect("Cannot interpret input program");
     println!("Result: {:?}", result);
 }
 
-fn read(input: &mut Stdin) -> io::Result<String> {
+fn read(input: &mut impl Read) -> io::Result<String> {
     let mut result = String::new();
     input.read_to_string(&mut result)?;
     Ok(result)

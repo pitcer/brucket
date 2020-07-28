@@ -34,6 +34,7 @@ type ValueResult = Result<Value, String>;
 type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
 
 pub struct Evaluator {
+    default_environment: Environment,
     internal_environment: InternalEnvironment,
 }
 
@@ -56,24 +57,30 @@ pub enum Closure {
 
 impl Evaluator {
     pub fn default() -> Self {
-        let mut internal_environment = InternalEnvironment::new();
-        internal_environment.insert("add", internal::add);
-        internal_environment.insert("+", internal::add);
-        internal_environment.insert("subtract", internal::subtract);
-        internal_environment.insert("-", internal::subtract);
-        internal_environment.insert("multiply", internal::multiply);
-        internal_environment.insert("*", internal::multiply);
-        internal_environment.insert("divide", internal::divide);
-        internal_environment.insert("/", internal::divide);
-        internal_environment.insert("remainder", internal::remainder);
-        internal_environment.insert("%", internal::remainder);
+        let default_environment = Environment::new();
+        Self::new(default_environment)
+    }
+
+    pub fn new(default_environment: Environment) -> Self {
+        let internal_environment = Self::create_internal_environment();
         Self {
+            default_environment,
             internal_environment,
         }
     }
 
+    fn create_internal_environment() -> InternalEnvironment {
+        let mut environment = InternalEnvironment::new();
+        environment.insert("add", internal::add);
+        environment.insert("subtract", internal::subtract);
+        environment.insert("multiply", internal::multiply);
+        environment.insert("divide", internal::divide);
+        environment.insert("remainder", internal::remainder);
+        environment
+    }
+
     pub fn evaluate(&self, expression: &Expression) -> ValueResult {
-        let mut environment = Environment::new();
+        let mut environment = self.default_environment.clone();
         self.evaluate_environment(expression, &mut environment)
     }
 

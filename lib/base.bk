@@ -1,0 +1,26 @@
+(module base
+  (function add |first second|
+    (internal add first second))
+
+  (constant + add)
+
+  (function subtract |first second|
+    (internal subtract first second))
+
+  (constant - subtract)
+
+  (function multiply |first second|
+    (internal multiply first second))
+
+  (constant * multiply)
+
+  (function divide |first second|
+    (internal divide first second))
+
+  (constant / divide)
+
+  (function remainder |first second|
+    (internal remainder first second))
+
+  (constant % remainder)
+)

@@ -30,7 +30,7 @@ type TestResult = Result<(), String>;
 
 #[test]
 fn test_interpret_number() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(42);
     let actual = interpreter.interpret("42")?;
     assert_eq!(expected, actual);
@@ -39,7 +39,7 @@ fn test_interpret_number() -> TestResult {
 
 #[test]
 fn test_interpret_unit_function() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Unit;
     let actual = interpreter.interpret("()")?;
     assert_eq!(expected, actual);
@@ -48,40 +48,40 @@ fn test_interpret_unit_function() -> TestResult {
 
 #[test]
 fn test_interpret_simple_arithmetic_expression() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(3);
-    let actual = interpreter.interpret("(internal + 1 2)")?;
+    let actual = interpreter.interpret("(+ 1 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_arithmetic_expression() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(9);
-    let actual = interpreter.interpret("(internal + (internal * 2 3) (internal - 7 4))")?;
+    let actual = interpreter.interpret("(+ (* 2 3) (- 7 4))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_expression_with_comment() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("# foobar\n(internal + 40 2)\n#another comment")?;
+    let actual = interpreter.interpret("# foobar\n(+ 40 2)\n#another comment")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(42);
     let actual = interpreter.interpret(
         r#"
-        (let x (internal + 40 2)
-          (internal - (let y 2 (internal * x y))
-             (let z 10 (internal - (internal + x z) 10))))
+        (let x (+ 40 2)
+          (- (let y 2 (* x y))
+             (let z 10 (- (+ x z) 10))))
         "#,
     )?;
     assert_eq!(expected, actual);
@@ -90,14 +90,14 @@ fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
 
 #[test]
 fn test_interpret_expression_with_constant_condition() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(42);
     let actual = interpreter.interpret(
         r#"
-        (let x (internal + 20 2)
+        (let x (+ 20 2)
           (if false
-              (internal - x 2)
-              (internal + 20 x)))
+              (- x 2)
+              (+ 20 x)))
         "#,
     )?;
     assert_eq!(expected, actual);
@@ -107,30 +107,30 @@ fn test_interpret_expression_with_constant_condition() -> TestResult {
 #[test]
 #[should_panic(expected = "attempt to divide by zero")]
 fn test_division_by_zero_should_panic() {
-    let interpreter = Interpreter::default();
-    let _result = interpreter.interpret("(internal / 1 0)");
+    let interpreter = create_interpreter();
+    let _result = interpreter.interpret("(/ 1 0)");
 }
 
 #[test]
 fn test_if_expression_is_evaluated_lazily() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(if false (internal / 1 0) 42)")?;
+    let actual = interpreter.interpret("(if false (/ 1 0) 42)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_environment_is_cleared() {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Err("Undefined variable: x".to_string());
-    let actual = interpreter.interpret("(internal + (let x 42 x) x)");
+    let actual = interpreter.interpret("(+ (let x 42 x) x)");
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_interpret_module() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Module(
         "foo".to_string(),
         maplit::hashmap! {
@@ -164,7 +164,7 @@ fn test_interpret_module() -> TestResult {
 
 #[test]
 fn test_interpret_function() -> TestResult {
-    let interpreter = Interpreter::default();
+    let interpreter = create_interpreter();
     let expected = Value::Identified(
         "foo".to_string(),
         Box::new(Value::Closure(Closure::Parametrized(
@@ -176,4 +176,35 @@ fn test_interpret_function() -> TestResult {
     let actual = interpreter.interpret("(function foo |x| x))")?;
     assert_eq!(expected, actual);
     Ok(())
+}
+
+fn create_interpreter() -> Interpreter {
+    let library_syntax = r#"
+    (module base
+      (function add |first second|
+        (internal add first second))
+
+      (constant + add)
+
+      (function subtract |first second|
+        (internal subtract first second))
+
+      (constant - subtract)
+
+      (function multiply |first second|
+        (internal multiply first second))
+
+      (constant * multiply)
+
+      (function divide |first second|
+        (internal divide first second))
+
+      (constant / divide)
+
+      (function remainder |first second|
+        (internal remainder first second))
+
+      (constant % remainder)
+    )"#;
+    Interpreter::with_library(library_syntax).expect("Cannot create interpreter with library")
 }
