@@ -34,10 +34,11 @@ pub struct Parser;
 pub enum Expression {
     Constant(Constant),
     Identifier(String),
-    Call(Call),
+    Application(Box<Expression>, Vec<Expression>),
+    InternalCall(String, Vec<Expression>),
     Let(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
-    Lambda(Lambda),
+    Lambda(Vec<String>, Box<Expression>),
     Module(String, Vec<Expression>),
     Identified(String, Box<Expression>),
     And(Vec<Expression>),
@@ -50,19 +51,6 @@ pub enum Constant {
     Numeric(u32),
     Boolean(bool),
     String(String),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Call {
-    Empty(Box<Expression>),
-    Unary(Box<Expression>, Box<Expression>),
-    Internal(String, Vec<Expression>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Lambda {
-    Empty(Box<Expression>),
-    Parametrized(String, Box<Expression>),
 }
 
 impl Token {
@@ -128,7 +116,7 @@ impl Parser {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => {
                     let identifier = Self::parse_section(tokens)?;
-                    Self::parse_call(identifier, tokens)
+                    Self::parse_application(identifier, tokens)
                 }
                 Parenthesis::Close(_) => Ok(Expression::Constant(Constant::Unit)),
                 Parenthesis::Parameters => Err("Unexpected parameters parenthesis".to_string()),
@@ -146,30 +134,16 @@ impl Parser {
             },
             Token::Symbol(symbol) => {
                 let identifier = Expression::Identifier(symbol.clone());
-                Self::parse_call(identifier, tokens)
+                Self::parse_application(identifier, tokens)
             }
             _ => Err("Invalid token".to_string()),
         }
     }
 
-    fn parse_call(identifier: Expression, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_application(identifier: Expression, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Box::from(identifier);
         let arguments = Self::parse_arguments(tokens)?;
-        Self::expand_call(identifier, arguments)
-    }
-
-    fn expand_call(identifier: Box<Expression>, arguments: Vec<Expression>) -> ExpressionResult {
-        let mut arguments = arguments.into_iter();
-        match arguments.next() {
-            Some(argument) => {
-                let mut call = Expression::Call(Call::Unary(identifier, Box::from(argument)));
-                for argument in arguments {
-                    call = Expression::Call(Call::Unary(Box::from(call), Box::from(argument)))
-                }
-                Ok(call)
-            }
-            None => Ok(Expression::Call(Call::Empty(identifier))),
-        }
+        Ok(Expression::Application(identifier, arguments))
     }
 
     fn parse_let(tokens: &mut Tokens) -> ExpressionResult {
@@ -209,30 +183,13 @@ impl Parser {
             return Err("Invalid lambda expression".to_string());
         }
         let body = Box::new(body);
-        Self::expand_lambda(parameters, body)
-    }
-
-    fn expand_lambda(parameters: Vec<String>, body: Box<Expression>) -> ExpressionResult {
-        let mut parameters = parameters.iter().rev();
-        match parameters.next() {
-            Some(parameter) => {
-                let mut lambda = Expression::Lambda(Lambda::Parametrized(parameter.clone(), body));
-                for parameter in parameters {
-                    lambda = Expression::Lambda(Lambda::Parametrized(
-                        parameter.clone(),
-                        Box::new(lambda),
-                    ));
-                }
-                Ok(lambda)
-            }
-            None => Ok(Expression::Lambda(Lambda::Empty(body))),
-        }
+        Ok(Expression::Lambda(parameters, body))
     }
 
     fn parse_internal(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let arguments = Self::parse_arguments(tokens)?;
-        Ok(Expression::Call(Call::Internal(identifier, arguments)))
+        Ok(Expression::InternalCall(identifier, arguments))
     }
 
     fn parse_module(tokens: &mut Tokens) -> ExpressionResult {

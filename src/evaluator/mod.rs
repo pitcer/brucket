@@ -22,9 +22,8 @@
  * SOFTWARE.
  */
 
-use crate::parser::{Call, Constant, Expression, Lambda};
+use crate::parser::{Constant, Expression};
 use std::collections::HashMap;
-use std::option::Option::Some;
 
 mod internal;
 
@@ -44,15 +43,9 @@ pub enum Value {
     Numeric(i32),
     Textual(String),
     Boolean(bool),
-    Closure(Closure),
+    Closure(Vec<String>, Expression, Environment),
     Module(String, Environment),
     Identified(String, Box<Value>),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Closure {
-    Empty(Expression, Environment),
-    Parametrized(String, Expression, Environment),
 }
 
 impl Evaluator {
@@ -102,20 +95,19 @@ impl Evaluator {
                 Constant::String(value) => Ok(Value::Textual(value.clone())),
             },
             Expression::Identifier(value) => Self::get_from_environment(environment, value),
-            Expression::Call(call) => match call {
-                Call::Empty(identifier) => self.evaluate_empty_call(identifier, environment),
-                Call::Unary(identifier, argument) => {
-                    self.evaluate_unary_call(identifier, argument, environment)
-                }
-                Call::Internal(identifier, arguments) => {
-                    self.evaluate_internal_call(identifier, arguments, environment)
-                }
-            },
+            Expression::Application(identifier, arguments) => {
+                self.evaluate_application(identifier, arguments, environment)
+            }
+            Expression::InternalCall(identifier, arguments) => {
+                self.evaluate_internal_call(identifier, arguments, environment)
+            }
             Expression::Let(name, value, then) => self.evaluate_let(name, value, then, environment),
             Expression::If(condition, if_true_then, if_false_then) => {
                 self.evaluate_if(condition, if_true_then, if_false_then, environment)
             }
-            Expression::Lambda(lambda) => Self::evaluate_lambda(lambda, environment),
+            Expression::Lambda(parameters, body) => {
+                Self::evaluate_lambda(parameters, body, environment)
+            }
             Expression::Module(identifier, members) => {
                 self.evaluate_module(identifier, members, environment)
             }
@@ -129,15 +121,15 @@ impl Evaluator {
 
     fn evaluate_let(
         &self,
-        name: &str,
+        identifier: &str,
         value: &Expression,
         then: &Expression,
         environment: &mut Environment,
     ) -> ValueResult {
         let value = self.evaluate_environment(value, environment)?;
-        environment.insert(name.to_string(), value);
+        environment.insert(identifier.to_string(), value);
         let result = self.evaluate_environment(then, environment);
-        environment.remove(name);
+        environment.remove(identifier);
         result
     }
 
@@ -160,31 +152,17 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_lambda(lambda: &Lambda, environment: &Environment) -> ValueResult {
-        match lambda {
-            Lambda::Empty(body) => Self::evaluate_empty_lambda(body, environment),
-            Lambda::Parametrized(parameter, body) => {
-                Self::evaluate_parametrized_lambda(parameter, body, environment)
-            }
-        }
-    }
-
-    fn evaluate_empty_lambda(body: &Expression, environment: &Environment) -> ValueResult {
-        let environment = Self::get_optimized_lambda_environment(body, environment);
-        Ok(Value::Closure(Closure::Empty(body.clone(), environment)))
-    }
-
-    fn evaluate_parametrized_lambda(
-        parameter: &str,
+    fn evaluate_lambda(
+        parameters: &[String],
         body: &Expression,
         environment: &Environment,
     ) -> ValueResult {
         let environment = Self::get_optimized_lambda_environment(body, environment);
-        Ok(Value::Closure(Closure::Parametrized(
-            parameter.to_string(),
+        Ok(Value::Closure(
+            parameters.to_vec(),
             body.clone(),
             environment,
-        )))
+        ))
     }
 
     fn get_optimized_lambda_environment(
@@ -205,20 +183,17 @@ impl Evaluator {
         let mut identifiers = Vec::new();
         match expression {
             Expression::Identifier(identifier) => identifiers.push(identifier),
-            Expression::Call(call) => match call {
-                Call::Empty(identifier) => {
-                    identifiers.append(&mut Self::get_used_identifiers(identifier))
-                }
-                Call::Unary(identifier, argument) => {
-                    identifiers.append(&mut Self::get_used_identifiers(identifier));
+            Expression::Application(identifier, arguments) => {
+                identifiers.append(&mut Self::get_used_identifiers(identifier));
+                for argument in arguments {
                     identifiers.append(&mut Self::get_used_identifiers(argument));
                 }
-                Call::Internal(_, arguments) => {
-                    for argument in arguments {
-                        identifiers.append(&mut Self::get_used_identifiers(argument));
-                    }
+            }
+            Expression::InternalCall(_, arguments) => {
+                for argument in arguments {
+                    identifiers.append(&mut Self::get_used_identifiers(argument));
                 }
-            },
+            }
             Expression::Let(_, value, body) => {
                 identifiers.append(&mut Self::get_used_identifiers(value));
                 identifiers.append(&mut Self::get_used_identifiers(body));
@@ -228,14 +203,9 @@ impl Evaluator {
                 identifiers.append(&mut Self::get_used_identifiers(if_true));
                 identifiers.append(&mut Self::get_used_identifiers(if_false));
             }
-            Expression::Lambda(lambda) => match lambda {
-                Lambda::Empty(body) => {
-                    identifiers.append(&mut Self::get_used_identifiers(body));
-                }
-                Lambda::Parametrized(_, body) => {
-                    identifiers.append(&mut Self::get_used_identifiers(body));
-                }
-            },
+            Expression::Lambda(_, body) => {
+                identifiers.append(&mut Self::get_used_identifiers(body));
+            }
             Expression::Module(_, members) => {
                 for member in members {
                     identifiers.append(&mut Self::get_used_identifiers(member));
@@ -268,42 +238,37 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_empty_call(
+    fn evaluate_application(
         &self,
         identifier: &Expression,
+        arguments: &[Expression],
         environment: &mut Environment,
     ) -> ValueResult {
         let identifier = self.evaluate_environment(identifier, environment)?;
-        if let Value::Closure(closure) = identifier {
-            if let Closure::Empty(body, mut environment) = closure {
-                self.evaluate_environment(&body, &mut environment)
-            } else {
-                Err("Invalid closure type".to_string())
+        if let Value::Closure(parameters, body, mut closure_environment) = identifier {
+            let parameters_length = parameters.len();
+            let arguments_length = arguments.len();
+            if parameters_length != arguments_length {
+                return Err(format!(
+                    "Invalid number of arguments. Expected: {}, Actual: {}",
+                    parameters_length, arguments_length
+                ));
             }
-        } else {
-            Err("Invalid identifier type".to_string())
-        }
-    }
-
-    fn evaluate_unary_call(
-        &self,
-        identifier: &Expression,
-        argument: &Expression,
-        environment: &mut Environment,
-    ) -> ValueResult {
-        let identifier = self.evaluate_environment(identifier, environment)?;
-        if let Value::Closure(closure) = identifier {
-            if let Closure::Parametrized(parameter, body, mut closure_environment) = closure {
-                let argument = self.evaluate_environment(argument, environment)?;
+            let arguments = self.evaluate_arguments(arguments, environment)?;
+            for (index, argument) in arguments.into_iter().enumerate() {
+                let parameter = &parameters[index];
                 closure_environment.insert(parameter.clone(), argument);
-                let result = self.evaluate_environment(&body, &mut closure_environment);
-                closure_environment.remove(&parameter);
-                result
-            } else {
-                Err("Invalid closure type".to_string())
             }
+            let result = self.evaluate_environment(&body, &mut closure_environment);
+            for parameter in &parameters {
+                closure_environment.remove(parameter);
+            }
+            result
         } else {
-            Err("Invalid identifier type".to_string())
+            Err(format!(
+                "Invalid identifier type. Expected: Value::Closure, Actual: {:?}",
+                identifier
+            ))
         }
     }
 
@@ -318,12 +283,21 @@ impl Evaluator {
             return Err(format!("Undefined internal identifier: {}", identifier));
         }
         let function = function.unwrap();
-        let mut values = Vec::new();
+        let arguments = self.evaluate_arguments(arguments, environment)?;
+        function(arguments)
+    }
+
+    fn evaluate_arguments(
+        &self,
+        arguments: &[Expression],
+        environment: &mut Environment,
+    ) -> Result<Vec<Value>, String> {
+        let mut result = Vec::new();
         for argument in arguments {
-            let value = self.evaluate_environment(argument, environment)?;
-            values.push(value);
+            let argument = self.evaluate_environment(argument, environment)?;
+            result.push(argument);
         }
-        function(values)
+        Ok(result)
     }
 
     fn evaluate_identified(

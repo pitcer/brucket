@@ -23,7 +23,7 @@
  */
 
 use super::*;
-use crate::evaluator::{Closure, Environment};
+use crate::evaluator::Environment;
 use crate::parser::{Constant, Expression};
 
 type TestResult = Result<(), String>;
@@ -135,17 +135,17 @@ fn test_interpret_module() -> TestResult {
         "foo".to_string(),
         maplit::hashmap! {
         "bar".to_string() => Value::Numeric(1),
-        "barfoo".to_string() => Value::Closure(Closure::Parametrized(
-            "x".to_string(),
+        "barfoo".to_string() => Value::Closure(
+            vec!["x".to_string()],
             Expression::Constant(Constant::Numeric(2)),
             Environment::new(),
-        )),
+        ),
         "foobar".to_string() => Value::Numeric(3),
-        "fooo".to_string() => Value::Closure(Closure::Parametrized(
-            "x".to_string(),
+        "fooo".to_string() => Value::Closure(
+            vec!["x".to_string()],
             Expression::Constant(Constant::Numeric(4)),
             Environment::new(),
-        ))
+        )
         },
     );
     let actual = interpreter.interpret(
@@ -167,11 +167,11 @@ fn test_interpret_function() -> TestResult {
     let interpreter = create_interpreter();
     let expected = Value::Identified(
         "foo".to_string(),
-        Box::new(Value::Closure(Closure::Parametrized(
-            "x".to_string(),
+        Box::new(Value::Closure(
+            vec!["x".to_string()],
             Expression::Identifier("x".to_string()),
             Environment::new(),
-        ))),
+        )),
     );
     let actual = interpreter.interpret("(function foo |x| x))")?;
     assert_eq!(expected, actual);

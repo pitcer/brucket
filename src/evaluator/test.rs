@@ -125,72 +125,121 @@ fn test_evaluated_if_expression_has_correct_value() -> TestResult {
 }
 
 #[test]
-fn test_evaluated_empty_lambda_expression_is_empty_closure_value() -> TestResult {
+fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Closure(Closure::Empty(
+    let expected = Value::Closure(
+        Vec::new(),
         Expression::Identifier("x".to_string()),
         maplit::hashmap! {"x".to_string() => Value::Numeric(42)},
-    ));
+    );
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
-        Box::new(Expression::Lambda(Lambda::Empty(Box::new(
-            Expression::Identifier("x".to_string()),
-        )))),
+        Box::new(Expression::Lambda(
+            Vec::new(),
+            Box::new(Expression::Identifier("x".to_string())),
+        )),
     ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
-fn test_evaluated_parametrized_lambda_expression_is_parametrized_closure_value() -> TestResult {
+fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Closure(Closure::Parametrized(
-        "y".to_string(),
+    let expected = Value::Closure(
+        vec!["y".to_string()],
         Expression::Identifier("y".to_string()),
         Environment::new(),
-    ));
+    );
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
-        Box::new(Expression::Lambda(Lambda::Parametrized(
-            "y".to_string(),
+        Box::new(Expression::Lambda(
+            vec!["y".to_string()],
             Box::new(Expression::Identifier("y".to_string())),
-        ))),
+        )),
     ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
-fn test_evaluated_empty_call_on_empty_lambda_expression_is_value() -> TestResult {
+fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Closure(
+        vec!["y".to_string(), "z".to_string(), "a".to_string()],
+        Expression::Identifier("y".to_string()),
+        Environment::new(),
+    );
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Lambda(
+            vec!["y".to_string(), "z".to_string(), "a".to_string()],
+            Box::new(Expression::Identifier("y".to_string())),
+        )),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_application_on_lambda_expression_without_parameters_is_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Numeric(42);
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
-        Box::new(Expression::Call(Call::Empty(Box::new(Expression::Lambda(
-            Lambda::Empty(Box::new(Expression::Identifier("x".to_string()))),
-        ))))),
+        Box::new(Expression::Application(
+            Box::new(Expression::Lambda(
+                Vec::new(),
+                Box::new(Expression::Identifier("x".to_string())),
+            )),
+            Vec::new(),
+        )),
     ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
-fn test_evaluated_unary_call_on_parametrized_lambda_expression_is_value() -> TestResult {
+fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Numeric(24);
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
-        Box::new(Expression::Call(Call::Unary(
-            Box::new(Expression::Lambda(Lambda::Parametrized(
-                "y".to_string(),
+        Box::new(Expression::Application(
+            Box::new(Expression::Lambda(
+                vec!["y".to_string()],
                 Box::new(Expression::Identifier("y".to_string())),
-            ))),
-            Box::new(Expression::Constant(Constant::Numeric(24))),
-        ))),
+            )),
+            vec![Expression::Constant(Constant::Numeric(24))],
+        )),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Numeric(24);
+    let actual = evaluator.evaluate(&Expression::Let(
+        "x".to_string(),
+        Box::new(Expression::Constant(Constant::Numeric(42))),
+        Box::new(Expression::Application(
+            Box::new(Expression::Lambda(
+                vec!["y".to_string(), "z".to_string(), "a".to_string()],
+                Box::new(Expression::Identifier("y".to_string())),
+            )),
+            vec![
+                Expression::Constant(Constant::Numeric(24)),
+                Expression::Constant(Constant::Numeric(4)),
+                Expression::Constant(Constant::Numeric(2)),
+            ],
+        )),
     ))?;
     assert_eq!(expected, actual);
     Ok(())
@@ -205,17 +254,17 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
         Box::new(Expression::Constant(Constant::Numeric(42))),
         Box::new(Expression::Let(
             "y".to_string(),
-            Box::new(Expression::Lambda(Lambda::Parametrized(
-                "a".to_string(),
+            Box::new(Expression::Lambda(
+                vec!["a".to_string()],
                 Box::new(Expression::Identifier("z".to_string())),
-            ))),
+            )),
             Box::new(Expression::Let(
                 "z".to_string(),
                 Box::new(Expression::Constant(Constant::Numeric(24))),
-                Box::new(Expression::Call(Call::Unary(
+                Box::new(Expression::Application(
                     Box::new(Expression::Identifier("y".to_string())),
-                    Box::new(Expression::Constant(Constant::Numeric(12))),
-                ))),
+                    vec![Expression::Constant(Constant::Numeric(12))],
+                )),
             )),
         )),
     ));
@@ -228,16 +277,17 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
     let expected = Value::Module(
         "foo".to_string(),
         maplit::hashmap! {
-           "bar".to_string() => Value::Closure(Closure::Empty(Expression::Constant(Constant::Numeric(42)), Environment::new()))
+           "bar".to_string() => Value::Closure(Vec::new(), Expression::Constant(Constant::Numeric(42)), Environment::new())
         },
     );
     let actual = evaluator.evaluate(&Expression::Module(
         "foo".to_string(),
         vec![Expression::Identified(
             "bar".to_string(),
-            Box::new(Expression::Lambda(Lambda::Empty(Box::new(
-                Expression::Constant(Constant::Numeric(42)),
-            )))),
+            Box::new(Expression::Lambda(
+                Vec::new(),
+                Box::new(Expression::Constant(Constant::Numeric(42))),
+            )),
         )],
     ))?;
     assert_eq!(expected, actual);
@@ -249,18 +299,18 @@ fn test_evaluated_identified_expression_is_identified_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Identified(
         "foo".to_string(),
-        Box::new(Value::Closure(Closure::Parametrized(
-            "x".to_string(),
+        Box::new(Value::Closure(
+            vec!["x".to_string()],
             Expression::Constant(Constant::Numeric(42)),
             Environment::new(),
-        ))),
+        )),
     );
     let actual = evaluator.evaluate(&Expression::Identified(
         "foo".to_string(),
-        Box::new(Expression::Lambda(Lambda::Parametrized(
-            "x".to_string(),
+        Box::new(Expression::Lambda(
+            vec!["x".to_string()],
             Box::new(Expression::Constant(Constant::Numeric(42))),
-        ))),
+        )),
     ))?;
     assert_eq!(expected, actual);
     Ok(())

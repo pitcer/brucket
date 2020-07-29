@@ -75,11 +75,12 @@ fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_constant_function_tokens_are_empty_call_expression() -> TestResult {
+fn test_parsed_constant_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Call(Call::Empty(Box::new(Expression::Identifier(
-        "foobar".to_string(),
-    ))));
+    let expected = Expression::Application(
+        Box::new(Expression::Identifier("foobar".to_string())),
+        Vec::new(),
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
@@ -90,12 +91,12 @@ fn test_parsed_constant_function_tokens_are_empty_call_expression() -> TestResul
 }
 
 #[test]
-fn test_parsed_unary_function_tokens_are_unary_call_expression() -> TestResult {
+fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Call(Call::Unary(
+    let expected = Expression::Application(
         Box::new(Expression::Identifier("foobar".to_string())),
-        Box::new(Expression::Constant(Constant::Numeric(42))),
-    ));
+        vec![Expression::Constant(Constant::Numeric(42))],
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
@@ -107,18 +108,16 @@ fn test_parsed_unary_function_tokens_are_unary_call_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_multi_parameter_function_tokens_are_multi_call_expression() -> TestResult {
+fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Call(Call::Unary(
-        Box::new(Expression::Call(Call::Unary(
-            Box::new(Expression::Call(Call::Unary(
-                Box::new(Expression::Identifier("foobar".to_string())),
-                Box::new(Expression::Constant(Constant::Numeric(42))),
-            ))),
-            Box::new(Expression::Constant(Constant::Numeric(24))),
-        ))),
-        Box::new(Expression::Constant(Constant::Numeric(0))),
-    ));
+    let expected = Expression::Application(
+        Box::new(Expression::Identifier("foobar".to_string())),
+        vec![
+            Expression::Constant(Constant::Numeric(42)),
+            Expression::Constant(Constant::Numeric(24)),
+            Expression::Constant(Constant::Numeric(0)),
+        ],
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
@@ -174,9 +173,10 @@ fn test_parsed_if_tokens_are_if_expression() -> TestResult {
 #[test]
 fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(Lambda::Empty(Box::new(Expression::Identifier(
-        "x".to_string(),
-    ))));
+    let expected = Expression::Lambda(
+        Vec::new(),
+        Box::new(Expression::Identifier("x".to_string())),
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -192,10 +192,10 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(Lambda::Parametrized(
-        "x".to_string(),
+    let expected = Expression::Lambda(
+        vec!["x".to_string()],
         Box::new(Expression::Identifier("x".to_string())),
-    ));
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -210,18 +210,12 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
 }
 
 #[test]
-fn test_parsed_multi_parameters_lambda_tokens_are_multi_lambda_expression() -> TestResult {
+fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(Lambda::Parametrized(
-        "x".to_string(),
-        Box::new(Expression::Lambda(Lambda::Parametrized(
-            "y".to_string(),
-            Box::from(Expression::Lambda(Lambda::Parametrized(
-                "z".to_string(),
-                Box::new(Expression::Identifier("x".to_string())),
-            ))),
-        ))),
-    ));
+    let expected = Expression::Lambda(
+        vec!["x".to_string(), "y".to_string(), "z".to_string()],
+        Box::new(Expression::Identifier("x".to_string())),
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -240,14 +234,14 @@ fn test_parsed_multi_parameters_lambda_tokens_are_multi_lambda_expression() -> T
 #[test]
 fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Call(Call::Internal(
+    let expected = Expression::InternalCall(
         "foo".to_string(),
         vec![
             Expression::Identifier("x".to_string()),
             Expression::Constant(Constant::Numeric(42)),
             Expression::Identifier("y".to_string()),
         ],
-    ));
+    );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Internal),
@@ -290,19 +284,13 @@ fn test_parsed_function_tokens_are_identified_lambda_expressions() -> TestResult
     let parser = Parser::default();
     let expected = Expression::Identified(
         "foo".to_string(),
-        Box::new(Expression::Lambda(Lambda::Parametrized(
-            "x".to_string(),
-            Box::new(Expression::Lambda(Lambda::Parametrized(
-                "y".to_string(),
-                Box::from(Expression::Lambda(Lambda::Parametrized(
-                    "z".to_string(),
-                    Box::new(Expression::Call(Call::Unary(
-                        Box::new(Expression::Identifier("bar".to_string())),
-                        Box::new(Expression::Constant(Constant::Numeric(42))),
-                    ))),
-                ))),
-            ))),
-        ))),
+        Box::new(Expression::Lambda(
+            vec!["x".to_string(), "y".to_string(), "z".to_string()],
+            Box::new(Expression::Application(
+                Box::new(Expression::Identifier("bar".to_string())),
+                vec![Expression::Constant(Constant::Numeric(42))],
+            )),
+        )),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
