@@ -65,6 +65,25 @@ pub enum Lambda {
     Parametrized(String, Box<Expression>),
 }
 
+impl Token {
+    fn as_symbol(&self) -> Result<String, String> {
+        match self {
+            Token::Symbol(symbol) => Ok(symbol.clone()),
+            _ => Err("Token is not a symbol".to_string()),
+        }
+    }
+
+    fn is_close_parenthesis(&self) -> bool {
+        matches!(self, Token::Parenthesis(Parenthesis::Close(_)))
+    }
+
+    fn is_parameters_parenthesis(&self) -> bool {
+        matches!(self, Token::Parenthesis(Parenthesis::Parameters))
+    }
+}
+
+type Tokens<'a> = Iter<'a, Token>;
+
 impl Parser {
     pub fn default() -> Self {
         Self {}
@@ -75,16 +94,14 @@ impl Parser {
         Self::parse_first(&mut iterator)
     }
 
-    fn parse_first(tokens: &mut Iter<Token>) -> ExpressionResult {
-        let next = tokens.next();
-        if next.is_none() {
-            return Err("Empty tokens".to_string());
+    fn parse_first(tokens: &mut Tokens) -> ExpressionResult {
+        match tokens.next() {
+            Some(token) => Self::parse_first_token(token, tokens),
+            None => Err("Empty tokens".to_string()),
         }
-        let token = next.unwrap();
-        Self::parse_first_token(token, tokens)
     }
 
-    fn parse_first_token(token: &Token, tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_first_token(token: &Token, tokens: &mut Tokens) -> ExpressionResult {
         match token {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => Self::parse_section(tokens),
@@ -100,11 +117,13 @@ impl Parser {
     }
 
     fn parse_section(tokens: &mut Iter<Token>) -> ExpressionResult {
-        let next = tokens.next();
-        if next.is_none() {
-            return Err("Empty tokens".to_string());
+        match tokens.next() {
+            Some(token) => Self::parse_section_token(token, tokens),
+            None => Err("Empty tokens".to_string()),
         }
-        let token = next.unwrap();
+    }
+
+    fn parse_section_token(token: &Token, tokens: &mut Tokens) -> ExpressionResult {
         match token {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => {
@@ -133,27 +152,27 @@ impl Parser {
         }
     }
 
-    fn parse_call(identifier: Expression, tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_call(identifier: Expression, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Box::from(identifier);
         let arguments = Self::parse_arguments(tokens)?;
         Self::expand_call(identifier, arguments)
     }
 
     fn expand_call(identifier: Box<Expression>, arguments: Vec<Expression>) -> ExpressionResult {
-        let mut iterator = arguments.into_iter();
-        let argument = iterator.next();
-        if argument.is_none() {
-            return Ok(Expression::Call(Call::Empty(identifier)));
+        let mut arguments = arguments.into_iter();
+        match arguments.next() {
+            Some(argument) => {
+                let mut call = Expression::Call(Call::Unary(identifier, Box::from(argument)));
+                for argument in arguments {
+                    call = Expression::Call(Call::Unary(Box::from(call), Box::from(argument)))
+                }
+                Ok(call)
+            }
+            None => Ok(Expression::Call(Call::Empty(identifier))),
         }
-        let argument = argument.unwrap();
-        let mut call = Expression::Call(Call::Unary(identifier, Box::from(argument)));
-        for argument in iterator {
-            call = Expression::Call(Call::Unary(Box::from(call), Box::from(argument)))
-        }
-        Ok(call)
     }
 
-    fn parse_let(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_let(tokens: &mut Tokens) -> ExpressionResult {
         let name = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         let then = Self::parse_first(tokens)?;
@@ -163,7 +182,7 @@ impl Parser {
         Ok(Expression::Let(name, Box::new(value), Box::new(then)))
     }
 
-    fn parse_if(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_if(tokens: &mut Tokens) -> ExpressionResult {
         let condition = Self::parse_first(tokens)?;
         let if_true_then = Self::parse_first(tokens)?;
         let if_false_then = Self::parse_first(tokens)?;
@@ -177,13 +196,13 @@ impl Parser {
         ))
     }
 
-    fn parse_function(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_function(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let lambda = Self::parse_lambda(tokens)?;
         Ok(Expression::Identified(identifier, Box::from(lambda)))
     }
 
-    fn parse_lambda(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_lambda(tokens: &mut Tokens) -> ExpressionResult {
         let parameters = Self::parse_parameters(tokens)?;
         let body = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
@@ -194,32 +213,35 @@ impl Parser {
     }
 
     fn expand_lambda(parameters: Vec<String>, body: Box<Expression>) -> ExpressionResult {
-        let mut iterator = parameters.iter().rev();
-        let parameter = iterator.next();
-        if parameter.is_none() {
-            return Ok(Expression::Lambda(Lambda::Empty(body)));
+        let mut parameters = parameters.iter().rev();
+        match parameters.next() {
+            Some(parameter) => {
+                let mut lambda = Expression::Lambda(Lambda::Parametrized(parameter.clone(), body));
+                for parameter in parameters {
+                    lambda = Expression::Lambda(Lambda::Parametrized(
+                        parameter.clone(),
+                        Box::new(lambda),
+                    ));
+                }
+                Ok(lambda)
+            }
+            None => Ok(Expression::Lambda(Lambda::Empty(body))),
         }
-        let parameter = parameter.unwrap();
-        let mut lambda = Expression::Lambda(Lambda::Parametrized(parameter.clone(), body));
-        for parameter in iterator {
-            lambda = Expression::Lambda(Lambda::Parametrized(parameter.clone(), Box::new(lambda)));
-        }
-        Ok(lambda)
     }
 
-    fn parse_internal(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_internal(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let arguments = Self::parse_arguments(tokens)?;
         Ok(Expression::Call(Call::Internal(identifier, arguments)))
     }
 
-    fn parse_module(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_module(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let members = Self::parse_arguments(tokens)?;
         Ok(Expression::Module(identifier, members))
     }
 
-    fn parse_constant(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_constant(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
@@ -228,17 +250,17 @@ impl Parser {
         Ok(Expression::Identified(identifier, Box::from(value)))
     }
 
-    fn parse_and(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_and(tokens: &mut Tokens) -> ExpressionResult {
         let arguments = Self::parse_arguments(tokens)?;
         Ok(Expression::And(arguments))
     }
 
-    fn parse_or(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_or(tokens: &mut Tokens) -> ExpressionResult {
         let arguments = Self::parse_arguments(tokens)?;
         Ok(Expression::Or(arguments))
     }
 
-    fn parse_identifier(tokens: &mut Iter<Token>) -> Result<String, String> {
+    fn parse_identifier(tokens: &mut Tokens) -> Result<String, String> {
         let identifier = tokens.next();
         if identifier.is_none() {
             return Err("Missing name token".to_string());
@@ -247,64 +269,44 @@ impl Parser {
         identifier.as_symbol()
     }
 
-    fn parse_arguments(tokens: &mut Iter<Token>) -> Result<Vec<Expression>, String> {
+    fn parse_arguments(tokens: &mut Tokens) -> Result<Vec<Expression>, String> {
         let mut arguments = Vec::new();
-        let mut next = tokens.next();
-        while next.is_some() {
-            let current = next.unwrap();
-            if Self::is_close_parenthesis(current) {
+        while let Some(token) = tokens.next() {
+            if token.is_close_parenthesis() {
                 break;
             }
-            let argument = Self::parse_first_token(current, tokens)?;
+            let argument = Self::parse_first_token(token, tokens)?;
             arguments.push(argument);
-            next = tokens.next();
         }
         Ok(arguments)
     }
 
-    fn parse_parameters(tokens: &mut Iter<Token>) -> Result<Vec<String>, String> {
+    fn parse_parameters(tokens: &mut Tokens) -> Result<Vec<String>, String> {
         let mut parameters = Vec::new();
         if !Self::is_parameters_section(tokens) {
             return Err("Missing parameters section".to_string());
         }
-        let mut next = tokens.next();
-        while next.is_some() {
-            let current = next.unwrap();
-            if Self::is_parameters_parenthesis(current) {
+        for token in tokens {
+            if token.is_parameters_parenthesis() {
                 break;
             }
-            let parameter = current.as_symbol()?;
+            let parameter = token.as_symbol()?;
             parameters.push(parameter);
-            next = tokens.next();
         }
         Ok(parameters)
     }
 
-    fn is_section_closed(tokens: &mut Iter<Token>) -> bool {
-        let next = tokens.next();
-        next.is_some() && Self::is_close_parenthesis(next.unwrap())
+    fn is_section_closed(tokens: &mut Tokens) -> bool {
+        match tokens.next() {
+            Some(token) => token.is_close_parenthesis(),
+            None => false,
+        }
     }
 
-    fn is_close_parenthesis(token: &Token) -> bool {
-        matches!(token, Token::Parenthesis(Parenthesis::Close(_)))
-    }
-
-    fn is_parameters_section(tokens: &mut Iter<Token>) -> bool {
-        let next = tokens.next();
-        next.is_some() && Self::is_parameters_parenthesis(next.unwrap())
-    }
-
-    fn is_parameters_parenthesis(token: &Token) -> bool {
-        matches!(token, Token::Parenthesis(Parenthesis::Parameters))
-    }
-}
-
-impl Token {
-    fn as_symbol(&self) -> Result<String, String> {
-        if let Token::Symbol(symbol) = self {
-            Ok(symbol.clone())
-        } else {
-            Err("Token is not a symbol".to_string())
+    fn is_parameters_section(tokens: &mut Tokens) -> bool {
+        match tokens.next() {
+            Some(token) => token.is_parameters_parenthesis(),
+            None => false,
         }
     }
 }
