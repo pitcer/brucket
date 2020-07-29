@@ -25,6 +25,8 @@
 use super::*;
 use crate::evaluator::Environment;
 use crate::parser::{Constant, Expression};
+use std::fs::File;
+use std::io::Read;
 
 type TestResult = Result<(), String>;
 
@@ -229,66 +231,10 @@ fn test_negate_function_negates_correctly() -> TestResult {
 }
 
 fn create_interpreter() -> Interpreter {
-    let library_syntax = r#"
-    (module base
-      (function add |first second|
-        (internal add first second))
-
-      (constant + add)
-
-      (function subtract |first second|
-        (internal subtract first second))
-
-      (constant - subtract)
-
-      (function multiply |first second|
-        (internal multiply first second))
-
-      (constant * multiply)
-
-      (function divide |first second|
-        (internal divide first second))
-
-      (constant / divide)
-
-      (function remainder |first second|
-        (internal remainder first second))
-
-      (constant % remainder)
-
-      (function is_equal |first second|
-        (internal is_equal first second))
-
-      (constant = is_equal)
-
-      (function is_greater |first second|
-        (internal is_greater first second))
-
-      (constant > is_greater)
-
-      (function is_greater_or_equal |first second|
-        (internal is_greater_or_equal first second))
-
-      (constant >= is_greater_or_equal)
-
-      (function is_less |first second|
-        (internal is_less first second))
-
-      (constant < is_less)
-
-      (function is_less_or_equal |first second|
-        (internal is_less_or_equal first second))
-
-      (constant <= is_less_or_equal)
-
-      (function negate |argument|
-        (if argument
-          false
-          true))
-
-      (constant not negate)
-
-      (constant ! negate)
-    )"#;
-    Interpreter::with_library(library_syntax).expect("Cannot create interpreter with library")
+    let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
+    let mut library_syntax = String::new();
+    library_file
+        .read_to_string(&mut library_syntax)
+        .expect("Cannot read library file");
+    Interpreter::with_library(&library_syntax).expect("Cannot create an interpreter with library")
 }
