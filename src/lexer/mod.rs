@@ -60,6 +60,63 @@ pub enum Keyword {
     Or,
 }
 
+trait LexerCharacter {
+    fn is_comment(&self) -> bool;
+
+    fn is_opening_parenthesis(&self) -> bool;
+
+    fn is_closing_parenthesis(&self) -> bool;
+
+    fn is_parameter_parenthesis(&self) -> bool;
+
+    fn is_section_break(&self) -> bool;
+
+    fn is_quote(&self) -> bool;
+
+    fn is_escaping(&self) -> bool;
+
+    fn is_number(&self) -> bool;
+}
+
+impl LexerCharacter for char {
+    fn is_comment(&self) -> bool {
+        matches!(self, '#')
+    }
+
+    fn is_opening_parenthesis(&self) -> bool {
+        matches!(self, '(' | '[' | '{')
+    }
+
+    fn is_closing_parenthesis(&self) -> bool {
+        matches!(self, ')' | ']' | '}')
+    }
+
+    fn is_parameter_parenthesis(&self) -> bool {
+        matches!(self, '|')
+    }
+
+    fn is_section_break(&self) -> bool {
+        self.is_ascii_whitespace()
+            || self.is_closing_parenthesis()
+            || self.is_parameter_parenthesis()
+    }
+
+    fn is_quote(&self) -> bool {
+        matches!(self, '"' | '\'')
+    }
+
+    fn is_escaping(&self) -> bool {
+        matches!(self, '\\')
+    }
+
+    fn is_number(&self) -> bool {
+        matches!(self, '0'..='9')
+    }
+}
+
+type Characters<'a> = Peekable<Chars<'a>>;
+type TokenResult = Result<Option<Token>, String>;
+
 impl Lexer {
     pub fn default() -> Self {
         let symbol_map = maplit::hashmap! {
@@ -79,109 +136,115 @@ impl Lexer {
         Self { symbol_map }
     }
 
-    pub fn tokenize(&self, syntax: &str) -> Vec<Token> {
+    pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, String> {
         let mut result = Vec::new();
-        let mut chars = syntax.chars().peekable();
-        let mut next = chars.next();
-        while next.is_some() {
-            let current = next.unwrap();
-            let token = self.match_token(&mut chars, current);
+        let mut characters = syntax.chars().peekable();
+        let mut next = characters.next();
+        while let Some(current) = next {
+            let token = self.match_token(current, &mut characters)?;
             if let Some(token) = token {
                 result.push(token);
             }
-            next = chars.next();
+            next = characters.next();
         }
-        result
+        Ok(result)
     }
 
-    fn match_token(&self, chars: &mut Peekable<Chars>, current: char) -> Option<Token> {
+    fn match_token(&self, current: char, characters: &mut Characters) -> TokenResult {
         match current {
-            '#' => {
-                Self::skip_comment(chars);
-                None
+            comment if comment.is_comment() => {
+                Self::skip_comment(characters);
+                Ok(None)
             }
-            '(' | '[' | '{' => Some(Token::Parenthesis(Parenthesis::Open(current))),
-            ')' | ']' | '}' => Some(Token::Parenthesis(Parenthesis::Close(current))),
-            '|' => Some(Token::Parenthesis(Parenthesis::Parameters)),
-            '"' => Some(Token::String(Self::tokenize_string(chars))),
-            '0'..='9' => Some(Token::Number(Self::tokenize_number(chars, current))),
-            ' ' | '\n' | '\t' | '\r' => None,
+            parenthesis if parenthesis.is_opening_parenthesis() => {
+                Ok(Some(Token::Parenthesis(Parenthesis::Open(parenthesis))))
+            }
+            parenthesis if parenthesis.is_closing_parenthesis() => {
+                Ok(Some(Token::Parenthesis(Parenthesis::Close(parenthesis))))
+            }
+            parenthesis if parenthesis.is_parameter_parenthesis() => {
+                Ok(Some(Token::Parenthesis(Parenthesis::Parameters)))
+            }
+            quote if quote.is_quote() => {
+                let string = Self::tokenize_string(characters);
+                Ok(Some(Token::String(string)))
+            }
+            number if number.is_number() => {
+                let number = Self::tokenize_number(current, characters)?;
+                Ok(Some(Token::Number(number)))
+            }
+            whitespace if whitespace.is_ascii_whitespace() => Ok(None),
             _ => {
-                let symbol = Self::tokenize_symbol(chars, current);
+                let symbol = Self::tokenize_symbol(current, characters);
                 let token = self.symbol_map.get(symbol.as_str());
                 if let Some(token) = token {
-                    Some(token.clone())
+                    Ok(Some(token.clone()))
                 } else {
-                    Some(Token::Symbol(symbol))
+                    Ok(Some(Token::Symbol(symbol)))
                 }
             }
         }
     }
 
-    fn skip_comment(chars: &mut Peekable<Chars>) {
-        let mut next = chars.next();
-        while next.is_some() {
-            let current = next.unwrap();
+    fn skip_comment(characters: &mut Characters) {
+        let mut next = characters.next();
+        while let Some(current) = next {
             if current == '\n' {
                 return;
             }
-            next = chars.next();
+            next = characters.next();
         }
     }
 
-    fn tokenize_string(chars: &mut Peekable<Chars>) -> String {
+    fn tokenize_string(characters: &mut Characters) -> String {
         let mut result = String::new();
-        let mut next = chars.next();
+        let mut next = characters.next();
         let mut escaping = false;
-        while next.is_some() {
-            let current = next.unwrap();
-            if !escaping && current == '\\' {
+        while let Some(current) = next {
+            if !escaping && current.is_escaping() {
                 escaping = !escaping;
-            } else if !escaping && current == '"' {
+            } else if !escaping && current.is_quote() {
                 break;
             } else {
                 result.push(current);
                 escaping = false;
             }
-            next = chars.next();
+            next = characters.next();
         }
         result
     }
 
-    fn tokenize_number(chars: &mut Peekable<Chars>, last: char) -> u32 {
-        let mut result = last.to_digit(10).expect("Invalid digit");
-        let mut current;
-        loop {
-            let next = chars.peek();
-            if next.is_none() {
-                return result;
+    fn tokenize_number(first: char, characters: &mut Characters) -> Result<u32, String> {
+        let mut result = first.to_digit(10).unwrap();
+        let mut next = characters.peek();
+        while let Some(current) = next {
+            if current.is_section_break() {
+                break;
             }
-            current = next.unwrap();
-            match current {
-                '0'..='9' => result = result * 10 + current.to_digit(10).expect("Invalid digit"),
-                ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' | '|' => return result,
-                _ => (),
+            if current.is_number() {
+                result = result * 10 + current.to_digit(10).unwrap();
+            } else {
+                return Err("Invalid number character".to_string());
             }
-            chars.next();
+            characters.next();
+            next = characters.peek();
         }
+        Ok(result)
     }
 
-    fn tokenize_symbol(chars: &mut Peekable<Chars>, last: char) -> String {
+    fn tokenize_symbol(first: char, characters: &mut Characters) -> String {
         let mut result = String::new();
-        result.push(last);
-        let mut current;
-        loop {
-            let next = chars.peek();
-            if next.is_none() {
-                return result;
+        result.push(first);
+        let mut next = characters.peek();
+        while let Some(current) = next {
+            if current.is_section_break() {
+                break;
             }
-            current = next.unwrap();
-            match current {
-                ' ' | '\n' | '\t' | '\r' | ')' | ']' | '}' | '|' => return result,
-                _ => result.push(*current),
-            }
-            chars.next();
+            result.push(*current);
+            characters.next();
+            next = characters.peek();
         }
+        result
     }
 }
 

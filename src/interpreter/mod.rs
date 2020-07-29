@@ -71,7 +71,7 @@ impl Interpreter {
     }
 
     pub fn interpret(&self, syntax: &str) -> ValueResult {
-        let tokenized = self.lexer.tokenize(syntax);
+        let tokenized = self.lexer.tokenize(syntax)?;
         let parsed = self.parser.parse(&tokenized)?;
         self.evaluator.evaluate(&parsed)
     }

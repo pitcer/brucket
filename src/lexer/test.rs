@@ -24,168 +24,190 @@
 
 use super::*;
 
+type TestResult = Result<(), String>;
+
 #[test]
-fn test_comment_is_skipped() {
+fn test_comment_is_skipped() -> TestResult {
     let lexer = Lexer::default();
     let expected: Vec<Token> = Vec::new();
-    let actual = lexer.tokenize("# test \t comment \t \n # foo bar");
-    assert_eq!(expected, actual)
+    let actual = lexer.tokenize("# test \t comment \t \n # foo bar")?;
+    assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_open_parenthesis_is_parenthesis_token() {
+fn test_tokenized_open_parenthesis_is_parenthesis_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Parenthesis(Parenthesis::Open('('))];
-    let actual = lexer.tokenize("(");
+    let actual = lexer.tokenize("(")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_close_parenthesis_is_parenthesis_token() {
+fn test_tokenized_close_parenthesis_is_parenthesis_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Parenthesis(Parenthesis::Close(')'))];
-    let actual = lexer.tokenize(")");
+    let actual = lexer.tokenize(")")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_parameters_parenthesis_is_parenthesis_token() {
+fn test_tokenized_parameters_parenthesis_is_parenthesis_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Parenthesis(Parenthesis::Parameters)];
-    let actual = lexer.tokenize("|");
+    let actual = lexer.tokenize("|")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_string_is_string_token() {
+fn test_tokenized_string_is_string_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::String("foo bar \" \\ foobar ".to_string())];
-    let actual = lexer.tokenize("\"foo bar \\\" \\\\ foobar \"");
+    let actual = lexer.tokenize("\"foo bar \\\" \\\\ foobar \"")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_single_character_number_is_number_token() {
+fn test_tokenized_single_character_number_is_number_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Number(7)];
-    let actual = lexer.tokenize("7");
+    let actual = lexer.tokenize("7")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_multi_character_number_is_number_token() {
+fn test_tokenized_multi_character_number_is_number_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Number(4224)];
-    let actual = lexer.tokenize("4224");
+    let actual = lexer.tokenize("4224")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_let_keyword_is_let_token() {
+fn test_tokenized_let_keyword_is_let_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Let)];
-    let actual = lexer.tokenize("let");
+    let actual = lexer.tokenize("let")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_if_keyword_is_if_token() {
+fn test_tokenized_if_keyword_is_if_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::If)];
-    let actual = lexer.tokenize("if");
+    let actual = lexer.tokenize("if")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_lambda_keyword_is_lambda_token() {
+fn test_tokenized_lambda_keyword_is_lambda_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Lambda)];
-    let actual = lexer.tokenize("lambda");
+    let actual = lexer.tokenize("lambda")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_right_arrow_symbol_is_lambda_token() {
+fn test_tokenized_right_arrow_symbol_is_lambda_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Lambda)];
-    let actual = lexer.tokenize("->");
+    let actual = lexer.tokenize("->")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_internal_keyword_is_internal_token() {
+fn test_tokenized_internal_keyword_is_internal_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Internal)];
-    let actual = lexer.tokenize("internal");
+    let actual = lexer.tokenize("internal")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_module_keyword_is_module_token() {
+fn test_tokenized_module_keyword_is_module_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Module)];
-    let actual = lexer.tokenize("module");
+    let actual = lexer.tokenize("module")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_function_keyword_is_function_token() {
+fn test_tokenized_function_keyword_is_function_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Function)];
-    let actual = lexer.tokenize("function");
+    let actual = lexer.tokenize("function")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_constant_keyword_is_constant_token() {
+fn test_tokenized_constant_keyword_is_constant_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Constant)];
-    let actual = lexer.tokenize("constant");
+    let actual = lexer.tokenize("constant")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_and_keyword_is_and_token() {
+fn test_tokenized_and_keyword_is_and_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::And)];
-    let actual = lexer.tokenize("and");
+    let actual = lexer.tokenize("and")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_or_keyword_is_and_token() {
+fn test_tokenized_or_keyword_is_and_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Or)];
-    let actual = lexer.tokenize("or");
+    let actual = lexer.tokenize("or")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_single_character_symbol_is_symbol_token() {
+fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("x".to_string())];
-    let actual = lexer.tokenize("x");
+    let actual = lexer.tokenize("x")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_multi_character_symbol_is_symbol_token() {
+fn test_tokenized_multi_character_symbol_is_symbol_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("xyz".to_string())];
-    let actual = lexer.tokenize("xyz");
+    let actual = lexer.tokenize("xyz")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_tokenized_boolean_symbol_is_boolean_token() {
+fn test_tokenized_boolean_symbol_is_boolean_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Boolean(true), Token::Boolean(false)];
-    let actual = lexer.tokenize("true false");
+    let actual = lexer.tokenize("true false")?;
     assert_eq!(expected, actual);
+    Ok(())
 }
 
 #[test]
-fn test_statement_is_tokenized_correctly() {
+fn test_statement_is_tokenized_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -199,6 +221,53 @@ fn test_statement_is_tokenized_correctly() {
         Token::String("foobar".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ];
-    let actual = lexer.tokenize("(multiply 123 (+ 321 1) \"foobar\" )");
+    let actual = lexer.tokenize("(multiply 123 (+ 321 1) \"foobar\" )")?;
     assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_closing_parenthesis_after_number_is_handled_correctly() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ];
+    let actual = lexer.tokenize("(42)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_closing_parenthesis_after_symbol_is_handled_correctly() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ];
+    let actual = lexer.tokenize("(foo)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenize_number() -> TestResult {
+    let mut characters = "224)".chars().peekable();
+    let number = Lexer::tokenize_number('4', &mut characters)?;
+    let parenthesis = characters.next().expect("Missing closing parenthesis");
+    assert_eq!(4224, number);
+    assert_eq!(')', parenthesis);
+    Ok(())
+}
+
+#[test]
+fn test_tokenize_symbol() -> TestResult {
+    let mut characters = "oo)".chars().peekable();
+    let symbol = Lexer::tokenize_symbol('f', &mut characters);
+    let parenthesis = characters.next().expect("Missing closing parenthesis");
+    assert_eq!("foo".to_string(), symbol);
+    assert_eq!(')', parenthesis);
+    Ok(())
 }
