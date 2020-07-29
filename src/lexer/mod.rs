@@ -139,13 +139,11 @@ impl Lexer {
     pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, String> {
         let mut result = Vec::new();
         let mut characters = syntax.chars().peekable();
-        let mut next = characters.next();
-        while let Some(current) = next {
+        while let Some(current) = characters.next() {
             let token = self.match_token(current, &mut characters)?;
             if let Some(token) = token {
                 result.push(token);
             }
-            next = characters.next();
         }
         Ok(result)
     }
@@ -187,20 +185,17 @@ impl Lexer {
     }
 
     fn skip_comment(characters: &mut Characters) {
-        let mut next = characters.next();
-        while let Some(current) = next {
+        for current in characters {
             if current == '\n' {
                 return;
             }
-            next = characters.next();
         }
     }
 
     fn tokenize_string(characters: &mut Characters) -> String {
         let mut result = String::new();
-        let mut next = characters.next();
         let mut escaping = false;
-        while let Some(current) = next {
+        for current in characters {
             if !escaping && current.is_escaping() {
                 escaping = !escaping;
             } else if !escaping && current.is_quote() {
@@ -209,15 +204,13 @@ impl Lexer {
                 result.push(current);
                 escaping = false;
             }
-            next = characters.next();
         }
         result
     }
 
     fn tokenize_number(first: char, characters: &mut Characters) -> Result<u32, String> {
         let mut result = first.to_digit(10).unwrap();
-        let mut next = characters.peek();
-        while let Some(current) = next {
+        while let Some(current) = characters.peek() {
             if current.is_section_break() {
                 break;
             }
@@ -227,7 +220,6 @@ impl Lexer {
                 return Err("Invalid number character".to_string());
             }
             characters.next();
-            next = characters.peek();
         }
         Ok(result)
     }
@@ -235,14 +227,12 @@ impl Lexer {
     fn tokenize_symbol(first: char, characters: &mut Characters) -> String {
         let mut result = String::new();
         result.push(first);
-        let mut next = characters.peek();
-        while let Some(current) = next {
+        while let Some(current) = characters.peek() {
             if current.is_section_break() {
                 break;
             }
             result.push(*current);
             characters.next();
-            next = characters.peek();
         }
         result
     }
