@@ -48,12 +48,14 @@ pub enum Value {
     Identified(String, Box<Value>),
 }
 
-impl Evaluator {
-    pub fn default() -> Self {
+impl Default for Evaluator {
+    fn default() -> Self {
         let default_environment = Environment::new();
         Self::new(default_environment)
     }
+}
 
+impl Evaluator {
     pub fn new(default_environment: Environment) -> Self {
         let internal_environment = Self::create_internal_environment();
         Self {

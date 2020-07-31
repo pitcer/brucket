@@ -36,8 +36,8 @@ pub struct Interpreter {
     evaluator: Evaluator,
 }
 
-impl Interpreter {
-    pub fn default() -> Self {
+impl Default for Interpreter {
+    fn default() -> Self {
         let lexer = Lexer::default();
         let parser = Parser::default();
         let evaluator = Evaluator::default();
@@ -47,7 +47,9 @@ impl Interpreter {
             evaluator,
         }
     }
+}
 
+impl Interpreter {
     pub fn with_library(library_syntax: &str) -> Result<Self, String> {
         let lexer = Lexer::default();
         let parser = Parser::default();

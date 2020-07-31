@@ -72,11 +72,13 @@ impl Token {
 
 type Tokens<'a> = Iter<'a, Token>;
 
-impl Parser {
-    pub fn default() -> Self {
+impl Default for Parser {
+    fn default() -> Self {
         Self {}
     }
+}
 
+impl Parser {
     pub fn parse(&self, tokens: &[Token]) -> ExpressionResult {
         let mut iterator = tokens.iter();
         Self::parse_first(&mut iterator)

@@ -117,8 +117,8 @@ impl LexerCharacter for char {
 type Characters<'a> = Peekable<Chars<'a>>;
 type TokenResult = Result<Option<Token>, String>;
 
-impl Lexer {
-    pub fn default() -> Self {
+impl Default for Lexer {
+    fn default() -> Self {
         let symbol_map = maplit::hashmap! {
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
@@ -135,7 +135,9 @@ impl Lexer {
         };
         Self { symbol_map }
     }
+}
 
+impl Lexer {
     pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, String> {
         let mut result = Vec::new();
         let mut characters = syntax.chars().peekable();
