@@ -248,6 +248,20 @@ fn test_recursive_lambda() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn test_pair() -> TestResult {
+    let interpreter = create_interpreter();
+    assert_eq!(
+        Value::Numeric(42),
+        interpreter.interpret("(pair_first (new_pair 42 24))")?
+    );
+    assert_eq!(
+        Value::Numeric(24),
+        interpreter.interpret("(pair_second (new_pair 42 24))")?
+    );
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
     let mut library_syntax = String::new();

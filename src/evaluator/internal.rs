@@ -158,6 +158,45 @@ pub fn is_less_or_equal(arguments: Vec<Value>) -> ValueResult {
     }
 }
 
+pub fn pair_new(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 2 {
+        let mut iter = arguments.into_iter();
+        let first = iter.next().unwrap();
+        let second = iter.next().unwrap();
+        Ok(Value::Pair(Box::new(first), Box::new(second)))
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
+pub fn pair_first(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 1 {
+        let mut iter = arguments.into_iter();
+        let first = iter.next().unwrap();
+        if let Value::Pair(first, _) = first {
+            Ok(*first)
+        } else {
+            Err("Invalid type of argument".to_string())
+        }
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
+pub fn pair_second(arguments: Vec<Value>) -> ValueResult {
+    if arguments.len() == 1 {
+        let mut iter = arguments.into_iter();
+        let first = iter.next().unwrap();
+        if let Value::Pair(_, second) = first {
+            Ok(*second)
+        } else {
+            Err("Invalid type of argument".to_string())
+        }
+    } else {
+        Err("Invalid number of arguments".to_string())
+    }
+}
+
 impl Value {
     fn as_number(&self) -> Result<i32, &'static str> {
         if let Value::Numeric(value) = self {
@@ -367,6 +406,39 @@ mod test {
         assert_eq!(
             Value::Boolean(true),
             is_less_or_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_pair_new() -> TestResult {
+        assert_eq!(
+            Value::Pair(Box::new(Value::Numeric(42)), Box::new(Value::Numeric(24))),
+            pair_new(vec![Value::Numeric(42), Value::Numeric(24)])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_pair_first() -> TestResult {
+        assert_eq!(
+            Value::Numeric(42),
+            pair_first(vec![Value::Pair(
+                Box::new(Value::Numeric(42)),
+                Box::new(Value::Numeric(24))
+            )])?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_pair_second() -> TestResult {
+        assert_eq!(
+            Value::Numeric(24),
+            pair_second(vec![Value::Pair(
+                Box::new(Value::Numeric(42)),
+                Box::new(Value::Numeric(24))
+            )])?
         );
         Ok(())
     }

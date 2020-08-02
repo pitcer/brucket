@@ -60,6 +60,7 @@ pub enum Value {
     Numeric(i32),
     Textual(String),
     Boolean(bool),
+    Pair(Box<Value>, Box<Value>),
     Closure(Vec<String>, Expression, Environment),
     Module(String, Environment),
     Identified(String, Rc<Value>),
@@ -84,7 +85,10 @@ impl Evaluator {
             "is_greater" => internal::is_greater,
             "is_greater_or_equal" => internal::is_greater_or_equal,
             "is_less" => internal::is_less,
-            "is_less_or_equal" => internal::is_less_or_equal
+            "is_less_or_equal" => internal::is_less_or_equal,
+            "pair_new" => internal::pair_new,
+            "pair_first" => internal::pair_first,
+            "pair_second" => internal::pair_second
         };
         Self {
             default_environment,

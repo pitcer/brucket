@@ -57,4 +57,17 @@
   (constant not negate)
 
   (constant ! negate)
+
+  (function new_pair |first second|
+    (internal pair_new first second))
+
+  (function pair_first |pair|
+    (internal pair_first pair))
+
+  (constant car pair_first)
+
+  (function pair_second |pair|
+    (internal pair_second pair))
+
+  (constant cdr pair_first)
 )
