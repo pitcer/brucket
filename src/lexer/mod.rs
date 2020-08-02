@@ -58,6 +58,7 @@ pub enum Keyword {
     Constant,
     And,
     Or,
+    Letrec,
 }
 
 trait LexerCharacter {
@@ -123,6 +124,7 @@ impl Default for Lexer {
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
             "let" => Token::Keyword(Keyword::Let),
+            "letrec" => Token::Keyword(Keyword::Letrec),
             "if" => Token::Keyword(Keyword::If),
             "lambda" => Token::Keyword(Keyword::Lambda),
             "->" => Token::Keyword(Keyword::Lambda),

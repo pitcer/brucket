@@ -23,10 +23,10 @@
  */
 
 use super::*;
-use crate::evaluator::Environment;
 use crate::parser::{Constant, Expression};
 use std::fs::File;
 use std::io::Read;
+use std::rc::Rc;
 
 type TestResult = Result<(), String>;
 
@@ -135,19 +135,19 @@ fn test_interpret_module() -> TestResult {
     let interpreter = create_interpreter();
     let expected = Value::Module(
         "foo".to_string(),
-        maplit::hashmap! {
-        "bar".to_string() => Value::Numeric(1),
-        "barfoo".to_string() => Value::Closure(
-            vec!["x".to_string()],
-            Expression::Constant(Constant::Numeric(2)),
-            Environment::new(),
-        ),
-        "foobar".to_string() => Value::Numeric(3),
-        "fooo".to_string() => Value::Closure(
-            vec!["x".to_string()],
-            Expression::Constant(Constant::Numeric(4)),
-            Environment::new(),
-        )
+        environment! {
+            "bar" => Value::Numeric(1),
+            "barfoo" => Value::Closure(
+                vec!["x".to_string()],
+                Expression::Constant(Constant::Numeric(2)),
+                Environment::new(),
+            ),
+            "foobar" => Value::Numeric(3),
+            "fooo" => Value::Closure(
+                vec!["x".to_string()],
+                Expression::Constant(Constant::Numeric(4)),
+                Environment::new(),
+            )
         },
     );
     let actual = interpreter.interpret(
@@ -169,7 +169,7 @@ fn test_interpret_function() -> TestResult {
     let interpreter = create_interpreter();
     let expected = Value::Identified(
         "foo".to_string(),
-        Box::new(Value::Closure(
+        Rc::new(Value::Closure(
             vec!["x".to_string()],
             Expression::Identifier("x".to_string()),
             Environment::new(),
@@ -227,6 +227,24 @@ fn test_negate_function_negates_correctly() -> TestResult {
         Value::Boolean(true),
         interpreter.interpret("(negate false)")?
     );
+    Ok(())
+}
+
+#[test]
+fn test_recursive_lambda() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(0);
+    let actual = interpreter.interpret(
+        r#"
+        (letrec foo
+          (-> |x|
+            (if (> x 0)
+              (foo (- x 1))
+              x))
+          (foo 5))
+        "#,
+    )?;
+    assert_eq!(expected, actual);
     Ok(())
 }
 

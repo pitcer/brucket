@@ -22,8 +22,9 @@
  * SOFTWARE.
  */
 
-pub mod interpreter;
-
+#[macro_use]
 mod evaluator;
 mod lexer;
 mod parser;
+
+pub mod interpreter;

@@ -99,6 +99,15 @@ fn test_tokenized_let_keyword_is_let_token() -> TestResult {
 }
 
 #[test]
+fn test_tokenized_letrec_keyword_is_letrec_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Letrec)];
+    let actual = lexer.tokenize("letrec")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_tokenized_if_keyword_is_if_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::If)];

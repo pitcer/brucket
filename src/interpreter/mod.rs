@@ -24,7 +24,8 @@
 
 pub use crate::evaluator::Value;
 
-use crate::evaluator::{Environment, Evaluator};
+use crate::evaluator::environment::Environment;
+use crate::evaluator::Evaluator;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 

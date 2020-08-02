@@ -130,7 +130,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let expected = Value::Closure(
         Vec::new(),
         Expression::Identifier("x".to_string()),
-        maplit::hashmap! {"x".to_string() => Value::Numeric(42)},
+        environment!("x" => Value::Numeric(42)),
     );
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
@@ -276,8 +276,12 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Module(
         "foo".to_string(),
-        maplit::hashmap! {
-           "bar".to_string() => Value::Closure(Vec::new(), Expression::Constant(Constant::Numeric(42)), Environment::new())
+        environment! {
+            "bar" => Value::Closure(
+                Vec::new(),
+                Expression::Constant(Constant::Numeric(42)),
+                Environment::new(),
+            )
         },
     );
     let actual = evaluator.evaluate(&Expression::Module(
@@ -299,7 +303,7 @@ fn test_evaluated_identified_expression_is_identified_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Identified(
         "foo".to_string(),
-        Box::new(Value::Closure(
+        Rc::new(Value::Closure(
             vec!["x".to_string()],
             Expression::Constant(Constant::Numeric(42)),
             Environment::new(),

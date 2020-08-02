@@ -37,6 +37,7 @@ pub enum Expression {
     Application(Box<Expression>, Vec<Expression>),
     InternalCall(String, Vec<Expression>),
     Let(String, Box<Expression>, Box<Expression>),
+    Letrec(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
     Lambda(Vec<String>, Box<Expression>),
     Module(String, Vec<Expression>),
@@ -125,6 +126,7 @@ impl Parser {
             },
             Token::Keyword(keyword) => match keyword {
                 Keyword::Let => Self::parse_let(tokens),
+                Keyword::Letrec => Self::parse_letrec(tokens),
                 Keyword::If => Self::parse_if(tokens),
                 Keyword::Lambda => Self::parse_lambda(tokens),
                 Keyword::Internal => Self::parse_internal(tokens),
@@ -156,6 +158,16 @@ impl Parser {
             return Err("Invalid let expression".to_string());
         }
         Ok(Expression::Let(name, Box::new(value), Box::new(then)))
+    }
+
+    fn parse_letrec(tokens: &mut Tokens) -> ExpressionResult {
+        let name = Self::parse_identifier(tokens)?;
+        let value = Self::parse_first(tokens)?;
+        let then = Self::parse_first(tokens)?;
+        if !Self::is_section_closed(tokens) {
+            return Err("Invalid letrec expression".to_string());
+        }
+        Ok(Expression::Letrec(name, Box::new(value), Box::new(then)))
     }
 
     fn parse_if(tokens: &mut Tokens) -> ExpressionResult {

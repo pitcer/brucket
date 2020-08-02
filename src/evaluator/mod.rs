@@ -22,12 +22,16 @@
  * SOFTWARE.
  */
 
+use crate::evaluator::environment::Environment;
 use crate::parser::{Constant, Expression};
+use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::option::Option::Some;
+use std::rc::Rc;
 
+#[macro_use]
+pub mod environment;
 mod internal;
-
-pub type Environment = HashMap<String, Value>;
 
 type ValueResult = Result<Value, String>;
 type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
@@ -45,7 +49,7 @@ pub enum Value {
     Boolean(bool),
     Closure(Vec<String>, Expression, Environment),
     Module(String, Environment),
-    Identified(String, Box<Value>),
+    Identified(String, Rc<Value>),
 }
 
 impl Default for Evaluator {
@@ -104,6 +108,9 @@ impl Evaluator {
                 self.evaluate_internal_call(identifier, arguments, environment)
             }
             Expression::Let(name, value, then) => self.evaluate_let(name, value, then, environment),
+            Expression::Letrec(name, value, then) => {
+                self.evaluate_letrec(name, value, then, environment)
+            }
             Expression::If(condition, if_true_then, if_false_then) => {
                 self.evaluate_if(condition, if_true_then, if_false_then, environment)
             }
@@ -129,6 +136,27 @@ impl Evaluator {
         environment: &mut Environment,
     ) -> ValueResult {
         let value = self.evaluate_environment(value, environment)?;
+        environment.insert(identifier.to_string(), Rc::new(value));
+        let result = self.evaluate_environment(then, environment);
+        environment.remove(identifier);
+        result
+    }
+
+    fn evaluate_letrec(
+        &self,
+        identifier: &str,
+        value: &Expression,
+        then: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let evaluated_value = self.evaluate_environment(value, environment)?;
+        let used_identifiers = Self::get_used_identifiers(value);
+        let value = Rc::new(evaluated_value);
+        if let Value::Closure(_, _, environment) = value.borrow() {
+            if used_identifiers.contains(&&identifier.to_string()) {
+                environment.insert_weak(identifier.to_string(), Rc::downgrade(&value));
+            }
+        }
         environment.insert(identifier.to_string(), value);
         let result = self.evaluate_environment(then, environment);
         environment.remove(identifier);
@@ -144,11 +172,8 @@ impl Evaluator {
     ) -> ValueResult {
         let condition = self.evaluate_environment(condition, environment)?;
         if let Value::Boolean(value) = condition {
-            if value {
-                Ok(self.evaluate_environment(if_true_then, environment)?)
-            } else {
-                Ok(self.evaluate_environment(if_false_then, environment)?)
-            }
+            let body = if value { if_true_then } else { if_false_then };
+            self.evaluate_environment(body, environment)
         } else {
             Err("Invalid condition type".to_string())
         }
@@ -172,13 +197,15 @@ impl Evaluator {
         environment: &Environment,
     ) -> Environment {
         let identifiers = Self::get_used_identifiers(body);
-        identifiers
+        let new_env: Environment = identifiers
             .into_iter()
             .filter_map(|identifier| {
                 let value = environment.get(identifier)?;
-                Some((identifier.clone(), value.clone()))
+                Some((identifier.clone(), value))
             })
-            .collect()
+            .collect();
+        new_env.insert_all_weak(environment);
+        new_env
     }
 
     fn get_used_identifiers(expression: &Expression) -> Vec<&String> {
@@ -197,6 +224,10 @@ impl Evaluator {
                 }
             }
             Expression::Let(_, value, body) => {
+                identifiers.append(&mut Self::get_used_identifiers(value));
+                identifiers.append(&mut Self::get_used_identifiers(body));
+            }
+            Expression::Letrec(_, value, body) => {
                 identifiers.append(&mut Self::get_used_identifiers(value));
                 identifiers.append(&mut Self::get_used_identifiers(body));
             }
@@ -232,8 +263,11 @@ impl Evaluator {
     }
 
     fn get_from_environment(environment: &Environment, name: &str) -> ValueResult {
-        let value = environment.get(name);
+        let value = environment
+            .get(name)
+            .or_else(|| environment.get_weak(name).and_then(|value| value.upgrade()));
         if let Some(value) = value {
+            let value: &Value = &value;
             Ok(value.clone())
         } else {
             Err(format!("Undefined variable: {}", name))
@@ -259,7 +293,7 @@ impl Evaluator {
             let arguments = self.evaluate_arguments(arguments, environment)?;
             for (index, argument) in arguments.into_iter().enumerate() {
                 let parameter = &parameters[index];
-                closure_environment.insert(parameter.clone(), argument);
+                closure_environment.insert(parameter.clone(), Rc::new(argument));
             }
             let result = self.evaluate_environment(&body, &mut closure_environment);
             for parameter in &parameters {
@@ -309,7 +343,7 @@ impl Evaluator {
         environment: &mut Environment,
     ) -> ValueResult {
         let value = self.evaluate_environment(value, environment)?;
-        Ok(Value::Identified(identifier.to_string(), Box::from(value)))
+        Ok(Value::Identified(identifier.to_string(), Rc::new(value)))
     }
 
     fn evaluate_module(
@@ -323,8 +357,8 @@ impl Evaluator {
         for member in members {
             let member = self.evaluate_environment(member, &mut environment)?;
             if let Value::Identified(identifier, value) = member {
-                environment.insert(identifier.clone(), *value.clone());
-                module_environment.insert(identifier, *value);
+                environment.insert(identifier.clone(), Rc::clone(&value));
+                module_environment.insert(identifier, value);
             } else {
                 return Err("Cannot identify module member".to_string());
             }
