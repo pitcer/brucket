@@ -86,9 +86,9 @@ impl Evaluator {
             "is_greater_or_equal" => internal::is_greater_or_equal,
             "is_less" => internal::is_less,
             "is_less_or_equal" => internal::is_less_or_equal,
-            "pair_new" => internal::pair_new,
-            "pair_first" => internal::pair_first,
-            "pair_second" => internal::pair_second
+            "pair_new" => internal::pair::new,
+            "pair_first" => internal::pair::first,
+            "pair_second" => internal::pair::second
         };
         Self {
             default_environment,

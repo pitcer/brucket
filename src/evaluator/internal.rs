@@ -89,111 +89,97 @@ pub fn divide(arguments: Vec<Value>) -> ValueResult {
 }
 
 pub fn remainder(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let first = &arguments[0];
-        let second = &arguments[1];
-        let first = first.as_number()?;
-        let second = second.as_number()?;
-        Ok(Value::Numeric(first % second))
-    } else {
-        Err("Invalid number of arguments".to_string())
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Numeric(first % second))
 }
 
 pub fn is_equal(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let first = &arguments[0];
-        let second = &arguments[1];
-        Ok(Value::Boolean(first.eq(second)))
-    } else {
-        Err("Invalid number of arguments".to_string())
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    Ok(Value::Boolean(first.eq(&second)))
 }
 
 pub fn is_greater(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let first = &arguments[0];
-        let second = &arguments[1];
-        let first = first.as_number()?;
-        let second = second.as_number()?;
-        Ok(Value::Boolean(first > second))
-    } else {
-        Err("Invalid number of arguments".to_string())
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Boolean(first > second))
 }
 
 pub fn is_greater_or_equal(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let first = &arguments[0];
-        let second = &arguments[1];
-        let first = first.as_number()?;
-        let second = second.as_number()?;
-        Ok(Value::Boolean(first >= second))
-    } else {
-        Err("Invalid number of arguments".to_string())
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+
+    Ok(Value::Boolean(first >= second))
 }
 
 pub fn is_less(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let first = &arguments[0];
-        let second = &arguments[1];
-        let first = first.as_number()?;
-        let second = second.as_number()?;
-        Ok(Value::Boolean(first < second))
-    } else {
-        Err("Invalid number of arguments".to_string())
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Boolean(first < second))
 }
 
 pub fn is_less_or_equal(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let first = &arguments[0];
-        let second = &arguments[1];
-        let first = first.as_number()?;
-        let second = second.as_number()?;
-        Ok(Value::Boolean(first <= second))
-    } else {
-        Err("Invalid number of arguments".to_string())
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Boolean(first <= second))
 }
 
-pub fn pair_new(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 2 {
-        let mut iter = arguments.into_iter();
-        let first = iter.next().unwrap();
-        let second = iter.next().unwrap();
+pub mod pair {
+    use super::*;
+
+    pub fn new(arguments: Vec<Value>) -> ValueResult {
+        let (first, second) = get_binary_function_arguments(arguments)?;
         Ok(Value::Pair(Box::new(first), Box::new(second)))
-    } else {
-        Err("Invalid number of arguments".to_string())
     }
-}
 
-pub fn pair_first(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 1 {
-        let mut iter = arguments.into_iter();
-        let first = iter.next().unwrap();
-        if let Value::Pair(first, _) = first {
+    pub fn first(arguments: Vec<Value>) -> ValueResult {
+        let argument = get_unary_function_argument(arguments)?;
+        if let Value::Pair(first, _) = argument {
             Ok(*first)
         } else {
             Err("Invalid type of argument".to_string())
         }
-    } else {
-        Err("Invalid number of arguments".to_string())
     }
-}
 
-pub fn pair_second(arguments: Vec<Value>) -> ValueResult {
-    if arguments.len() == 1 {
-        let mut iter = arguments.into_iter();
-        let first = iter.next().unwrap();
-        if let Value::Pair(_, second) = first {
+    pub fn second(arguments: Vec<Value>) -> ValueResult {
+        let argument = get_unary_function_argument(arguments)?;
+        if let Value::Pair(_, second) = argument {
             Ok(*second)
         } else {
             Err("Invalid type of argument".to_string())
         }
+    }
+}
+
+fn get_unary_function_argument(arguments: Vec<Value>) -> Result<Value, String> {
+    validate_arguments_length(&arguments, 1)?;
+    let mut iterator = arguments.into_iter();
+    let first = iterator.next().unwrap();
+    Ok(first)
+}
+
+fn get_binary_function_arguments(arguments: Vec<Value>) -> Result<(Value, Value), String> {
+    validate_arguments_length(&arguments, 2)?;
+    let mut iterator = arguments.into_iter();
+    let first = iterator.next().unwrap();
+    let second = iterator.next().unwrap();
+    Ok((first, second))
+}
+
+fn validate_arguments_length(arguments: &[Value], expected_length: usize) -> Result<(), String> {
+    let actual_length = arguments.len();
+    if actual_length == expected_length {
+        Ok(())
     } else {
-        Err("Invalid number of arguments".to_string())
+        Err(format!(
+            "Invalid number of arguments. Expected: {}; Actual: {}",
+            expected_length, actual_length
+        ))
     }
 }
 
@@ -414,7 +400,7 @@ mod test {
     fn test_pair_new() -> TestResult {
         assert_eq!(
             Value::Pair(Box::new(Value::Numeric(42)), Box::new(Value::Numeric(24))),
-            pair_new(vec![Value::Numeric(42), Value::Numeric(24)])?
+            pair::new(vec![Value::Numeric(42), Value::Numeric(24)])?
         );
         Ok(())
     }
@@ -423,7 +409,7 @@ mod test {
     fn test_pair_first() -> TestResult {
         assert_eq!(
             Value::Numeric(42),
-            pair_first(vec![Value::Pair(
+            pair::first(vec![Value::Pair(
                 Box::new(Value::Numeric(42)),
                 Box::new(Value::Numeric(24))
             )])?
@@ -435,7 +421,7 @@ mod test {
     fn test_pair_second() -> TestResult {
         assert_eq!(
             Value::Numeric(24),
-            pair_second(vec![Value::Pair(
+            pair::second(vec![Value::Pair(
                 Box::new(Value::Numeric(42)),
                 Box::new(Value::Numeric(24))
             )])?
