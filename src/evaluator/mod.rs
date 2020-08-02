@@ -36,6 +36,19 @@ mod internal;
 type ValueResult = Result<Value, String>;
 type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
 
+macro_rules! internal_environment {
+    ($($identifier:expr => $function:expr),*) => {
+        {
+            let mut environment = InternalEnvironment::new();
+            $(
+                environment.insert($identifier, $function);
+            )*
+            environment.shrink_to_fit();
+            environment
+        }
+    };
+}
+
 pub struct Evaluator {
     default_environment: Environment,
     internal_environment: InternalEnvironment,
@@ -61,26 +74,22 @@ impl Default for Evaluator {
 
 impl Evaluator {
     pub fn new(default_environment: Environment) -> Self {
-        let internal_environment = Self::create_internal_environment();
+        let internal_environment = internal_environment! {
+            "add" => internal::add,
+            "subtract" => internal::subtract,
+            "multiply" => internal::multiply,
+            "divide" => internal::divide,
+            "remainder" => internal::remainder,
+            "is_equal" => internal::is_equal,
+            "is_greater" => internal::is_greater,
+            "is_greater_or_equal" => internal::is_greater_or_equal,
+            "is_less" => internal::is_less,
+            "is_less_or_equal" => internal::is_less_or_equal
+        };
         Self {
             default_environment,
             internal_environment,
         }
-    }
-
-    fn create_internal_environment() -> InternalEnvironment {
-        let mut environment = InternalEnvironment::new();
-        environment.insert("add", internal::add);
-        environment.insert("subtract", internal::subtract);
-        environment.insert("multiply", internal::multiply);
-        environment.insert("divide", internal::divide);
-        environment.insert("remainder", internal::remainder);
-        environment.insert("is_equal", internal::is_equal);
-        environment.insert("is_greater", internal::is_greater);
-        environment.insert("is_greater_or_equal", internal::is_greater_or_equal);
-        environment.insert("is_less", internal::is_less);
-        environment.insert("is_less_or_equal", internal::is_less_or_equal);
-        environment
     }
 
     pub fn evaluate(&self, expression: &Expression) -> ValueResult {
