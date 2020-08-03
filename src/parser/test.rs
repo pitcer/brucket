@@ -222,7 +222,7 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Lambda(
-        vec!["x".to_string()],
+        vec![Parameter::Unary("x".to_string())],
         Box::new(Expression::Identifier("x".to_string())),
     );
     let actual = parser.parse(&[
@@ -242,7 +242,11 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
 fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Lambda(
-        vec!["x".to_string(), "y".to_string(), "z".to_string()],
+        vec![
+            Parameter::Unary("x".to_string()),
+            Parameter::Unary("y".to_string()),
+            Parameter::Unary("z".to_string()),
+        ],
         Box::new(Expression::Identifier("x".to_string())),
     );
     let actual = parser.parse(&[
@@ -314,7 +318,11 @@ fn test_parsed_function_tokens_are_identified_lambda_expressions() -> TestResult
     let expected = Expression::Identified(
         "foo".to_string(),
         Box::new(Expression::Lambda(
-            vec!["x".to_string(), "y".to_string(), "z".to_string()],
+            vec![
+                Parameter::Unary("x".to_string()),
+                Parameter::Unary("y".to_string()),
+                Parameter::Unary("z".to_string()),
+            ],
             Box::new(Expression::Application(
                 Box::new(Expression::Identifier("bar".to_string())),
                 vec![Expression::Constant(Constant::Numeric(42))],
@@ -392,6 +400,27 @@ fn test_parsed_or_tokens_are_or_expression() -> TestResult {
         Token::Boolean(true),
         Token::Number(42),
         Token::String("foobar".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Lambda(
+        vec![Parameter::Variadic("xs".to_string())],
+        Box::new(Expression::Identifier("x".to_string())),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Lambda),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Symbol("xs".to_string()),
+        Token::Operator(Operator::Variadic),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Symbol("x".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);

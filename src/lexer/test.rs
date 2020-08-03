@@ -289,3 +289,12 @@ fn test_tokenize_symbol() -> TestResult {
     assert_eq!(')', parenthesis);
     Ok(())
 }
+
+#[test]
+fn test_tokenized_three_dots_are_variadic_operator_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Operator(Operator::Variadic)];
+    let actual = lexer.tokenize("...")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

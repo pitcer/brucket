@@ -24,7 +24,7 @@
 
 use std::slice::Iter;
 
-use crate::lexer::{Keyword, Parenthesis, Token};
+use crate::lexer::{Keyword, Operator, Parenthesis, Token};
 
 type ExpressionResult = Result<Expression, String>;
 
@@ -39,7 +39,7 @@ pub enum Expression {
     Let(String, Box<Expression>, Box<Expression>),
     Letrec(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
-    Lambda(Vec<String>, Box<Expression>),
+    Lambda(Vec<Parameter>, Box<Expression>),
     Module(String, Vec<Expression>),
     Identified(String, Box<Expression>),
     And(Vec<Expression>),
@@ -53,6 +53,21 @@ pub enum Constant {
     Numeric(u32),
     Boolean(bool),
     String(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Parameter {
+    Unary(String),
+    Variadic(String),
+}
+
+impl Parameter {
+    pub fn get_name(&self) -> &String {
+        match self {
+            Parameter::Unary(name) => name,
+            Parameter::Variadic(name) => name,
+        }
+    }
 }
 
 impl Token {
@@ -99,6 +114,9 @@ impl Parser {
                 Parenthesis::Open(_) => Self::parse_section(tokens),
                 Parenthesis::Close(_) => Err("Unexpected close parenthesis".to_string()),
                 Parenthesis::Parameters => Err("Unexpected parameters parenthesis".to_string()),
+            },
+            Token::Operator(operator) => match operator {
+                Operator::Variadic => Err("Unexpected variadic operator".to_string()),
             },
             Token::Null => Ok(Expression::Constant(Constant::Null)),
             Token::String(value) => Ok(Expression::Constant(Constant::String(value.clone()))),
@@ -254,17 +272,25 @@ impl Parser {
         Ok(arguments)
     }
 
-    fn parse_parameters(tokens: &mut Tokens) -> Result<Vec<String>, String> {
-        let mut parameters = Vec::new();
+    fn parse_parameters(tokens: &mut Tokens) -> Result<Vec<Parameter>, String> {
         if !Self::is_parameters_section(tokens) {
             return Err("Missing parameters section".to_string());
         }
-        for token in tokens {
+        let mut tokens = tokens.peekable();
+        let mut parameters = Vec::new();
+        while let Some(token) = tokens.next() {
             if token.is_parameters_parenthesis() {
                 break;
             }
-            let parameter = token.as_symbol()?;
-            parameters.push(parameter);
+            let name = token.as_symbol()?;
+            let next = tokens.peek();
+            let parameter = if let Some(Token::Operator(Operator::Variadic)) = next {
+                tokens.next();
+                Parameter::Variadic(name)
+            } else {
+                Parameter::Unary(name)
+            };
+            parameters.push(parameter)
         }
         Ok(parameters)
     }

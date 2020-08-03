@@ -23,7 +23,7 @@
  */
 
 use super::*;
-use crate::parser::{Constant, Expression};
+use crate::parser::{Constant, Expression, Parameter};
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
@@ -138,13 +138,13 @@ fn test_interpret_module() -> TestResult {
         environment! {
             "bar" => Value::Numeric(1),
             "barfoo" => Value::Closure(
-                vec!["x".to_string()],
+                vec![Parameter::Unary("x".to_string())],
                 Expression::Constant(Constant::Numeric(2)),
                 Environment::new(),
             ),
             "foobar" => Value::Numeric(3),
             "fooo" => Value::Closure(
-                vec!["x".to_string()],
+                vec![Parameter::Unary("x".to_string())],
                 Expression::Constant(Constant::Numeric(4)),
                 Environment::new(),
             )
@@ -170,7 +170,7 @@ fn test_interpret_function() -> TestResult {
     let expected = Value::Identified(
         "foo".to_string(),
         Rc::new(Value::Closure(
-            vec!["x".to_string()],
+            vec![Parameter::Unary("x".to_string())],
             Expression::Identifier("x".to_string()),
             Environment::new(),
         )),
@@ -272,6 +272,29 @@ fn test_is_null() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
         interpreter.interpret("(is_null 42)")?
+    );
+    Ok(())
+}
+
+#[test]
+fn test_variadic_parameter() -> TestResult {
+    let interpreter = create_interpreter();
+    assert_eq!(
+        Value::Pair(
+            Box::new(Value::Numeric(2)),
+            Box::new(Value::Pair(
+                Box::new(Value::Numeric(3)),
+                Box::new(Value::Pair(
+                    Box::new(Value::Numeric(4)),
+                    Box::new(Value::Null),
+                )),
+            )),
+        ),
+        interpreter.interpret("((-> |x xs... y| xs) 1 2 3 4)")?
+    );
+    assert_eq!(
+        Value::Numeric(1),
+        interpreter.interpret("((-> |x xs... y| x) 1 2 3 4)")?
     );
     Ok(())
 }

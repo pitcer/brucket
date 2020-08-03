@@ -23,11 +23,12 @@
  */
 
 use crate::evaluator::environment::Environment;
-use crate::parser::{Constant, Expression};
+use crate::parser::{Constant, Expression, Parameter};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::option::Option::Some;
 use std::rc::Rc;
+use std::slice::Iter;
 
 #[macro_use]
 pub mod environment;
@@ -62,7 +63,7 @@ pub enum Value {
     Textual(String),
     Boolean(bool),
     Pair(Box<Value>, Box<Value>),
-    Closure(Vec<String>, Expression, Environment),
+    Closure(Vec<Parameter>, Expression, Environment),
     Module(String, Environment),
     Identified(String, Rc<Value>),
 }
@@ -195,7 +196,7 @@ impl Evaluator {
     }
 
     fn evaluate_lambda(
-        parameters: &[String],
+        parameters: &[Parameter],
         body: &Expression,
         environment: &Environment,
     ) -> ValueResult {
@@ -299,20 +300,33 @@ impl Evaluator {
         if let Value::Closure(parameters, body, mut closure_environment) = identifier {
             let parameters_length = parameters.len();
             let arguments_length = arguments.len();
-            if parameters_length != arguments_length {
+            if parameters_length > arguments_length {
                 return Err(format!(
                     "Invalid number of arguments. Expected: {}, Actual: {}",
                     parameters_length, arguments_length
                 ));
             }
-            let arguments = self.evaluate_arguments(arguments, environment)?;
-            for (index, argument) in arguments.into_iter().enumerate() {
-                let parameter = &parameters[index];
-                closure_environment.insert(parameter.clone(), Rc::new(argument));
+            let mut arguments = arguments.iter();
+            for parameter in &parameters {
+                match parameter {
+                    Parameter::Unary(name) => {
+                        let argument = arguments
+                            .next()
+                            .ok_or_else(|| "Missing argument.".to_string())?;
+                        let argument = self.evaluate_environment(argument, environment)?;
+                        closure_environment.insert(name.clone(), Rc::new(argument));
+                    }
+                    Parameter::Variadic(name) => {
+                        let list = self.create_pair_list(arguments, environment)?;
+                        closure_environment.insert(name.clone(), Rc::new(list));
+                        break;
+                    }
+                }
             }
             let result = self.evaluate_environment(&body, &mut closure_environment);
-            for parameter in &parameters {
-                closure_environment.remove(parameter);
+            for parameter in parameters {
+                let name = parameter.get_name();
+                closure_environment.remove(name);
             }
             result
         } else {
@@ -321,6 +335,19 @@ impl Evaluator {
                 identifier
             ))
         }
+    }
+
+    fn create_pair_list(
+        &self,
+        arguments: Iter<Expression>,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let mut result = Value::Null;
+        for argument in arguments.rev() {
+            let argument = self.evaluate_environment(argument, environment)?;
+            result = Value::Pair(Box::new(argument), Box::new(result));
+        }
+        Ok(result)
     }
 
     fn evaluate_internal_call(

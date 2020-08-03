@@ -157,7 +157,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
 fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Closure(
-        vec!["y".to_string()],
+        vec![Parameter::Unary("y".to_string())],
         Expression::Identifier("y".to_string()),
         Environment::new(),
     );
@@ -165,7 +165,7 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
         Box::new(Expression::Lambda(
-            vec!["y".to_string()],
+            vec![Parameter::Unary("y".to_string())],
             Box::new(Expression::Identifier("y".to_string())),
         )),
     ))?;
@@ -177,7 +177,11 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
 fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Closure(
-        vec!["y".to_string(), "z".to_string(), "a".to_string()],
+        vec![
+            Parameter::Unary("y".to_string()),
+            Parameter::Unary("z".to_string()),
+            Parameter::Unary("a".to_string()),
+        ],
         Expression::Identifier("y".to_string()),
         Environment::new(),
     );
@@ -185,7 +189,11 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
         "x".to_string(),
         Box::new(Expression::Constant(Constant::Numeric(42))),
         Box::new(Expression::Lambda(
-            vec!["y".to_string(), "z".to_string(), "a".to_string()],
+            vec![
+                Parameter::Unary("y".to_string()),
+                Parameter::Unary("z".to_string()),
+                Parameter::Unary("a".to_string()),
+            ],
             Box::new(Expression::Identifier("y".to_string())),
         )),
     ))?;
@@ -221,7 +229,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
         Box::new(Expression::Constant(Constant::Numeric(42))),
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(
-                vec!["y".to_string()],
+                vec![Parameter::Unary("y".to_string())],
                 Box::new(Expression::Identifier("y".to_string())),
             )),
             vec![Expression::Constant(Constant::Numeric(24))],
@@ -240,7 +248,11 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
         Box::new(Expression::Constant(Constant::Numeric(42))),
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(
-                vec!["y".to_string(), "z".to_string(), "a".to_string()],
+                vec![
+                    Parameter::Unary("y".to_string()),
+                    Parameter::Unary("z".to_string()),
+                    Parameter::Unary("a".to_string()),
+                ],
                 Box::new(Expression::Identifier("y".to_string())),
             )),
             vec![
@@ -264,7 +276,7 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
         Box::new(Expression::Let(
             "y".to_string(),
             Box::new(Expression::Lambda(
-                vec!["a".to_string()],
+                vec![Parameter::Unary("a".to_string())],
                 Box::new(Expression::Identifier("z".to_string())),
             )),
             Box::new(Expression::Let(
@@ -313,7 +325,7 @@ fn test_evaluated_identified_expression_is_identified_value() -> TestResult {
     let expected = Value::Identified(
         "foo".to_string(),
         Rc::new(Value::Closure(
-            vec!["x".to_string()],
+            vec![Parameter::Unary("x".to_string())],
             Expression::Constant(Constant::Numeric(42)),
             Environment::new(),
         )),
@@ -321,7 +333,7 @@ fn test_evaluated_identified_expression_is_identified_value() -> TestResult {
     let actual = evaluator.evaluate(&Expression::Identified(
         "foo".to_string(),
         Box::new(Expression::Lambda(
-            vec!["x".to_string()],
+            vec![Parameter::Unary("x".to_string())],
             Box::new(Expression::Constant(Constant::Numeric(42))),
         )),
     ))?;
@@ -381,6 +393,64 @@ fn test_evaluated_or_expression_is_false_if_every_argument_is_false() -> TestRes
         Expression::Constant(Constant::Boolean(false)),
         Expression::Constant(Constant::Boolean(false)),
     ]))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Closure(
+        vec![
+            Parameter::Unary("x".to_string()),
+            Parameter::Unary("y".to_string()),
+            Parameter::Variadic("z".to_string()),
+        ],
+        Expression::Identifier("x".to_string()),
+        Environment::new(),
+    );
+    let actual = evaluator.evaluate(&Expression::Lambda(
+        vec![
+            Parameter::Unary("x".to_string()),
+            Parameter::Unary("y".to_string()),
+            Parameter::Variadic("z".to_string()),
+        ],
+        Box::new(Expression::Identifier("x".to_string())),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Pair(
+        Box::new(Value::Numeric(3)),
+        Box::new(Value::Pair(
+            Box::new(Value::Numeric(4)),
+            Box::new(Value::Pair(
+                Box::new(Value::Numeric(5)),
+                Box::new(Value::Null),
+            )),
+        )),
+    );
+    let actual = evaluator.evaluate(&Expression::Application(
+        Box::new(Expression::Lambda(
+            vec![
+                Parameter::Unary("x".to_string()),
+                Parameter::Unary("y".to_string()),
+                Parameter::Variadic("z".to_string()),
+            ],
+            Box::new(Expression::Identifier("z".to_string())),
+        )),
+        vec![
+            Expression::Constant(Constant::Numeric(1)),
+            Expression::Constant(Constant::Numeric(2)),
+            Expression::Constant(Constant::Numeric(3)),
+            Expression::Constant(Constant::Numeric(4)),
+            Expression::Constant(Constant::Numeric(5)),
+        ],
+    ))?;
     assert_eq!(expected, actual);
     Ok(())
 }

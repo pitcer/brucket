@@ -33,6 +33,7 @@ pub struct Lexer {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Parenthesis(Parenthesis),
+    Operator(Operator),
     String(String),
     Number(u32),
     Boolean(bool),
@@ -46,6 +47,11 @@ pub enum Parenthesis {
     Open(char),
     Close(char),
     Parameters,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Operator {
+    Variadic,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -101,6 +107,7 @@ impl LexerCharacter for char {
         self.is_ascii_whitespace()
             || self.is_closing_parenthesis()
             || self.is_parameter_parenthesis()
+            || matches!(self, '.')
     }
 
     fn is_quote(&self) -> bool {
@@ -160,6 +167,7 @@ impl Lexer {
                 Self::skip_comment(characters);
                 Ok(None)
             }
+            '.' => Self::tokenize_dots(characters),
             parenthesis if parenthesis.is_opening_parenthesis() => {
                 Ok(Some(Token::Parenthesis(Parenthesis::Open(parenthesis))))
             }
@@ -195,6 +203,16 @@ impl Lexer {
             if current == '\n' {
                 return;
             }
+        }
+    }
+
+    fn tokenize_dots(characters: &mut Characters) -> Result<Option<Token>, String> {
+        let second = characters.next();
+        let third = characters.next();
+        if second.is_some() && second.unwrap() == '.' && third.is_some() && third.unwrap() == '.' {
+            Ok(Some(Token::Operator(Operator::Variadic)))
+        } else {
+            Err("Invalid dots operator".to_string())
         }
     }
 
