@@ -49,6 +49,7 @@ pub enum Expression {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Constant {
     Unit,
+    Null,
     Numeric(u32),
     Boolean(bool),
     String(String),
@@ -99,6 +100,7 @@ impl Parser {
                 Parenthesis::Close(_) => Err("Unexpected close parenthesis".to_string()),
                 Parenthesis::Parameters => Err("Unexpected parameters parenthesis".to_string()),
             },
+            Token::Null => Ok(Expression::Constant(Constant::Null)),
             Token::String(value) => Ok(Expression::Constant(Constant::String(value.clone()))),
             Token::Number(value) => Ok(Expression::Constant(Constant::Numeric(*value))),
             Token::Boolean(value) => Ok(Expression::Constant(Constant::Boolean(*value))),

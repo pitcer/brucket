@@ -189,6 +189,15 @@ fn test_tokenized_or_keyword_is_and_token() -> TestResult {
 }
 
 #[test]
+fn test_tokenized_null_is_null_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Null];
+    let actual = lexer.tokenize("null")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("x".to_string())];

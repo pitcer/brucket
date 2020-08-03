@@ -56,10 +56,19 @@ fn test_evaluated_string_expression_is_textual_value() -> TestResult {
 }
 
 #[test]
-fn test_evaluated_unit_function_expression_is_unit_value() -> TestResult {
+fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Unit;
     let actual = evaluator.evaluate(&Expression::Constant(Constant::Unit))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_null_expression_is_null_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Null;
+    let actual = evaluator.evaluate(&Expression::Constant(Constant::Null))?;
     assert_eq!(expected, actual);
     Ok(())
 }

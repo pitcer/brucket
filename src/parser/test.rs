@@ -75,6 +75,15 @@ fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
 }
 
 #[test]
+fn test_parsed_null_token_is_null_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Constant(Constant::Null);
+    let actual = parser.parse(&[Token::Null])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_parsed_constant_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Application(

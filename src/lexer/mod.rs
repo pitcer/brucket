@@ -36,6 +36,7 @@ pub enum Token {
     String(String),
     Number(u32),
     Boolean(bool),
+    Null,
     Keyword(Keyword),
     Symbol(String),
 }
@@ -123,6 +124,7 @@ impl Default for Lexer {
         let symbol_map = maplit::hashmap! {
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
+            "null" => Token::Null,
             "let" => Token::Keyword(Keyword::Let),
             "letrec" => Token::Keyword(Keyword::Letrec),
             "if" => Token::Keyword(Keyword::If),

@@ -57,6 +57,7 @@ pub struct Evaluator {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Unit,
+    Null,
     Numeric(i32),
     Textual(String),
     Boolean(bool),
@@ -109,6 +110,7 @@ impl Evaluator {
         match expression {
             Expression::Constant(value) => match value {
                 Constant::Unit => Ok(Value::Unit),
+                Constant::Null => Ok(Value::Null),
                 Constant::Numeric(value) => Ok(Value::Numeric(*value as i32)),
                 Constant::Boolean(value) => Ok(Value::Boolean(*value)),
                 Constant::String(value) => Ok(Value::Textual(value.clone())),

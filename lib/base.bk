@@ -70,4 +70,9 @@
     (internal pair_second pair))
 
   (constant cdr pair_first)
+
+  (function is_null |nullable|
+    (is_equal null nullable))
+
+  (constant null? is_null)
 )

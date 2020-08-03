@@ -262,6 +262,20 @@ fn test_pair() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn test_is_null() -> TestResult {
+    let interpreter = create_interpreter();
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret("(is_null null)")?
+    );
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret("(is_null 42)")?
+    );
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
     let mut library_syntax = String::new();
