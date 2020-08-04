@@ -23,7 +23,7 @@
  */
 
 use super::*;
-use crate::parser::{Constant, Expression, Parameter};
+use crate::parser::{ConstantValue, Expression, Parameter, Visibility};
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
@@ -139,13 +139,13 @@ fn test_interpret_module() -> TestResult {
             "bar" => Value::Numeric(1),
             "barfoo" => Value::Closure(
                 vec![Parameter::Unary("x".to_string())],
-                Expression::Constant(Constant::Numeric(2)),
+                Expression::ConstantValue(ConstantValue::Numeric(2)),
                 Environment::new(),
             ),
             "foobar" => Value::Numeric(3),
             "fooo" => Value::Closure(
                 vec![Parameter::Unary("x".to_string())],
-                Expression::Constant(Constant::Numeric(4)),
+                Expression::ConstantValue(ConstantValue::Numeric(4)),
                 Environment::new(),
             )
         },
@@ -153,10 +153,12 @@ fn test_interpret_module() -> TestResult {
     let actual = interpreter.interpret(
         r#"
         (module foo
-          (constant bar 1)
-          (function barfoo |x| 2)
-          (constant foobar 3)
-          (function fooo |x| 4)
+          (public constant bar 1)
+          (public function barfoo |x| 2)
+          (private function barr |x| 0)
+          (private constant baar 0)
+          (public constant foobar 3)
+          (public function fooo |x| 4)
         )
         "#,
     )?;
@@ -168,6 +170,7 @@ fn test_interpret_module() -> TestResult {
 fn test_interpret_function() -> TestResult {
     let interpreter = create_interpreter();
     let expected = Value::Identified(
+        Visibility::Private,
         "foo".to_string(),
         Rc::new(Value::Closure(
             vec![Parameter::Unary("x".to_string())],

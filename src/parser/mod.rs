@@ -32,7 +32,7 @@ pub struct Parser;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
-    Constant(Constant),
+    ConstantValue(ConstantValue),
     Identifier(String),
     Application(Box<Expression>, Vec<Expression>),
     InternalCall(String, Vec<Expression>),
@@ -41,13 +41,14 @@ pub enum Expression {
     If(Box<Expression>, Box<Expression>, Box<Expression>),
     Lambda(Vec<Parameter>, Box<Expression>),
     Module(String, Vec<Expression>),
-    Identified(String, Box<Expression>),
+    Function(Visibility, String, Vec<Parameter>, Box<Expression>),
+    Constant(Visibility, String, Box<Expression>),
     And(Vec<Expression>),
     Or(Vec<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Constant {
+pub enum ConstantValue {
     Unit,
     Null,
     Numeric(u32),
@@ -68,6 +69,12 @@ impl Parameter {
             Parameter::Variadic(name) => name,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Visibility {
+    Public,
+    Private,
 }
 
 impl Token {
@@ -118,10 +125,12 @@ impl Parser {
             Token::Operator(operator) => match operator {
                 Operator::Variadic => Err("Unexpected variadic operator".to_string()),
             },
-            Token::Null => Ok(Expression::Constant(Constant::Null)),
-            Token::String(value) => Ok(Expression::Constant(Constant::String(value.clone()))),
-            Token::Number(value) => Ok(Expression::Constant(Constant::Numeric(*value))),
-            Token::Boolean(value) => Ok(Expression::Constant(Constant::Boolean(*value))),
+            Token::Null => Ok(Expression::ConstantValue(ConstantValue::Null)),
+            Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(
+                value.clone(),
+            ))),
+            Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(*value))),
+            Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(*value))),
             Token::Keyword(_keyword) => Err("Unexpected keyword".to_string()),
             Token::Symbol(symbol) => Ok(Expression::Identifier(symbol.clone())),
         }
@@ -141,7 +150,7 @@ impl Parser {
                     let identifier = Self::parse_section(tokens)?;
                     Self::parse_application(identifier, tokens)
                 }
-                Parenthesis::Close(_) => Ok(Expression::Constant(Constant::Unit)),
+                Parenthesis::Close(_) => Ok(Expression::ConstantValue(ConstantValue::Unit)),
                 Parenthesis::Parameters => Err("Unexpected parameters parenthesis".to_string()),
             },
             Token::Keyword(keyword) => match keyword {
@@ -151,10 +160,12 @@ impl Parser {
                 Keyword::Lambda => Self::parse_lambda(tokens),
                 Keyword::Internal => Self::parse_internal(tokens),
                 Keyword::Module => Self::parse_module(tokens),
-                Keyword::Function => Self::parse_function(tokens),
-                Keyword::Constant => Self::parse_constant(tokens),
+                Keyword::Function => Self::parse_function(Visibility::Private, tokens),
+                Keyword::Constant => Self::parse_constant(Visibility::Private, tokens),
                 Keyword::And => Self::parse_and(tokens),
                 Keyword::Or => Self::parse_or(tokens),
+                Keyword::Public => Self::parse_public_member(tokens),
+                Keyword::Private => Self::parse_private_member(tokens),
             },
             Token::Symbol(symbol) => {
                 let identifier = Expression::Identifier(symbol.clone());
@@ -204,10 +215,43 @@ impl Parser {
         ))
     }
 
-    fn parse_function(tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_public_member(tokens: &mut Tokens) -> ExpressionResult {
+        Self::parse_member_with_visibility(Visibility::Public, tokens)
+    }
+
+    fn parse_private_member(tokens: &mut Tokens) -> ExpressionResult {
+        Self::parse_member_with_visibility(Visibility::Private, tokens)
+    }
+
+    fn parse_member_with_visibility(
+        visibility: Visibility,
+        tokens: &mut Tokens,
+    ) -> ExpressionResult {
+        let token = tokens.next();
+        match token {
+            Some(token) => match token {
+                Token::Keyword(keyword) => match keyword {
+                    Keyword::Function => Self::parse_function(visibility, tokens),
+                    Keyword::Constant => Self::parse_constant(visibility, tokens),
+                    _ => Err("Invalid token".to_string()),
+                },
+                _ => Err("Invalid token".to_string()),
+            },
+            None => Err("Invalid token".to_string()),
+        }
+    }
+
+    fn parse_function(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
-        let lambda = Self::parse_lambda(tokens)?;
-        Ok(Expression::Identified(identifier, Box::from(lambda)))
+        let parameters = Self::parse_parameters(tokens)?;
+        let body = Self::parse_first(tokens)?;
+        if !Self::is_section_closed(tokens) {
+            return Err("Invalid lambda expression".to_string());
+        }
+        let body = Box::new(body);
+        Ok(Expression::Function(
+            visibility, identifier, parameters, body,
+        ))
     }
 
     fn parse_lambda(tokens: &mut Tokens) -> ExpressionResult {
@@ -232,13 +276,17 @@ impl Parser {
         Ok(Expression::Module(identifier, members))
     }
 
-    fn parse_constant(tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_constant(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
             return Err("Missing parameters section".to_string());
         }
-        Ok(Expression::Identified(identifier, Box::from(value)))
+        Ok(Expression::Constant(
+            visibility,
+            identifier,
+            Box::from(value),
+        ))
     }
 
     fn parse_and(tokens: &mut Tokens) -> ExpressionResult {

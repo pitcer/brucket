@@ -23,7 +23,7 @@
  */
 
 use crate::evaluator::environment::Environment;
-use crate::parser::{Constant, Expression, Parameter};
+use crate::parser::{ConstantValue, Expression, Parameter, Visibility};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::option::Option::Some;
@@ -65,7 +65,7 @@ pub enum Value {
     Pair(Box<Value>, Box<Value>),
     Closure(Vec<Parameter>, Expression, Environment),
     Module(String, Environment),
-    Identified(String, Rc<Value>),
+    Identified(Visibility, String, Rc<Value>),
 }
 
 impl Default for Evaluator {
@@ -109,12 +109,12 @@ impl Evaluator {
         environment: &mut Environment,
     ) -> ValueResult {
         match expression {
-            Expression::Constant(value) => match value {
-                Constant::Unit => Ok(Value::Unit),
-                Constant::Null => Ok(Value::Null),
-                Constant::Numeric(value) => Ok(Value::Numeric(*value as i32)),
-                Constant::Boolean(value) => Ok(Value::Boolean(*value)),
-                Constant::String(value) => Ok(Value::Textual(value.clone())),
+            Expression::ConstantValue(value) => match value {
+                ConstantValue::Unit => Ok(Value::Unit),
+                ConstantValue::Null => Ok(Value::Null),
+                ConstantValue::Numeric(value) => Ok(Value::Numeric(*value as i32)),
+                ConstantValue::Boolean(value) => Ok(Value::Boolean(*value)),
+                ConstantValue::String(value) => Ok(Value::Textual(value.clone())),
             },
             Expression::Identifier(value) => Self::get_from_environment(environment, value),
             Expression::Application(identifier, arguments) => {
@@ -136,11 +136,14 @@ impl Evaluator {
             Expression::Module(identifier, members) => {
                 self.evaluate_module(identifier, members, environment)
             }
-            Expression::Identified(identifier, value) => {
-                self.evaluate_identified(identifier, value, environment)
-            }
             Expression::And(arguments) => self.evaluate_and(arguments, environment),
             Expression::Or(arguments) => self.evaluate_or(arguments, environment),
+            Expression::Function(visibility, identifier, parameters, body) => {
+                self.evaluate_function(visibility, identifier, parameters, body, environment)
+            }
+            Expression::Constant(visibility, identifier, value) => {
+                self.evaluate_constant(visibility, identifier, value, environment)
+            }
         }
     }
 
@@ -260,10 +263,7 @@ impl Evaluator {
                     identifiers.append(&mut Self::get_used_identifiers(member));
                 }
             }
-            Expression::Identified(_, body) => {
-                identifiers.append(&mut Self::get_used_identifiers(body))
-            }
-            Expression::Constant(_) => (),
+            Expression::ConstantValue(_) => (),
             Expression::And(arguments) => {
                 for argument in arguments {
                     identifiers.append(&mut Self::get_used_identifiers(argument));
@@ -273,6 +273,12 @@ impl Evaluator {
                 for argument in arguments {
                     identifiers.append(&mut Self::get_used_identifiers(argument));
                 }
+            }
+            Expression::Function(_, _, _, body) => {
+                identifiers.append(&mut Self::get_used_identifiers(body))
+            }
+            Expression::Constant(_, _, value) => {
+                identifiers.append(&mut Self::get_used_identifiers(value))
             }
         }
         identifiers
@@ -378,14 +384,35 @@ impl Evaluator {
         Ok(result)
     }
 
-    fn evaluate_identified(
+    fn evaluate_function(
         &self,
+        visibility: &Visibility,
+        identifier: &str,
+        parameters: &[Parameter],
+        body: &Expression,
+        environment: &mut Environment,
+    ) -> ValueResult {
+        let closure = Self::evaluate_lambda(parameters, body, environment)?;
+        Ok(Value::Identified(
+            visibility.clone(),
+            identifier.to_string(),
+            Rc::new(closure),
+        ))
+    }
+
+    fn evaluate_constant(
+        &self,
+        visibility: &Visibility,
         identifier: &str,
         value: &Expression,
         environment: &mut Environment,
     ) -> ValueResult {
         let value = self.evaluate_environment(value, environment)?;
-        Ok(Value::Identified(identifier.to_string(), Rc::new(value)))
+        Ok(Value::Identified(
+            visibility.clone(),
+            identifier.to_string(),
+            Rc::new(value),
+        ))
     }
 
     fn evaluate_module(
@@ -398,9 +425,11 @@ impl Evaluator {
         let mut module_environment = Environment::new();
         for member in members {
             let member = self.evaluate_environment(member, &mut environment)?;
-            if let Value::Identified(identifier, value) = member {
+            if let Value::Identified(visibility, identifier, value) = member {
                 environment.insert(identifier.clone(), Rc::clone(&value));
-                module_environment.insert(identifier, value);
+                if let Visibility::Public = visibility {
+                    module_environment.insert(identifier, value);
+                }
             } else {
                 return Err("Cannot identify module member".to_string());
             }

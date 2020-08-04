@@ -198,6 +198,24 @@ fn test_tokenized_null_is_null_token() -> TestResult {
 }
 
 #[test]
+fn test_tokenized_public_keyword_is_public_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Public)];
+    let actual = lexer.tokenize("public")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_private_keyword_is_private_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Keyword(Keyword::Private)];
+    let actual = lexer.tokenize("private")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Symbol("x".to_string())];

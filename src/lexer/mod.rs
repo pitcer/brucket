@@ -66,6 +66,8 @@ pub enum Keyword {
     And,
     Or,
     Letrec,
+    Public,
+    Private,
 }
 
 trait LexerCharacter {
@@ -143,6 +145,8 @@ impl Default for Lexer {
             "constant" => Token::Keyword(Keyword::Constant),
             "and" => Token::Keyword(Keyword::And),
             "or" => Token::Keyword(Keyword::Or),
+            "public" => Token::Keyword(Keyword::Public),
+            "private" => Token::Keyword(Keyword::Private),
         };
         Self { symbol_map }
     }
