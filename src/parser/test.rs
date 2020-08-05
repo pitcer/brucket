@@ -274,9 +274,9 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
 #[test]
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Module {
-        identifier: "foo".to_string(),
-        functions: vec![Expression::Function(
+    let expected = Expression::Module(Module::new(
+        "foo".to_string(),
+        vec![Expression::Function(
             Visibility::Private,
             "x".to_string(),
             Lambda::new(
@@ -285,12 +285,12 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
                 HashSet::new(),
             ),
         )],
-        constants: vec![Expression::Constant(
+        vec![Expression::Constant(
             Visibility::Private,
             "y".to_string(),
             Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         )],
-    };
+    ));
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Module),

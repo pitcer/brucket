@@ -23,7 +23,7 @@
  */
 
 use crate::evaluator::environment::Environment;
-use crate::parser::{ConstantValue, Expression, Lambda, Parameter};
+use crate::parser::{ConstantValue, Expression, Lambda, Module, Parameter};
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
@@ -154,11 +154,7 @@ impl Evaluator {
             Expression::Lambda(lambda) => {
                 Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
             }
-            Expression::Module {
-                identifier,
-                functions,
-                constants,
-            } => self.evaluate_module(identifier, functions, constants, environment),
+            Expression::Module(module) => self.evaluate_module(module, environment),
             Expression::And(arguments) => self.evaluate_and(arguments, environment),
             Expression::Or(arguments) => self.evaluate_or(arguments, environment),
             Expression::Function(_, _, lambda) => {
@@ -331,18 +327,12 @@ impl Evaluator {
         Ok(result)
     }
 
-    fn evaluate_module(
-        &self,
-        identifier: &str,
-        functions: &[Expression],
-        constants: &[Expression],
-        environment: &mut Environment,
-    ) -> ValueResult {
+    fn evaluate_module(&self, module: &Module, environment: &mut Environment) -> ValueResult {
         let module_environment = Environment::new();
         let mut constants_environment = environment.clone();
         let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();
-        for function in functions {
+        for function in module.functions() {
             if let Expression::Function(visibility, identifier, lambda) = &function {
                 let closure = Self::evaluate_lambda(lambda, environment);
                 let closure = Rc::new(Value::Closure(closure));
@@ -359,7 +349,7 @@ impl Evaluator {
         }
         Self::fill_closures(&closures, &evaluated_closures)?;
         let mut evaluated_constants = HashMap::new();
-        for constant in constants {
+        for constant in module.constants() {
             if let Expression::Constant(visibility, identifier, value) = constant {
                 let value = self.evaluate_environment(value, &mut constants_environment)?;
                 let value = Rc::new(value);
@@ -373,6 +363,7 @@ impl Evaluator {
             }
         }
         Self::fill_closures(&closures, &evaluated_constants)?;
+        let identifier = module.identifier();
         Ok(Value::Module(identifier.to_string(), module_environment))
     }
 

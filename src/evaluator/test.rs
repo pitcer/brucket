@@ -313,9 +313,9 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
             ))
         },
     );
-    let actual = evaluator.evaluate(&Expression::Module {
-        identifier: "foo".to_string(),
-        functions: vec![Expression::Function(
+    let actual = evaluator.evaluate(&Expression::Module(Module::new(
+        "foo".to_string(),
+        vec![Expression::Function(
             Visibility::Public,
             "bar".to_string(),
             Lambda::new(
@@ -324,8 +324,8 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 HashSet::new(),
             ),
         )],
-        constants: Vec::new(),
-    })?;
+        Vec::new(),
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -481,9 +481,9 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
             "baar" => Value::Numeric(42)
         },
     );
-    let actual = evaluator.evaluate(&Expression::Module {
-        identifier: "foo".to_string(),
-        functions: vec![
+    let actual = evaluator.evaluate(&Expression::Module(Module::new(
+        "foo".to_string(),
+        vec![
             Expression::Function(
                 Visibility::Public,
                 "bar".to_string(),
@@ -503,7 +503,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 ),
             ),
         ],
-        constants: vec![
+        vec![
             Expression::Constant(
                 Visibility::Public,
                 "baar".to_string(),
@@ -515,7 +515,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
             ),
         ],
-    })?;
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }

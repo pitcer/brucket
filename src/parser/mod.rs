@@ -40,11 +40,7 @@ pub enum Expression {
     Let(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
     Lambda(Lambda),
-    Module {
-        identifier: String,
-        functions: Vec<Expression>,
-        constants: Vec<Expression>,
-    },
+    Module(Module),
     Function(Visibility, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
     And(Vec<Expression>),
@@ -81,6 +77,35 @@ impl Lambda {
 
     pub fn used_identifiers(&self) -> &HashSet<String> {
         &self.used_identifiers
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Module {
+    identifier: String,
+    functions: Vec<Expression>,
+    constants: Vec<Expression>,
+}
+
+impl Module {
+    pub fn new(identifier: String, functions: Vec<Expression>, constants: Vec<Expression>) -> Self {
+        Self {
+            identifier,
+            functions,
+            constants,
+        }
+    }
+
+    pub fn identifier(&self) -> &String {
+        &self.identifier
+    }
+
+    pub fn functions(&self) -> &Vec<Expression> {
+        &self.functions
+    }
+
+    pub fn constants(&self) -> &Vec<Expression> {
+        &self.constants
     }
 }
 
@@ -328,15 +353,11 @@ impl Parser {
                     identifiers.insert(identifier.clone());
                 }
             }
-            Expression::Module {
-                identifier: _identifier,
-                functions,
-                constants,
-            } => {
-                for function in functions {
+            Expression::Module(module) => {
+                for function in module.functions() {
                     Self::insert_used_identifiers(function, identifiers);
                 }
-                for constant in constants {
+                for constant in module.constants() {
                     Self::insert_used_identifiers(constant, identifiers);
                 }
             }
@@ -381,11 +402,8 @@ impl Parser {
                 _ => return Err("Invalid module member".to_string()),
             }
         }
-        Ok(Expression::Module {
-            identifier,
-            functions,
-            constants,
-        })
+        let module = Module::new(identifier, functions, constants);
+        Ok(Expression::Module(module))
     }
 
     fn parse_constant(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
