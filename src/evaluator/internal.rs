@@ -25,67 +25,31 @@
 use crate::evaluator::{Value, ValueResult};
 
 pub fn add(arguments: Vec<Value>) -> ValueResult {
-    if arguments.is_empty() {
-        Err("Invalid number of arguments".to_string())
-    } else {
-        let mut result = 0;
-        for argument in arguments {
-            let argument = argument.as_number()?;
-            result += argument;
-        }
-        Ok(Value::Numeric(result))
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Numeric(first + second))
 }
 
 pub fn subtract(arguments: Vec<Value>) -> ValueResult {
-    if arguments.is_empty() {
-        Err("Invalid number of arguments".to_string())
-    } else if arguments.len() == 1 {
-        let argument = &arguments[0];
-        let argument = argument.as_number()?;
-        Ok(Value::Numeric(-argument))
-    } else {
-        let (first, arguments) = arguments.split_first().unwrap();
-        let first = first.as_number()?;
-        let mut result = first;
-        for argument in arguments {
-            let argument = argument.as_number()?;
-            result -= argument
-        }
-        Ok(Value::Numeric(result))
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Numeric(first - second))
 }
 
 pub fn multiply(arguments: Vec<Value>) -> ValueResult {
-    if arguments.is_empty() {
-        Err("Invalid number of arguments".to_string())
-    } else {
-        let mut result = 1;
-        for argument in arguments {
-            let argument = argument.as_number()?;
-            result *= argument;
-        }
-        Ok(Value::Numeric(result))
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Numeric(first * second))
 }
 
 pub fn divide(arguments: Vec<Value>) -> ValueResult {
-    if arguments.is_empty() {
-        Err("Invalid number of arguments".to_string())
-    } else if arguments.len() == 1 {
-        let argument = &arguments[0];
-        let argument = argument.as_number()?;
-        Ok(Value::Numeric(1 / argument))
-    } else {
-        let (first, arguments) = arguments.split_first().unwrap();
-        let first = first.as_number()?;
-        let mut result = first;
-        for argument in arguments {
-            let argument = argument.as_number()?;
-            result /= argument
-        }
-        Ok(Value::Numeric(result))
-    }
+    let (first, second) = get_binary_function_arguments(arguments)?;
+    let first = first.as_number()?;
+    let second = second.as_number()?;
+    Ok(Value::Numeric(first / second))
 }
 
 pub fn remainder(arguments: Vec<Value>) -> ValueResult {
@@ -97,7 +61,7 @@ pub fn remainder(arguments: Vec<Value>) -> ValueResult {
 
 pub fn is_equal(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    Ok(Value::Boolean(first.eq(&second)))
+    Ok(Value::Boolean(first == second))
 }
 
 pub fn is_greater(arguments: Vec<Value>) -> ValueResult {
@@ -200,38 +164,9 @@ mod test {
     type TestResult = Result<(), String>;
 
     #[test]
-    fn test_add_with_one_argument_returns_that_argument() -> TestResult {
-        let expected = Value::Numeric(42);
-        let actual = add(vec![Value::Numeric(42)])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
     fn test_add_with_two_arguments_returns_their_sum() -> TestResult {
         let expected = Value::Numeric(42);
         let actual = add(vec![Value::Numeric(40), Value::Numeric(2)])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
-    fn test_add_with_many_arguments_returns_their_sum() -> TestResult {
-        let expected = Value::Numeric(42);
-        let actual = add(vec![
-            Value::Numeric(18),
-            Value::Numeric(2),
-            Value::Numeric(9),
-            Value::Numeric(13),
-        ])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
-    fn test_subtract_with_one_argument_returns_that_argument_with_opposite_sign() -> TestResult {
-        let expected = Value::Numeric(-42);
-        let actual = subtract(vec![Value::Numeric(42)])?;
         assert_eq!(expected, actual);
         Ok(())
     }
@@ -245,27 +180,6 @@ mod test {
     }
 
     #[test]
-    fn test_subtract_with_many_arguments_returns_their_difference() -> TestResult {
-        let expected = Value::Numeric(10);
-        let actual = subtract(vec![
-            Value::Numeric(42),
-            Value::Numeric(10),
-            Value::Numeric(20),
-            Value::Numeric(2),
-        ])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiply_with_one_argument_returns_that_argument() -> TestResult {
-        let expected = Value::Numeric(42);
-        let actual = multiply(vec![Value::Numeric(42)])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
     fn test_multiply_with_two_arguments_returns_their_product() -> TestResult {
         let expected = Value::Numeric(42);
         let actual = multiply(vec![Value::Numeric(21), Value::Numeric(2)])?;
@@ -274,43 +188,9 @@ mod test {
     }
 
     #[test]
-    fn test_multiply_with_many_arguments_returns_their_product() -> TestResult {
-        let expected = Value::Numeric(42);
-        let actual = multiply(vec![
-            Value::Numeric(7),
-            Value::Numeric(3),
-            Value::Numeric(2),
-            Value::Numeric(1),
-        ])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
-    fn test_divide_with_one_argument_returns_inverse_of_that_argument() -> TestResult {
-        let expected = Value::Numeric(1 / 42);
-        let actual = divide(vec![Value::Numeric(42)])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
     fn test_divide_with_two_arguments_returns_their_quotient() -> TestResult {
         let expected = Value::Numeric(42);
         let actual = divide(vec![Value::Numeric(84), Value::Numeric(2)])?;
-        assert_eq!(expected, actual);
-        Ok(())
-    }
-
-    #[test]
-    fn test_divide_with_many_arguments_returns_their_quotient() -> TestResult {
-        let expected = Value::Numeric(42);
-        let actual = divide(vec![
-            Value::Numeric(42 * 2 * 3 * 5),
-            Value::Numeric(2),
-            Value::Numeric(3),
-            Value::Numeric(5),
-        ])?;
         assert_eq!(expected, actual);
         Ok(())
     }

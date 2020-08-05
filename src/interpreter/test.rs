@@ -345,6 +345,150 @@ fn test_call_other_members_in_module_including_recursive_function() -> TestResul
     Ok(())
 }
 
+#[test]
+fn test_add_with_zero_arguments_returns_zero() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(0);
+    let actual = interpreter.interpret("(+)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_add_with_one_argument_returns_that_argument() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(+ 42)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_add_with_two_arguments_returns_their_sum() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(+ 40 2)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_add_with_many_arguments_returns_their_sum() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(+ 18 2 9 13)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_subtract_with_zero_arguments_returns_zero() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(0);
+    let actual = interpreter.interpret("(-)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_subtract_with_one_argument_returns_that_argument_with_opposite_sign() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(-42);
+    let actual = interpreter.interpret("(- 42)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_subtract_with_two_arguments_returns_their_difference() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(40);
+    let actual = interpreter.interpret("(- 42 2)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_subtract_with_many_arguments_returns_their_difference() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(10);
+    let actual = interpreter.interpret("(- 42 10 20 2)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_multiply_with_zero_arguments_returns_one() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(1);
+    let actual = interpreter.interpret("(*)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_multiply_with_one_argument_returns_that_argument() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(* 42)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_multiply_with_two_arguments_returns_their_product() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(* 21 2)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_multiply_with_many_arguments_returns_their_product() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(* 7 3 2 1)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_divide_with_zero_arguments_returns_one() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(1);
+    let actual = interpreter.interpret("(/)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_divide_with_one_argument_returns_inverse_of_that_argument() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(1 / 42);
+    let actual = interpreter.interpret("(/ 42)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_divide_with_two_arguments_returns_their_quotient() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(/ 84 2)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_divide_with_many_arguments_returns_their_quotient() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(/ 1260 2 3 5)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
     let mut library_syntax = String::new();

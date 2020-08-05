@@ -26,6 +26,7 @@ use crate::evaluator::environment::Environment;
 use crate::parser::{ConstantValue, Expression, Parameter};
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::io::Empty;
 use std::option::Option::Some;
 use std::rc::Rc;
 use std::slice::Iter;
@@ -290,30 +291,31 @@ impl Evaluator {
     ) -> ValueResult {
         let identifier = self.evaluate_environment(identifier, environment)?;
         if let Value::Closure(parameters, body, mut closure_environment) = identifier {
-            let parameters_length = parameters.len();
-            let arguments_length = arguments.len();
-            if parameters_length > arguments_length {
-                return Err(format!(
-                    "Invalid number of arguments. Expected: {}, Actual: {}",
-                    parameters_length, arguments_length
-                ));
-            }
-            let mut arguments = arguments.iter();
+            let mut arguments_iterator = arguments.iter();
+            let mut has_variadic_parameter = false;
             for parameter in &parameters {
                 match parameter {
                     Parameter::Unary(name) => {
-                        let argument = arguments
-                            .next()
-                            .ok_or_else(|| "Missing argument.".to_string())?;
+                        let argument = arguments_iterator.next();
+                        let argument = argument.ok_or_else(|| "Missing argument.".to_string())?;
                         let argument = self.evaluate_environment(argument, environment)?;
                         closure_environment.insert(name.clone(), Rc::new(argument));
                     }
                     Parameter::Variadic(name) => {
-                        let list = self.create_pair_list(arguments, environment)?;
+                        let list = self.create_pair_list(arguments_iterator, environment)?;
                         closure_environment.insert(name.clone(), Rc::new(list));
+                        has_variadic_parameter = true;
                         break;
                     }
                 }
+            }
+            let parameters_length = parameters.len();
+            let arguments_length = arguments.len();
+            if !has_variadic_parameter && parameters_length != arguments_length {
+                return Err(format!(
+                    "Invalid number of arguments. Expected: {}, Actual: {}",
+                    parameters_length, arguments_length
+                ));
             }
             let result = self.evaluate_environment(&body, &mut closure_environment);
             for parameter in parameters {
