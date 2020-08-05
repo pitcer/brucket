@@ -65,7 +65,6 @@ pub enum Keyword {
     Constant,
     And,
     Or,
-    Letrec,
     Public,
     Private,
 }
@@ -107,6 +106,7 @@ impl LexerCharacter for char {
 
     fn is_section_break(&self) -> bool {
         self.is_ascii_whitespace()
+            || self.is_opening_parenthesis()
             || self.is_closing_parenthesis()
             || self.is_parameter_parenthesis()
             || matches!(self, '.')
@@ -135,7 +135,6 @@ impl Default for Lexer {
             "false" => Token::Boolean(false),
             "null" => Token::Null,
             "let" => Token::Keyword(Keyword::Let),
-            "letrec" => Token::Keyword(Keyword::Letrec),
             "if" => Token::Keyword(Keyword::If),
             "lambda" => Token::Keyword(Keyword::Lambda),
             "->" => Token::Keyword(Keyword::Lambda),

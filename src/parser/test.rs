@@ -160,26 +160,6 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_letrec_tokens_are_letrec_expression() -> TestResult {
-    let parser = Parser::default();
-    let expected = Expression::Letrec(
-        "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        Box::new(Expression::Identifier("x".to_string())),
-    );
-    let actual = parser.parse(&[
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Letrec),
-        Token::Symbol("x".to_string()),
-        Token::Number(42),
-        Token::Symbol("x".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
-    ])?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::If(

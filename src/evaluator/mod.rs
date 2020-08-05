@@ -123,9 +123,6 @@ impl Evaluator {
                 self.evaluate_internal_call(identifier, arguments, environment)
             }
             Expression::Let(name, value, then) => self.evaluate_let(name, value, then, environment),
-            Expression::Letrec(name, value, then) => {
-                self.evaluate_letrec(name, value, then, environment)
-            }
             Expression::If(condition, if_true_then, if_false_then) => {
                 self.evaluate_if(condition, if_true_then, if_false_then, environment)
             }
@@ -153,29 +150,16 @@ impl Evaluator {
         then: &Expression,
         environment: &mut Environment,
     ) -> ValueResult {
-        let value = self.evaluate_environment(value, environment)?;
-        environment.insert(identifier.to_string(), Rc::new(value));
-        let result = self.evaluate_environment(then, environment);
-        environment.remove(identifier);
-        result
-    }
-
-    fn evaluate_letrec(
-        &self,
-        identifier: &str,
-        value: &Expression,
-        then: &Expression,
-        environment: &mut Environment,
-    ) -> ValueResult {
         let evaluated_value = self.evaluate_environment(value, environment)?;
-        let used_identifiers = Self::get_used_identifiers(value);
-        let value = Rc::new(evaluated_value);
-        if let Value::Closure(_, _, environment) = value.borrow() {
-            if used_identifiers.contains(&&identifier.to_string()) {
-                environment.insert_weak(identifier.to_string(), Rc::downgrade(&value));
+        let evaluated_value = Rc::new(evaluated_value);
+        if let Value::Closure(_, _, environment) = evaluated_value.borrow() {
+            let used_identifiers = Self::get_used_identifiers(value);
+            let identifier = identifier.to_string();
+            if used_identifiers.contains(&&identifier) {
+                environment.insert_weak(identifier, Rc::downgrade(&evaluated_value));
             }
         }
-        environment.insert(identifier.to_string(), value);
+        environment.insert(identifier.to_string(), evaluated_value);
         let result = self.evaluate_environment(then, environment);
         environment.remove(identifier);
         result
@@ -242,10 +226,6 @@ impl Evaluator {
                 }
             }
             Expression::Let(_, value, body) => {
-                identifiers.append(&mut Self::get_used_identifiers(value));
-                identifiers.append(&mut Self::get_used_identifiers(body));
-            }
-            Expression::Letrec(_, value, body) => {
                 identifiers.append(&mut Self::get_used_identifiers(value));
                 identifiers.append(&mut Self::get_used_identifiers(body));
             }

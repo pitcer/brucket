@@ -234,7 +234,7 @@ fn test_recursive_lambda() -> TestResult {
     let expected = Value::Numeric(0);
     let actual = interpreter.interpret(
         r#"
-        (letrec foo
+        (let foo
           (-> |x|
             (if (> x 0)
               (foo (- x 1))
