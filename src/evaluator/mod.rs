@@ -26,7 +26,6 @@ use crate::evaluator::environment::Environment;
 use crate::parser::{ConstantValue, Expression, Parameter};
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::io::Empty;
 use std::option::Option::Some;
 use std::rc::Rc;
 use std::slice::Iter;
