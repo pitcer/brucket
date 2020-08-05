@@ -23,9 +23,9 @@
  */
 
 use crate::evaluator::environment::Environment;
-use crate::parser::{ConstantValue, Expression, Parameter};
+use crate::parser::{ConstantValue, Expression, Lambda, Parameter};
 use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
 use std::rc::Rc;
 use std::slice::Iter;
@@ -63,8 +63,33 @@ pub enum Value {
     Textual(String),
     Boolean(bool),
     Pair(Box<Value>, Box<Value>),
-    Closure(Vec<Parameter>, Box<Expression>, Environment),
+    Closure(Closure),
     Module(String, Environment),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Closure {
+    parameters: Vec<Parameter>,
+    body: Box<Expression>,
+    environment: Environment,
+}
+
+impl Closure {
+    pub fn new(
+        parameters: Vec<Parameter>,
+        body: Box<Expression>,
+        environment: Environment,
+    ) -> Self {
+        Self {
+            parameters,
+            body,
+            environment,
+        }
+    }
+
+    pub fn environment(&self) -> &Environment {
+        &self.environment
+    }
 }
 
 impl Default for Evaluator {
@@ -126,8 +151,8 @@ impl Evaluator {
             Expression::If(condition, if_true_then, if_false_then) => {
                 self.evaluate_if(condition, if_true_then, if_false_then, environment)
             }
-            Expression::Lambda(parameters, body) => {
-                Self::evaluate_lambda(parameters, body, environment)
+            Expression::Lambda(lambda) => {
+                Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
             }
             Expression::Module {
                 identifier,
@@ -136,8 +161,8 @@ impl Evaluator {
             } => self.evaluate_module(identifier, functions, constants, environment),
             Expression::And(arguments) => self.evaluate_and(arguments, environment),
             Expression::Or(arguments) => self.evaluate_or(arguments, environment),
-            Expression::Function(_, _, parameters, body) => {
-                Self::evaluate_lambda(parameters, body, environment)
+            Expression::Function(_, _, lambda) => {
+                Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
             }
             Expression::Constant(_, _, value) => self.evaluate_environment(value, environment),
         }
@@ -152,11 +177,13 @@ impl Evaluator {
     ) -> ValueResult {
         let evaluated_value = self.evaluate_environment(value, environment)?;
         let evaluated_value = Rc::new(evaluated_value);
-        if let Value::Closure(_, _, environment) = evaluated_value.borrow() {
-            let used_identifiers = Self::get_used_identifiers(value);
-            let identifier = identifier.to_string();
-            if used_identifiers.contains(&&identifier) {
-                environment.insert_weak(identifier, Rc::downgrade(&evaluated_value));
+        if let Value::Closure(closure) = evaluated_value.borrow() {
+            if let Expression::Lambda(lambda) = value {
+                let identifier = identifier.to_string();
+                if lambda.used_identifiers().contains(&identifier) {
+                    let closure_environment = closure.environment();
+                    closure_environment.insert_weak(identifier, Rc::downgrade(&evaluated_value));
+                }
             }
         }
         environment.insert(identifier.to_string(), evaluated_value);
@@ -181,26 +208,19 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_lambda(
-        parameters: &[Parameter],
-        body: &Expression,
-        environment: &Environment,
-    ) -> ValueResult {
-        let environment = Self::get_optimized_lambda_environment(body, environment);
-        Ok(Value::Closure(
-            parameters.to_vec(),
-            Box::new(body.clone()),
+    fn evaluate_lambda(lambda: &Lambda, environment: &Environment) -> Closure {
+        let environment = Self::get_optimized_lambda_environment(lambda, environment);
+        Closure::new(
+            lambda.parameters().clone(),
+            Box::from(lambda.body().clone()),
             environment,
-        ))
+        )
     }
 
-    fn get_optimized_lambda_environment(
-        body: &Expression,
-        environment: &Environment,
-    ) -> Environment {
-        let identifiers = Self::get_used_identifiers(body);
+    fn get_optimized_lambda_environment(lambda: &Lambda, environment: &Environment) -> Environment {
+        let identifiers = lambda.used_identifiers();
         let new_env: Environment = identifiers
-            .into_iter()
+            .iter()
             .filter_map(|identifier| {
                 let value = environment.get(identifier)?;
                 Some((identifier.clone(), value))
@@ -208,66 +228,6 @@ impl Evaluator {
             .collect();
         new_env.insert_all_weak(environment);
         new_env
-    }
-
-    fn get_used_identifiers(expression: &Expression) -> Vec<&String> {
-        let mut identifiers = Vec::new();
-        match expression {
-            Expression::Identifier(identifier) => identifiers.push(identifier),
-            Expression::Application(identifier, arguments) => {
-                identifiers.append(&mut Self::get_used_identifiers(identifier));
-                for argument in arguments {
-                    identifiers.append(&mut Self::get_used_identifiers(argument));
-                }
-            }
-            Expression::InternalCall(_, arguments) => {
-                for argument in arguments {
-                    identifiers.append(&mut Self::get_used_identifiers(argument));
-                }
-            }
-            Expression::Let(_, value, body) => {
-                identifiers.append(&mut Self::get_used_identifiers(value));
-                identifiers.append(&mut Self::get_used_identifiers(body));
-            }
-            Expression::If(condition, if_true, if_false) => {
-                identifiers.append(&mut Self::get_used_identifiers(condition));
-                identifiers.append(&mut Self::get_used_identifiers(if_true));
-                identifiers.append(&mut Self::get_used_identifiers(if_false));
-            }
-            Expression::Lambda(_, body) => {
-                identifiers.append(&mut Self::get_used_identifiers(body));
-            }
-            Expression::Module {
-                identifier: _identifier,
-                functions,
-                constants,
-            } => {
-                for function in functions {
-                    identifiers.append(&mut Self::get_used_identifiers(function));
-                }
-                for constant in constants {
-                    identifiers.append(&mut Self::get_used_identifiers(constant));
-                }
-            }
-            Expression::ConstantValue(_) => (),
-            Expression::And(arguments) => {
-                for argument in arguments {
-                    identifiers.append(&mut Self::get_used_identifiers(argument));
-                }
-            }
-            Expression::Or(arguments) => {
-                for argument in arguments {
-                    identifiers.append(&mut Self::get_used_identifiers(argument));
-                }
-            }
-            Expression::Function(_, _, _, body) => {
-                identifiers.append(&mut Self::get_used_identifiers(body))
-            }
-            Expression::Constant(_, _, value) => {
-                identifiers.append(&mut Self::get_used_identifiers(value))
-            }
-        }
-        identifiers
     }
 
     fn get_from_environment(environment: &Environment, name: &str) -> ValueResult {
@@ -289,26 +249,26 @@ impl Evaluator {
         environment: &mut Environment,
     ) -> ValueResult {
         let identifier = self.evaluate_environment(identifier, environment)?;
-        if let Value::Closure(parameters, body, mut closure_environment) = identifier {
+        if let Value::Closure(mut closure) = identifier {
             let mut arguments_iterator = arguments.iter();
             let mut has_variadic_parameter = false;
-            for parameter in &parameters {
+            for parameter in &closure.parameters {
                 match parameter {
                     Parameter::Unary(name) => {
                         let argument = arguments_iterator.next();
                         let argument = argument.ok_or_else(|| "Missing argument.".to_string())?;
                         let argument = self.evaluate_environment(argument, environment)?;
-                        closure_environment.insert(name.clone(), Rc::new(argument));
+                        closure.environment.insert(name.clone(), Rc::new(argument));
                     }
                     Parameter::Variadic(name) => {
                         let list = self.create_pair_list(arguments_iterator, environment)?;
-                        closure_environment.insert(name.clone(), Rc::new(list));
+                        closure.environment.insert(name.clone(), Rc::new(list));
                         has_variadic_parameter = true;
                         break;
                     }
                 }
             }
-            let parameters_length = parameters.len();
+            let parameters_length = closure.parameters.len();
             let arguments_length = arguments.len();
             if !has_variadic_parameter && parameters_length != arguments_length {
                 return Err(format!(
@@ -316,10 +276,10 @@ impl Evaluator {
                     parameters_length, arguments_length
                 ));
             }
-            let result = self.evaluate_environment(&body, &mut closure_environment);
-            for parameter in parameters {
+            let result = self.evaluate_environment(&closure.body, &mut closure.environment);
+            for parameter in closure.parameters {
                 let name = parameter.get_name();
-                closure_environment.remove(name);
+                closure.environment.remove(name);
             }
             result
         } else {
@@ -380,21 +340,24 @@ impl Evaluator {
     ) -> ValueResult {
         let module_environment = Environment::new();
         let mut constants_environment = environment.clone();
+        let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();
         for function in functions {
-            if let Expression::Function(visibility, identifier, parameters, body) = &function {
-                let closure = Self::evaluate_lambda(parameters, body, environment)?;
-                let closure = Rc::new(closure);
+            if let Expression::Function(visibility, identifier, lambda) = &function {
+                let closure = Self::evaluate_lambda(lambda, environment);
+                let closure = Rc::new(Value::Closure(closure));
                 if visibility.is_public() {
                     module_environment.insert(identifier.clone(), Rc::clone(&closure));
                 }
                 constants_environment.insert(identifier.clone(), Rc::clone(&closure));
+                let used_identifiers = lambda.used_identifiers();
+                closures.push((identifier, Rc::clone(&closure), used_identifiers));
                 evaluated_closures.insert(identifier, closure);
             } else {
                 return Err("Invalid function type".to_string());
             }
         }
-        Self::fill_closures(&evaluated_closures, &evaluated_closures)?;
+        Self::fill_closures(&closures, &evaluated_closures)?;
         let mut evaluated_constants = HashMap::new();
         for constant in constants {
             if let Expression::Constant(visibility, identifier, value) = constant {
@@ -409,30 +372,28 @@ impl Evaluator {
                 return Err("Invalid constant type".to_string());
             }
         }
-        Self::fill_closures(&evaluated_closures, &evaluated_constants)?;
+        Self::fill_closures(&closures, &evaluated_constants)?;
         Ok(Value::Module(identifier.to_string(), module_environment))
     }
 
     fn fill_closures(
-        closures: &HashMap<&String, Rc<Value>>,
+        closures: &[(&String, Rc<Value>, &HashSet<String>)],
         values: &HashMap<&String, Rc<Value>>,
     ) -> Result<(), String> {
-        for (identifier, closure) in closures {
-            if let Value::Closure(_, body, closure_environment) = closure.borrow() {
-                let used_identifiers = Self::get_used_identifiers(body);
-                for used_identifier in used_identifiers {
+        for (identifier, closure, used_identifiers) in closures {
+            if let Value::Closure(closure) = closure.borrow() {
+                let environment = closure.environment();
+                for used_identifier in used_identifiers.iter() {
                     if let Some(evaluated_value) = values.get(used_identifier) {
                         if &used_identifier == identifier {
                             let value = Rc::downgrade(evaluated_value);
-                            closure_environment.insert_weak(used_identifier.clone(), value);
+                            environment.insert_weak(used_identifier.clone(), value);
                         } else {
                             let value = Rc::clone(evaluated_value);
-                            closure_environment.insert(used_identifier.clone(), value);
+                            environment.insert(used_identifier.clone(), value);
                         }
                     }
                 }
-            } else {
-                return Err("Invalid closure type".to_string());
             }
         }
         Ok(())

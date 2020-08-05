@@ -23,6 +23,7 @@
  */
 
 use super::*;
+use crate::evaluator::Closure;
 use crate::parser::{ConstantValue, Expression, Parameter};
 use std::fs::File;
 use std::io::Read;
@@ -136,17 +137,17 @@ fn test_interpret_module() -> TestResult {
         "foo".to_string(),
         environment! {
             "bar" => Value::Numeric(1),
-            "barfoo" => Value::Closure(
+            "barfoo" => Value::Closure(Closure::new(
                 vec![Parameter::Unary("x".to_string())],
                 Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
                 Environment::new(),
-            ),
+            )),
             "foobar" => Value::Numeric(3),
-            "fooo" => Value::Closure(
+            "fooo" => Value::Closure(Closure::new(
                 vec![Parameter::Unary("x".to_string())],
                 Box::new(Expression::ConstantValue(ConstantValue::Numeric(4))),
                 Environment::new(),
-            )
+            ))
         },
     );
     let actual = interpreter.interpret(
@@ -168,11 +169,11 @@ fn test_interpret_module() -> TestResult {
 #[test]
 fn test_interpret_function() -> TestResult {
     let interpreter = create_interpreter();
-    let expected = Value::Closure(
+    let expected = Value::Closure(Closure::new(
         vec![Parameter::Unary("x".to_string())],
         Box::from(Expression::Identifier("x".to_string())),
         Environment::new(),
-    );
+    ));
     let actual = interpreter.interpret("(function foo |x| x))")?;
     assert_eq!(expected, actual);
     Ok(())

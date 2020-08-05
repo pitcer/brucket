@@ -182,10 +182,11 @@ fn test_parsed_if_tokens_are_if_expression() -> TestResult {
 #[test]
 fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(
+    let expected = Expression::Lambda(Lambda::new(
         Vec::new(),
         Box::new(Expression::Identifier("x".to_string())),
-    );
+        maplit::hashset!("x".to_string()),
+    ));
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -201,10 +202,11 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(
+    let expected = Expression::Lambda(Lambda::new(
         vec![Parameter::Unary("x".to_string())],
         Box::new(Expression::Identifier("x".to_string())),
-    );
+        HashSet::new(),
+    ));
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -221,14 +223,15 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(
+    let expected = Expression::Lambda(Lambda::new(
         vec![
             Parameter::Unary("x".to_string()),
             Parameter::Unary("y".to_string()),
             Parameter::Unary("z".to_string()),
         ],
         Box::new(Expression::Identifier("x".to_string())),
-    );
+        HashSet::new(),
+    ));
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -276,8 +279,11 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         functions: vec![Expression::Function(
             Visibility::Private,
             "x".to_string(),
-            Vec::new(),
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Lambda::new(
+                Vec::new(),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                HashSet::new(),
+            ),
         )],
         constants: vec![Expression::Constant(
             Visibility::Private,
@@ -313,15 +319,18 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
     let expected = Expression::Function(
         Visibility::Private,
         "foo".to_string(),
-        vec![
-            Parameter::Unary("x".to_string()),
-            Parameter::Unary("y".to_string()),
-            Parameter::Unary("z".to_string()),
-        ],
-        Box::new(Expression::Application(
-            Box::new(Expression::Identifier("bar".to_string())),
-            vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
-        )),
+        Lambda::new(
+            vec![
+                Parameter::Unary("x".to_string()),
+                Parameter::Unary("y".to_string()),
+                Parameter::Unary("z".to_string()),
+            ],
+            Box::new(Expression::Application(
+                Box::new(Expression::Identifier("bar".to_string())),
+                vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
+            )),
+            maplit::hashset!("bar".to_string()),
+        ),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -404,10 +413,11 @@ fn test_parsed_or_tokens_are_or_expression() -> TestResult {
 #[test]
 fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Lambda(
+    let expected = Expression::Lambda(Lambda::new(
         vec![Parameter::Variadic("xs".to_string())],
         Box::new(Expression::Identifier("x".to_string())),
-    );
+        maplit::hashset!("x".to_string()),
+    ));
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -428,8 +438,11 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
     let expected = Expression::Function(
         Visibility::Public,
         "foo".to_string(),
-        Vec::new(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Lambda::new(
+            Vec::new(),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            HashSet::new(),
+        ),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),

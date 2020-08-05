@@ -25,6 +25,7 @@
 use std::slice::Iter;
 
 use crate::lexer::{Keyword, Operator, Parenthesis, Token};
+use std::collections::HashSet;
 
 type ExpressionResult = Result<Expression, String>;
 
@@ -38,16 +39,49 @@ pub enum Expression {
     InternalCall(String, Vec<Expression>),
     Let(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
-    Lambda(Vec<Parameter>, Box<Expression>),
+    Lambda(Lambda),
     Module {
         identifier: String,
         functions: Vec<Expression>,
         constants: Vec<Expression>,
     },
-    Function(Visibility, String, Vec<Parameter>, Box<Expression>),
+    Function(Visibility, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
     And(Vec<Expression>),
     Or(Vec<Expression>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Lambda {
+    parameters: Vec<Parameter>,
+    body: Box<Expression>,
+    used_identifiers: HashSet<String>,
+}
+
+impl Lambda {
+    pub fn new(
+        parameters: Vec<Parameter>,
+        body: Box<Expression>,
+        used_identifiers: HashSet<String>,
+    ) -> Self {
+        Self {
+            parameters,
+            body,
+            used_identifiers,
+        }
+    }
+
+    pub fn parameters(&self) -> &Vec<Parameter> {
+        &self.parameters
+    }
+
+    pub fn body(&self) -> &Expression {
+        &self.body
+    }
+
+    pub fn used_identifiers(&self) -> &HashSet<String> {
+        &self.used_identifiers
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -169,7 +203,7 @@ impl Parser {
             Token::Keyword(keyword) => match keyword {
                 Keyword::Let => Self::parse_let(tokens),
                 Keyword::If => Self::parse_if(tokens),
-                Keyword::Lambda => Self::parse_lambda(tokens),
+                Keyword::Lambda => Self::parse_lambda(tokens).map(Expression::Lambda),
                 Keyword::Internal => Self::parse_internal(tokens),
                 Keyword::Module => Self::parse_module(tokens),
                 Keyword::Function => Self::parse_function(Visibility::Private, tokens),
@@ -245,25 +279,85 @@ impl Parser {
 
     fn parse_function(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
-        let parameters = Self::parse_parameters(tokens)?;
-        let body = Self::parse_first(tokens)?;
-        if !Self::is_section_closed(tokens) {
-            return Err("Invalid lambda expression".to_string());
-        }
-        let body = Box::new(body);
-        Ok(Expression::Function(
-            visibility, identifier, parameters, body,
-        ))
+        let lambda = Self::parse_lambda(tokens)?;
+        Ok(Expression::Function(visibility, identifier, lambda))
     }
 
-    fn parse_lambda(tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, String> {
         let parameters = Self::parse_parameters(tokens)?;
         let body = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
             return Err("Invalid lambda expression".to_string());
         }
-        let body = Box::new(body);
-        Ok(Expression::Lambda(parameters, body))
+        let mut used_identifiers = HashSet::new();
+        Self::insert_used_identifiers(&body, &mut used_identifiers);
+        for parameter in &parameters {
+            let name = parameter.get_name();
+            used_identifiers.remove(name);
+        }
+        Ok(Lambda::new(parameters, Box::new(body), used_identifiers))
+    }
+
+    fn insert_used_identifiers(expression: &Expression, identifiers: &mut HashSet<String>) {
+        match expression {
+            Expression::Identifier(identifier) => {
+                identifiers.insert(identifier.clone());
+            }
+            Expression::Application(identifier, arguments) => {
+                Self::insert_used_identifiers(identifier, identifiers);
+                for argument in arguments {
+                    Self::insert_used_identifiers(argument, identifiers);
+                }
+            }
+            Expression::InternalCall(_, arguments) => {
+                for argument in arguments {
+                    Self::insert_used_identifiers(argument, identifiers);
+                }
+            }
+            Expression::Let(_, value, body) => {
+                Self::insert_used_identifiers(value, identifiers);
+                Self::insert_used_identifiers(body, identifiers);
+            }
+            Expression::If(condition, if_true, if_false) => {
+                Self::insert_used_identifiers(condition, identifiers);
+                Self::insert_used_identifiers(if_true, identifiers);
+                Self::insert_used_identifiers(if_false, identifiers);
+            }
+            Expression::Lambda(lambda) => {
+                for identifier in lambda.used_identifiers() {
+                    identifiers.insert(identifier.clone());
+                }
+            }
+            Expression::Module {
+                identifier: _identifier,
+                functions,
+                constants,
+            } => {
+                for function in functions {
+                    Self::insert_used_identifiers(function, identifiers);
+                }
+                for constant in constants {
+                    Self::insert_used_identifiers(constant, identifiers);
+                }
+            }
+            Expression::ConstantValue(_) => (),
+            Expression::And(arguments) => {
+                for argument in arguments {
+                    Self::insert_used_identifiers(argument, identifiers);
+                }
+            }
+            Expression::Or(arguments) => {
+                for argument in arguments {
+                    Self::insert_used_identifiers(argument, identifiers);
+                }
+            }
+            Expression::Function(_, _, lambda) => {
+                for identifier in lambda.used_identifiers() {
+                    identifiers.insert(identifier.clone());
+                }
+            }
+            Expression::Constant(_, _, value) => Self::insert_used_identifiers(value, identifiers),
+        };
     }
 
     fn parse_internal(tokens: &mut Tokens) -> ExpressionResult {
@@ -282,7 +376,7 @@ impl Parser {
             }
             let member = Self::parse_first_token(token, tokens)?;
             match member {
-                Expression::Function(_, _, _, _) => functions.push(member),
+                Expression::Function(_, _, _) => functions.push(member),
                 Expression::Constant(_, _, _) => constants.push(member),
                 _ => return Err("Invalid module member".to_string()),
             }
