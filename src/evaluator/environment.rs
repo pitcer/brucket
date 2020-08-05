@@ -34,7 +34,7 @@ use std::rc::{Rc, Weak};
 macro_rules! environment {
     ($($identifier:expr => $value:expr),*) => {
         {
-            let mut environment = Environment::default();
+            let environment = Environment::default();
             $(
                 environment.insert(
                     $identifier.to_string(),
@@ -48,7 +48,7 @@ macro_rules! environment {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Environment {
-    map: HashMap<String, Rc<Value>>,
+    map: RefCell<HashMap<String, Rc<Value>>>,
     weak_map: RefCell<HashMap<String, WeakWrapper<Value>>>,
 }
 
@@ -59,9 +59,9 @@ struct WeakWrapper<T> {
 
 impl<T: PartialEq> PartialEq for WeakWrapper<T> {
     fn eq(&self, other: &Self) -> bool {
-        let this = self.weak.upgrade();
+        let this = self.upgrade();
         if let Some(this) = this {
-            let that = other.weak.upgrade();
+            let that = other.upgrade();
             if let Some(that) = that {
                 return this == that;
             }
@@ -71,8 +71,16 @@ impl<T: PartialEq> PartialEq for WeakWrapper<T> {
 }
 
 impl<T> WeakWrapper<T> {
-    fn from(weak: Weak<T>) -> Self {
+    fn new(weak: Weak<T>) -> Self {
         Self { weak }
+    }
+
+    fn clone(&self) -> Weak<T> {
+        Weak::clone(&self.weak)
+    }
+
+    fn upgrade(&self) -> Option<Rc<T>> {
+        Weak::upgrade(&self.weak)
     }
 }
 
@@ -95,38 +103,39 @@ impl Environment {
     }
 
     fn from_map(map: HashMap<String, Rc<Value>>) -> Self {
+        let map = RefCell::new(map);
         let weak_map = RefCell::new(HashMap::new());
         Self { map, weak_map }
     }
 
-    pub fn insert(&mut self, key: String, value: Rc<Value>) {
-        self.map.insert(key, value);
+    pub fn insert(&self, key: String, value: Rc<Value>) {
+        self.map.borrow_mut().insert(key, value);
     }
 
     pub fn insert_weak(&self, key: String, value: Weak<Value>) {
         self.weak_map
             .borrow_mut()
-            .insert(key, WeakWrapper::from(value));
+            .insert(key, WeakWrapper::new(value));
     }
 
     pub fn insert_all_weak(&self, other: &Self) {
         for (key, value) in other.weak_map.borrow().iter() {
-            self.insert_weak(key.clone(), Weak::clone(&value.weak));
+            self.insert_weak(key.clone(), WeakWrapper::clone(value));
         }
     }
 
     pub fn get(&self, key: &str) -> Option<Rc<Value>> {
-        self.map.get(key).map(|value| Rc::clone(value))
+        self.map.borrow().get(key).map(|value| Rc::clone(value))
     }
 
     pub fn get_weak(&self, key: &str) -> Option<Weak<Value>> {
         self.weak_map
             .borrow()
             .get(key)
-            .map(|value| Weak::clone(&value.weak))
+            .map(|value| WeakWrapper::clone(value))
     }
 
     pub fn remove(&mut self, key: &str) {
-        self.map.remove(key);
+        self.map.borrow_mut().remove(key);
     }
 }

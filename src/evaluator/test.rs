@@ -23,6 +23,7 @@
  */
 
 use super::*;
+use crate::parser::Visibility;
 
 type TestResult = Result<(), String>;
 
@@ -138,7 +139,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let evaluator = Evaluator::default();
     let expected = Value::Closure(
         Vec::new(),
-        Expression::Identifier("x".to_string()),
+        Box::from(Expression::Identifier("x".to_string())),
         environment!("x" => Value::Numeric(42)),
     );
     let actual = evaluator.evaluate(&Expression::Let(
@@ -158,7 +159,7 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
     let evaluator = Evaluator::default();
     let expected = Value::Closure(
         vec![Parameter::Unary("y".to_string())],
-        Expression::Identifier("y".to_string()),
+        Box::from(Expression::Identifier("y".to_string())),
         Environment::new(),
     );
     let actual = evaluator.evaluate(&Expression::Let(
@@ -182,7 +183,7 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
             Parameter::Unary("z".to_string()),
             Parameter::Unary("a".to_string()),
         ],
-        Expression::Identifier("y".to_string()),
+        Box::from(Expression::Identifier("y".to_string())),
         Environment::new(),
     );
     let actual = evaluator.evaluate(&Expression::Let(
@@ -300,35 +301,32 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
         environment! {
             "bar" => Value::Closure(
                 Vec::new(),
-                Expression::ConstantValue(ConstantValue::Numeric(42)),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
                 Environment::new(),
             )
         },
     );
-    let actual = evaluator.evaluate(&Expression::Module(
-        "foo".to_string(),
-        vec![Expression::Function(
+    let actual = evaluator.evaluate(&Expression::Module {
+        identifier: "foo".to_string(),
+        functions: vec![Expression::Function(
             Visibility::Public,
             "bar".to_string(),
             Vec::new(),
             Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         )],
-    ))?;
+        constants: Vec::new(),
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
-fn test_evaluated_function_expression_is_identified_value() -> TestResult {
+fn test_evaluated_function_expression_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Identified(
-        Visibility::Private,
-        "foo".to_string(),
-        Rc::new(Value::Closure(
-            vec![Parameter::Unary("x".to_string())],
-            Expression::ConstantValue(ConstantValue::Numeric(42)),
-            Environment::new(),
-        )),
+    let expected = Value::Closure(
+        vec![Parameter::Unary("x".to_string())],
+        Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Environment::new(),
     );
     let actual = evaluator.evaluate(&Expression::Function(
         Visibility::Private,
@@ -405,7 +403,7 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
             Parameter::Unary("y".to_string()),
             Parameter::Variadic("z".to_string()),
         ],
-        Expression::Identifier("x".to_string()),
+        Box::from(Expression::Identifier("x".to_string())),
         Environment::new(),
     );
     let actual = evaluator.evaluate(&Expression::Lambda(
@@ -462,15 +460,15 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
         environment! {
             "bar" => Value::Closure(
                 Vec::new(),
-                Expression::ConstantValue(ConstantValue::Numeric(42)),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
                 Environment::new(),
             ),
             "baar" => Value::Numeric(42)
         },
     );
-    let actual = evaluator.evaluate(&Expression::Module(
-        "foo".to_string(),
-        vec![
+    let actual = evaluator.evaluate(&Expression::Module {
+        identifier: "foo".to_string(),
+        functions: vec![
             Expression::Function(
                 Visibility::Public,
                 "bar".to_string(),
@@ -483,6 +481,8 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 Vec::new(),
                 Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
             ),
+        ],
+        constants: vec![
             Expression::Constant(
                 Visibility::Public,
                 "baar".to_string(),
@@ -494,7 +494,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
             ),
         ],
-    ))?;
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }

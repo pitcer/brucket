@@ -40,7 +40,11 @@ pub enum Expression {
     Letrec(String, Box<Expression>, Box<Expression>),
     If(Box<Expression>, Box<Expression>, Box<Expression>),
     Lambda(Vec<Parameter>, Box<Expression>),
-    Module(String, Vec<Expression>),
+    Module {
+        identifier: String,
+        functions: Vec<Expression>,
+        constants: Vec<Expression>,
+    },
     Function(Visibility, String, Vec<Parameter>, Box<Expression>),
     Constant(Visibility, String, Box<Expression>),
     And(Vec<Expression>),
@@ -75,6 +79,16 @@ impl Parameter {
 pub enum Visibility {
     Public,
     Private,
+}
+
+impl Visibility {
+    pub fn is_public(&self) -> bool {
+        matches!(self, Visibility::Public)
+    }
+
+    pub fn is_private(&self) -> bool {
+        matches!(self, Visibility::Private)
+    }
 }
 
 impl Token {
@@ -272,15 +286,31 @@ impl Parser {
 
     fn parse_module(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
-        let members = Self::parse_arguments(tokens)?;
-        Ok(Expression::Module(identifier, members))
+        let mut functions = Vec::new();
+        let mut constants = Vec::new();
+        while let Some(token) = tokens.next() {
+            if token.is_close_parenthesis() {
+                break;
+            }
+            let member = Self::parse_first_token(token, tokens)?;
+            match member {
+                Expression::Function(_, _, _, _) => functions.push(member),
+                Expression::Constant(_, _, _) => constants.push(member),
+                _ => return Err("Invalid module member".to_string()),
+            }
+        }
+        Ok(Expression::Module {
+            identifier,
+            functions,
+            constants,
+        })
     }
 
     fn parse_constant(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Missing parameters section".to_string());
+            return Err("Invalid constant expression".to_string());
         }
         Ok(Expression::Constant(
             visibility,

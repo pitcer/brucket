@@ -291,21 +291,36 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
 #[test]
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Module(
-        "foo".to_string(),
-        vec![
-            Expression::Identifier("x".to_string()),
-            Expression::Identifier("y".to_string()),
-            Expression::Identifier("z".to_string()),
-        ],
-    );
+    let expected = Expression::Module {
+        identifier: "foo".to_string(),
+        functions: vec![Expression::Function(
+            Visibility::Private,
+            "x".to_string(),
+            Vec::new(),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        )],
+        constants: vec![Expression::Constant(
+            Visibility::Private,
+            "y".to_string(),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        )],
+    };
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Module),
         Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Function),
         Token::Symbol("x".to_string()),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Constant),
         Token::Symbol("y".to_string()),
-        Token::Symbol("z".to_string()),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);

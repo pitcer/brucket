@@ -23,7 +23,7 @@
  */
 
 use crate::evaluator::environment::Environment;
-use crate::parser::{ConstantValue, Expression, Parameter, Visibility};
+use crate::parser::{ConstantValue, Expression, Parameter};
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::option::Option::Some;
@@ -63,9 +63,8 @@ pub enum Value {
     Textual(String),
     Boolean(bool),
     Pair(Box<Value>, Box<Value>),
-    Closure(Vec<Parameter>, Expression, Environment),
+    Closure(Vec<Parameter>, Box<Expression>, Environment),
     Module(String, Environment),
-    Identified(Visibility, String, Rc<Value>),
 }
 
 impl Default for Evaluator {
@@ -133,17 +132,17 @@ impl Evaluator {
             Expression::Lambda(parameters, body) => {
                 Self::evaluate_lambda(parameters, body, environment)
             }
-            Expression::Module(identifier, members) => {
-                self.evaluate_module(identifier, members, environment)
-            }
+            Expression::Module {
+                identifier,
+                functions,
+                constants,
+            } => self.evaluate_module(identifier, functions, constants, environment),
             Expression::And(arguments) => self.evaluate_and(arguments, environment),
             Expression::Or(arguments) => self.evaluate_or(arguments, environment),
-            Expression::Function(visibility, identifier, parameters, body) => {
-                self.evaluate_function(visibility, identifier, parameters, body, environment)
+            Expression::Function(_, _, parameters, body) => {
+                Self::evaluate_lambda(parameters, body, environment)
             }
-            Expression::Constant(visibility, identifier, value) => {
-                self.evaluate_constant(visibility, identifier, value, environment)
-            }
+            Expression::Constant(_, _, value) => self.evaluate_environment(value, environment),
         }
     }
 
@@ -206,7 +205,7 @@ impl Evaluator {
         let environment = Self::get_optimized_lambda_environment(body, environment);
         Ok(Value::Closure(
             parameters.to_vec(),
-            body.clone(),
+            Box::new(body.clone()),
             environment,
         ))
     }
@@ -258,9 +257,16 @@ impl Evaluator {
             Expression::Lambda(_, body) => {
                 identifiers.append(&mut Self::get_used_identifiers(body));
             }
-            Expression::Module(_, members) => {
-                for member in members {
-                    identifiers.append(&mut Self::get_used_identifiers(member));
+            Expression::Module {
+                identifier: _identifier,
+                functions,
+                constants,
+            } => {
+                for function in functions {
+                    identifiers.append(&mut Self::get_used_identifiers(function));
+                }
+                for constant in constants {
+                    identifiers.append(&mut Self::get_used_identifiers(constant));
                 }
             }
             Expression::ConstantValue(_) => (),
@@ -384,57 +390,71 @@ impl Evaluator {
         Ok(result)
     }
 
-    fn evaluate_function(
-        &self,
-        visibility: &Visibility,
-        identifier: &str,
-        parameters: &[Parameter],
-        body: &Expression,
-        environment: &mut Environment,
-    ) -> ValueResult {
-        let closure = Self::evaluate_lambda(parameters, body, environment)?;
-        Ok(Value::Identified(
-            visibility.clone(),
-            identifier.to_string(),
-            Rc::new(closure),
-        ))
-    }
-
-    fn evaluate_constant(
-        &self,
-        visibility: &Visibility,
-        identifier: &str,
-        value: &Expression,
-        environment: &mut Environment,
-    ) -> ValueResult {
-        let value = self.evaluate_environment(value, environment)?;
-        Ok(Value::Identified(
-            visibility.clone(),
-            identifier.to_string(),
-            Rc::new(value),
-        ))
-    }
-
     fn evaluate_module(
         &self,
         identifier: &str,
-        members: &[Expression],
+        functions: &[Expression],
+        constants: &[Expression],
         environment: &mut Environment,
     ) -> ValueResult {
-        let mut environment = environment.clone();
-        let mut module_environment = Environment::new();
-        for member in members {
-            let member = self.evaluate_environment(member, &mut environment)?;
-            if let Value::Identified(visibility, identifier, value) = member {
-                environment.insert(identifier.clone(), Rc::clone(&value));
-                if let Visibility::Public = visibility {
-                    module_environment.insert(identifier, value);
+        let module_environment = Environment::new();
+        let mut constants_environment = environment.clone();
+        let mut evaluated_closures = HashMap::new();
+        for function in functions {
+            if let Expression::Function(visibility, identifier, parameters, body) = &function {
+                let closure = Self::evaluate_lambda(parameters, body, environment)?;
+                let closure = Rc::new(closure);
+                if visibility.is_public() {
+                    module_environment.insert(identifier.clone(), Rc::clone(&closure));
                 }
+                constants_environment.insert(identifier.clone(), Rc::clone(&closure));
+                evaluated_closures.insert(identifier, closure);
             } else {
-                return Err("Cannot identify module member".to_string());
+                return Err("Invalid function type".to_string());
             }
         }
+        Self::fill_closures(&evaluated_closures, &evaluated_closures)?;
+        let mut evaluated_constants = HashMap::new();
+        for constant in constants {
+            if let Expression::Constant(visibility, identifier, value) = constant {
+                let value = self.evaluate_environment(value, &mut constants_environment)?;
+                let value = Rc::new(value);
+                if visibility.is_public() {
+                    module_environment.insert(identifier.clone(), Rc::clone(&value));
+                }
+                constants_environment.insert(identifier.clone(), Rc::clone(&value));
+                evaluated_constants.insert(identifier, value);
+            } else {
+                return Err("Invalid constant type".to_string());
+            }
+        }
+        Self::fill_closures(&evaluated_closures, &evaluated_constants)?;
         Ok(Value::Module(identifier.to_string(), module_environment))
+    }
+
+    fn fill_closures(
+        closures: &HashMap<&String, Rc<Value>>,
+        values: &HashMap<&String, Rc<Value>>,
+    ) -> Result<(), String> {
+        for (identifier, closure) in closures {
+            if let Value::Closure(_, body, closure_environment) = closure.borrow() {
+                let used_identifiers = Self::get_used_identifiers(body);
+                for used_identifier in used_identifiers {
+                    if let Some(evaluated_value) = values.get(used_identifier) {
+                        if &used_identifier == identifier {
+                            let value = Rc::downgrade(evaluated_value);
+                            closure_environment.insert_weak(used_identifier.clone(), value);
+                        } else {
+                            let value = Rc::clone(evaluated_value);
+                            closure_environment.insert(used_identifier.clone(), value);
+                        }
+                    }
+                }
+            } else {
+                return Err("Invalid closure type".to_string());
+            }
+        }
+        Ok(())
     }
 
     fn evaluate_and(&self, arguments: &[Expression], environment: &mut Environment) -> ValueResult {

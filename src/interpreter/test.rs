@@ -23,10 +23,9 @@
  */
 
 use super::*;
-use crate::parser::{ConstantValue, Expression, Parameter, Visibility};
+use crate::parser::{ConstantValue, Expression, Parameter};
 use std::fs::File;
 use std::io::Read;
-use std::rc::Rc;
 
 type TestResult = Result<(), String>;
 
@@ -139,13 +138,13 @@ fn test_interpret_module() -> TestResult {
             "bar" => Value::Numeric(1),
             "barfoo" => Value::Closure(
                 vec![Parameter::Unary("x".to_string())],
-                Expression::ConstantValue(ConstantValue::Numeric(2)),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
                 Environment::new(),
             ),
             "foobar" => Value::Numeric(3),
             "fooo" => Value::Closure(
                 vec![Parameter::Unary("x".to_string())],
-                Expression::ConstantValue(ConstantValue::Numeric(4)),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(4))),
                 Environment::new(),
             )
         },
@@ -169,14 +168,10 @@ fn test_interpret_module() -> TestResult {
 #[test]
 fn test_interpret_function() -> TestResult {
     let interpreter = create_interpreter();
-    let expected = Value::Identified(
-        Visibility::Private,
-        "foo".to_string(),
-        Rc::new(Value::Closure(
-            vec![Parameter::Unary("x".to_string())],
-            Expression::Identifier("x".to_string()),
-            Environment::new(),
-        )),
+    let expected = Value::Closure(
+        vec![Parameter::Unary("x".to_string())],
+        Box::from(Expression::Identifier("x".to_string())),
+        Environment::new(),
     );
     let actual = interpreter.interpret("(function foo |x| x))")?;
     assert_eq!(expected, actual);
@@ -299,6 +294,54 @@ fn test_variadic_parameter() -> TestResult {
         Value::Numeric(1),
         interpreter.interpret("((-> |x xs... y| x) 1 2 3 4)")?
     );
+    Ok(())
+}
+
+#[test]
+fn test_call_other_members_in_module() -> TestResult {
+    let library = r#"
+        (module test
+          (constant X 42)
+
+          (function foo |x|
+            x)
+
+          (public function foobar ||
+            (foo (bar X)))
+
+          (function bar |x|
+            x))
+        "#;
+    let interpreter = Interpreter::with_library(library)?;
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(foobar)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_call_other_members_in_module_including_recursive_function() -> TestResult {
+    let library = r#"
+        (module test
+          (constant X 42)
+
+          (function foo |x|
+            (iter x STEP))
+
+          (public function bar ||
+            (foo X))
+
+          (function iter |x y|
+            (if (internal is_greater y 0)
+              (iter x (internal subtract y 1))
+              x))
+
+          (constant STEP 3))
+        "#;
+    let interpreter = Interpreter::with_library(library)?;
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(bar)")?;
+    assert_eq!(expected, actual);
     Ok(())
 }
 
