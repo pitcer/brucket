@@ -359,62 +359,6 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
 }
 
 #[test]
-fn test_evaluated_and_expression_is_false_if_false_argument_exists() -> TestResult {
-    let evaluator = Evaluator::default();
-    let expected = Value::Boolean(false);
-    let actual = evaluator.evaluate(&Expression::And(vec![
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-    ]))?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_evaluated_and_expression_is_true_if_every_argument_is_true() -> TestResult {
-    let evaluator = Evaluator::default();
-    let expected = Value::Boolean(true);
-    let actual = evaluator.evaluate(&Expression::And(vec![
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-    ]))?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_evaluated_or_expression_is_true_if_true_argument_exists() -> TestResult {
-    let evaluator = Evaluator::default();
-    let expected = Value::Boolean(true);
-    let actual = evaluator.evaluate(&Expression::Or(vec![
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-    ]))?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_evaluated_or_expression_is_false_if_every_argument_is_false() -> TestResult {
-    let evaluator = Evaluator::default();
-    let expected = Value::Boolean(false);
-    let actual = evaluator.evaluate(&Expression::Or(vec![
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-        Expression::ConstantValue(ConstantValue::Boolean(false)),
-    ]))?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(

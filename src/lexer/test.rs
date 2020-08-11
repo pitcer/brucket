@@ -162,24 +162,6 @@ fn test_tokenized_constant_keyword_is_constant_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_and_keyword_is_and_token() -> TestResult {
-    let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::And)];
-    let actual = lexer.tokenize("and")?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_tokenized_or_keyword_is_and_token() -> TestResult {
-    let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::Or)];
-    let actual = lexer.tokenize("or")?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_tokenized_null_is_null_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Null];

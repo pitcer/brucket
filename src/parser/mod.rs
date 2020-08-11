@@ -42,8 +42,6 @@ pub enum Expression {
     Module(Module),
     Function(Visibility, ApplicationStrategy, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
-    And(Vec<Expression>),
-    Or(Vec<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -249,8 +247,6 @@ impl Parser {
                 Keyword::Module => Self::parse_module(tokens),
                 Keyword::Function => Self::parse_function(Vec::new(), tokens),
                 Keyword::Constant => Self::parse_constant(Vec::new(), tokens),
-                Keyword::And => Self::parse_and(tokens),
-                Keyword::Or => Self::parse_or(tokens),
             },
             Token::Modifier(modifier) => Self::parse_modifiers(modifier, tokens),
             Token::Symbol(symbol) => {
@@ -392,16 +388,6 @@ impl Parser {
                 }
             }
             Expression::ConstantValue(_) => (),
-            Expression::And(arguments) => {
-                for argument in arguments {
-                    Self::insert_used_identifiers(argument, identifiers);
-                }
-            }
-            Expression::Or(arguments) => {
-                for argument in arguments {
-                    Self::insert_used_identifiers(argument, identifiers);
-                }
-            }
             Expression::Function(_, _, _, lambda) => {
                 for identifier in lambda.used_identifiers() {
                     identifiers.insert(identifier.clone());
@@ -455,16 +441,6 @@ impl Parser {
             identifier,
             Box::from(value),
         ))
-    }
-
-    fn parse_and(tokens: &mut Tokens) -> ExpressionResult {
-        let arguments = Self::parse_arguments(tokens)?;
-        Ok(Expression::And(arguments))
-    }
-
-    fn parse_or(tokens: &mut Tokens) -> ExpressionResult {
-        let arguments = Self::parse_arguments(tokens)?;
-        Ok(Expression::Or(arguments))
     }
 
     fn parse_identifier(tokens: &mut Tokens) -> Result<String, String> {

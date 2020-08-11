@@ -373,46 +373,6 @@ fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
 }
 
 #[test]
-fn test_parsed_and_tokens_are_and_expression() -> TestResult {
-    let parser = Parser::default();
-    let expected = Expression::And(vec![
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Numeric(42)),
-        Expression::ConstantValue(ConstantValue::String("foobar".to_string())),
-    ]);
-    let actual = parser.parse(&[
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::And),
-        Token::Boolean(true),
-        Token::Number(42),
-        Token::String("foobar".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
-    ])?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_parsed_or_tokens_are_or_expression() -> TestResult {
-    let parser = Parser::default();
-    let expected = Expression::Or(vec![
-        Expression::ConstantValue(ConstantValue::Boolean(true)),
-        Expression::ConstantValue(ConstantValue::Numeric(42)),
-        Expression::ConstantValue(ConstantValue::String("foobar".to_string())),
-    ]);
-    let actual = parser.parse(&[
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Or),
-        Token::Boolean(true),
-        Token::Number(42),
-        Token::String("foobar".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
-    ])?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Lambda(Lambda::new(

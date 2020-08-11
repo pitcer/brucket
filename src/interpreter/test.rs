@@ -525,6 +525,42 @@ fn test_lazy_function_arguments_are_evaluated_lazily() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn test_and_is_false_if_false_argument_exists() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Boolean(false);
+    let actual = interpreter.interpret("(and true true false true)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_and_is_true_if_every_argument_is_true() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Boolean(true);
+    let actual = interpreter.interpret("(and true true true true)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_or_is_true_if_true_argument_exists() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Boolean(true);
+    let actual = interpreter.interpret("(or false false true false)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_or_is_false_if_every_argument_is_false() -> TestResult {
+    let interpreter = create_interpreter();
+    let expected = Value::Boolean(false);
+    let actual = interpreter.interpret("(or false false false false)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
 fn create_interpreter() -> Interpreter {
     let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
     let mut library_syntax = String::new();

@@ -157,8 +157,6 @@ impl Evaluator {
                 Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
             }
             Expression::Module(module) => self.evaluate_module(module, environment),
-            Expression::And(arguments) => self.evaluate_and(arguments, environment),
-            Expression::Or(arguments) => self.evaluate_or(arguments, environment),
             Expression::Function(_, application_strategy, _, lambda) => Ok(Value::FunctionClosure(
                 application_strategy.clone(),
                 Self::evaluate_lambda(lambda, environment),
@@ -438,34 +436,6 @@ impl Evaluator {
             }
         }
         Ok(())
-    }
-
-    fn evaluate_and(&self, arguments: &[Expression], environment: &mut Environment) -> ValueResult {
-        for argument in arguments {
-            let argument = self.evaluate_environment(argument, environment)?;
-            if let Value::Boolean(value) = argument {
-                if !value {
-                    return Ok(Value::Boolean(false));
-                }
-            } else {
-                return Err("Invalid argument type".to_string());
-            }
-        }
-        Ok(Value::Boolean(true))
-    }
-
-    fn evaluate_or(&self, arguments: &[Expression], environment: &mut Environment) -> ValueResult {
-        for argument in arguments {
-            let argument = self.evaluate_environment(argument, environment)?;
-            if let Value::Boolean(value) = argument {
-                if value {
-                    return Ok(Value::Boolean(true));
-                }
-            } else {
-                return Err("Invalid argument type".to_string());
-            }
-        }
-        Ok(Value::Boolean(false))
     }
 }
 

@@ -115,4 +115,24 @@
 
   (public function is_null |nullable|
     (is_equal null nullable))
+
+  (public lazy function and |arguments...|
+    (and_iterate arguments))
+
+  (function and_iterate |arguments|
+    (if (is_null arguments)
+      true
+      (if (not ((pair_first arguments)))
+        false
+        (and_iterate (pair_second arguments)))))
+
+  (public lazy function or |arguments...|
+    (or_iterate arguments))
+
+  (function or_iterate |arguments|
+    (if (is_null arguments)
+      false
+      (if ((pair_first arguments))
+        true
+        (or_iterate (pair_second arguments)))))
 )
