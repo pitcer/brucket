@@ -306,10 +306,12 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
     let expected = Value::Module(
         "foo".to_string(),
         environment! {
-            "bar" => Value::Closure(Closure::new(
-                Vec::new(),
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-                Environment::new(),
+            "bar" => Value::FunctionClosure(
+                ApplicationStrategy::Eager,
+                Closure::new(
+                    Vec::new(),
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                    Environment::new(),
             ))
         },
     );
@@ -317,6 +319,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
         "foo".to_string(),
         vec![Expression::Function(
             Visibility::Public,
+            ApplicationStrategy::Eager,
             "bar".to_string(),
             Lambda::new(
                 Vec::new(),
@@ -333,13 +336,17 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
 #[test]
 fn test_evaluated_function_expression_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Closure(Closure::new(
-        vec![Parameter::Unary("x".to_string())],
-        Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        Environment::new(),
-    ));
+    let expected = Value::FunctionClosure(
+        ApplicationStrategy::Eager,
+        Closure::new(
+            vec![Parameter::Unary("x".to_string())],
+            Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Environment::new(),
+        ),
+    );
     let actual = evaluator.evaluate(&Expression::Function(
         Visibility::Private,
+        ApplicationStrategy::Eager,
         "foo".to_string(),
         Lambda::new(
             vec![Parameter::Unary("x".to_string())],
@@ -473,10 +480,12 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
     let expected = Value::Module(
         "foo".to_string(),
         environment! {
-            "bar" => Value::Closure(Closure::new(
-                Vec::new(),
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-                Environment::new(),
+            "bar" => Value::FunctionClosure(
+                ApplicationStrategy::Eager,
+                Closure::new(
+                    Vec::new(),
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                    Environment::new(),
             )),
             "baar" => Value::Numeric(42)
         },
@@ -486,6 +495,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
         vec![
             Expression::Function(
                 Visibility::Public,
+                ApplicationStrategy::Eager,
                 "bar".to_string(),
                 Lambda::new(
                     Vec::new(),
@@ -495,6 +505,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
             ),
             Expression::Function(
                 Visibility::Private,
+                ApplicationStrategy::Eager,
                 "fooo".to_string(),
                 Lambda::new(
                     Vec::new(),
@@ -516,6 +527,55 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
             ),
         ],
     )))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::FunctionClosure(
+        ApplicationStrategy::Lazy,
+        Closure::new(
+            Vec::new(),
+            Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Environment::new(),
+        ),
+    );
+    let actual = evaluator.evaluate(&Expression::Function(
+        Visibility::Private,
+        ApplicationStrategy::Lazy,
+        "foo".to_string(),
+        Lambda::new(
+            Vec::new(),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            HashSet::new(),
+        ),
+    ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Thunk(
+        Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Environment::new(),
+    );
+    let actual = evaluator.evaluate(&Expression::Application(
+        Box::new(Expression::Function(
+            Visibility::Private,
+            ApplicationStrategy::Lazy,
+            "foo".to_string(),
+            Lambda::new(
+                vec![Parameter::Unary("x".to_string())],
+                Box::new(Expression::Identifier("x".to_string())),
+                HashSet::new(),
+            ),
+        )),
+        vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
+    ))?;
     assert_eq!(expected, actual);
     Ok(())
 }

@@ -23,7 +23,7 @@
  */
 
 use crate::evaluator::environment::Environment;
-use crate::parser::{ConstantValue, Expression, Lambda, Module, Parameter};
+use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Lambda, Module, Parameter};
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
@@ -64,6 +64,8 @@ pub enum Value {
     Boolean(bool),
     Pair(Box<Value>, Box<Value>),
     Closure(Closure),
+    FunctionClosure(ApplicationStrategy, Closure),
+    Thunk(Box<Expression>, Environment),
     Module(String, Environment),
 }
 
@@ -157,9 +159,10 @@ impl Evaluator {
             Expression::Module(module) => self.evaluate_module(module, environment),
             Expression::And(arguments) => self.evaluate_and(arguments, environment),
             Expression::Or(arguments) => self.evaluate_or(arguments, environment),
-            Expression::Function(_, _, lambda) => {
-                Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
-            }
+            Expression::Function(_, application_strategy, _, lambda) => Ok(Value::FunctionClosure(
+                application_strategy.clone(),
+                Self::evaluate_lambda(lambda, environment),
+            )),
             Expression::Constant(_, _, value) => self.evaluate_environment(value, environment),
         }
     }
@@ -245,55 +248,99 @@ impl Evaluator {
         environment: &mut Environment,
     ) -> ValueResult {
         let identifier = self.evaluate_environment(identifier, environment)?;
-        if let Value::Closure(mut closure) = identifier {
-            let mut arguments_iterator = arguments.iter();
-            let mut has_variadic_parameter = false;
-            for parameter in &closure.parameters {
-                match parameter {
-                    Parameter::Unary(name) => {
-                        let argument = arguments_iterator.next();
-                        let argument = argument.ok_or_else(|| "Missing argument.".to_string())?;
-                        let argument = self.evaluate_environment(argument, environment)?;
-                        closure.environment.insert(name.clone(), Rc::new(argument));
-                    }
-                    Parameter::Variadic(name) => {
-                        let list = self.create_pair_list(arguments_iterator, environment)?;
-                        closure.environment.insert(name.clone(), Rc::new(list));
-                        has_variadic_parameter = true;
-                        break;
-                    }
+        match identifier {
+            Value::Closure(closure) => self.evaluate_closure_application(
+                ApplicationStrategy::Eager,
+                arguments,
+                environment,
+                closure,
+            ),
+            Value::FunctionClosure(application_strategy, closure) => self
+                .evaluate_closure_application(
+                    application_strategy,
+                    arguments,
+                    environment,
+                    closure,
+                ),
+            Value::Thunk(body, mut environment) => {
+                self.evaluate_environment(&body, &mut environment)
+            }
+            _ => Err(format!(
+                "Invalid identifier type. Expected: Closure or Thunk, Actual: {:?}",
+                identifier
+            )),
+        }
+    }
+
+    fn evaluate_closure_application(
+        &self,
+        application_strategy: ApplicationStrategy,
+        arguments: &[Expression],
+        environment: &mut Environment,
+        mut closure: Closure,
+    ) -> Result<Value, String> {
+        let mut arguments_iterator = arguments.iter();
+        let mut has_variadic_parameter = false;
+        for parameter in &closure.parameters {
+            match parameter {
+                Parameter::Unary(name) => {
+                    let argument = arguments_iterator
+                        .next()
+                        .ok_or_else(|| "Missing argument.".to_string())?;
+                    let argument = if application_strategy.is_eager() {
+                        self.evaluate_environment(argument, environment)
+                    } else {
+                        Ok(Value::Thunk(
+                            Box::new(argument.clone()),
+                            environment.clone(),
+                        ))
+                    }?;
+                    closure.environment.insert(name.clone(), Rc::new(argument));
+                }
+                Parameter::Variadic(name) => {
+                    let list = self.create_pair_list(
+                        application_strategy,
+                        arguments_iterator,
+                        environment,
+                    )?;
+                    closure.environment.insert(name.clone(), Rc::new(list));
+                    has_variadic_parameter = true;
+                    break;
                 }
             }
-            let parameters_length = closure.parameters.len();
-            let arguments_length = arguments.len();
-            if !has_variadic_parameter && parameters_length != arguments_length {
-                return Err(format!(
-                    "Invalid number of arguments. Expected: {}, Actual: {}",
-                    parameters_length, arguments_length
-                ));
-            }
-            let result = self.evaluate_environment(&closure.body, &mut closure.environment);
-            for parameter in closure.parameters {
-                let name = parameter.get_name();
-                closure.environment.remove(name);
-            }
-            result
-        } else {
-            Err(format!(
-                "Invalid identifier type. Expected: Value::Closure, Actual: {:?}",
-                identifier
-            ))
         }
+        let parameters_length = closure.parameters.len();
+        let arguments_length = arguments.len();
+        if !has_variadic_parameter && parameters_length != arguments_length {
+            return Err(format!(
+                "Invalid number of arguments. Expected: {}, Actual: {}",
+                parameters_length, arguments_length
+            ));
+        }
+        let result = self.evaluate_environment(&closure.body, &mut closure.environment);
+        for parameter in &closure.parameters {
+            let name = parameter.get_name();
+            closure.environment.remove(name);
+        }
+        result
     }
 
     fn create_pair_list(
         &self,
+        application_strategy: ApplicationStrategy,
         arguments: Iter<Expression>,
         environment: &mut Environment,
     ) -> ValueResult {
         let mut result = Value::Null;
         for argument in arguments.rev() {
-            let argument = self.evaluate_environment(argument, environment)?;
+            let argument = if application_strategy.is_eager() {
+                self.evaluate_environment(argument, environment)
+            } else {
+                Ok(Value::Thunk(
+                    Box::new(argument.clone()),
+                    environment.clone(),
+                ))
+            }?;
             result = Value::Pair(Box::new(argument), Box::new(result));
         }
         Ok(result)
@@ -333,9 +380,12 @@ impl Evaluator {
         let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();
         for function in module.functions() {
-            if let Expression::Function(visibility, identifier, lambda) = &function {
+            if let Expression::Function(visibility, application_strategy, identifier, lambda) =
+                &function
+            {
                 let closure = Self::evaluate_lambda(lambda, environment);
-                let closure = Rc::new(Value::Closure(closure));
+                let closure = Value::FunctionClosure(application_strategy.clone(), closure);
+                let closure = Rc::new(closure);
                 if visibility.is_public() {
                     module_environment.insert(identifier.clone(), Rc::clone(&closure));
                 }
@@ -372,7 +422,7 @@ impl Evaluator {
         values: &HashMap<&String, Rc<Value>>,
     ) -> Result<(), String> {
         for (identifier, closure, used_identifiers) in closures {
-            if let Value::Closure(closure) = closure.borrow() {
+            if let Value::FunctionClosure(_, closure) = closure.borrow() {
                 let environment = closure.environment();
                 for used_identifier in used_identifiers.iter() {
                     if let Some(evaluated_value) = values.get(used_identifier) {

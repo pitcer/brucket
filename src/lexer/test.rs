@@ -191,7 +191,7 @@ fn test_tokenized_null_is_null_token() -> TestResult {
 #[test]
 fn test_tokenized_public_keyword_is_public_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::Public)];
+    let expected = vec![Token::Modifier(Modifier::Public)];
     let actual = lexer.tokenize("public")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -200,8 +200,17 @@ fn test_tokenized_public_keyword_is_public_token() -> TestResult {
 #[test]
 fn test_tokenized_private_keyword_is_private_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::Private)];
+    let expected = vec![Token::Modifier(Modifier::Private)];
     let actual = lexer.tokenize("private")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_lazy_keyword_is_lazy_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Modifier(Modifier::Lazy)];
+    let actual = lexer.tokenize("lazy")?;
     assert_eq!(expected, actual);
     Ok(())
 }

@@ -39,6 +39,7 @@ pub enum Token {
     Boolean(bool),
     Null,
     Keyword(Keyword),
+    Modifier(Modifier),
     Symbol(String),
 }
 
@@ -65,8 +66,13 @@ pub enum Keyword {
     Constant,
     And,
     Or,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Modifier {
     Public,
     Private,
+    Lazy,
 }
 
 trait LexerCharacter {
@@ -144,8 +150,9 @@ impl Default for Lexer {
             "constant" => Token::Keyword(Keyword::Constant),
             "and" => Token::Keyword(Keyword::And),
             "or" => Token::Keyword(Keyword::Or),
-            "public" => Token::Keyword(Keyword::Public),
-            "private" => Token::Keyword(Keyword::Private),
+            "public" => Token::Modifier(Modifier::Public),
+            "private" => Token::Modifier(Modifier::Private),
+            "lazy" => Token::Modifier(Modifier::Lazy),
         };
         Self { symbol_map }
     }

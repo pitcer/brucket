@@ -24,7 +24,7 @@
 
 use super::*;
 use crate::evaluator::Closure;
-use crate::parser::{ConstantValue, Expression, Parameter};
+use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Parameter};
 use std::fs::File;
 use std::io::Read;
 
@@ -137,16 +137,20 @@ fn test_interpret_module() -> TestResult {
         "foo".to_string(),
         environment! {
             "bar" => Value::Numeric(1),
-            "barfoo" => Value::Closure(Closure::new(
-                vec![Parameter::Unary("x".to_string())],
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
-                Environment::new(),
+            "barfoo" => Value::FunctionClosure(
+                ApplicationStrategy::Eager,
+                Closure::new(
+                    vec![Parameter::Unary("x".to_string())],
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
+                    Environment::new(),
             )),
             "foobar" => Value::Numeric(3),
-            "fooo" => Value::Closure(Closure::new(
-                vec![Parameter::Unary("x".to_string())],
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(4))),
-                Environment::new(),
+            "fooo" => Value::FunctionClosure(
+                ApplicationStrategy::Eager,
+                Closure::new(
+                    vec![Parameter::Unary("x".to_string())],
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(4))),
+                    Environment::new(),
             ))
         },
     );
@@ -169,11 +173,14 @@ fn test_interpret_module() -> TestResult {
 #[test]
 fn test_interpret_function() -> TestResult {
     let interpreter = create_interpreter();
-    let expected = Value::Closure(Closure::new(
-        vec![Parameter::Unary("x".to_string())],
-        Box::from(Expression::Identifier("x".to_string())),
-        Environment::new(),
-    ));
+    let expected = Value::FunctionClosure(
+        ApplicationStrategy::Eager,
+        Closure::new(
+            vec![Parameter::Unary("x".to_string())],
+            Box::from(Expression::Identifier("x".to_string())),
+            Environment::new(),
+        ),
+    );
     let actual = interpreter.interpret("(function foo |x| x))")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -486,6 +493,34 @@ fn test_divide_with_many_arguments_returns_their_quotient() -> TestResult {
     let interpreter = create_interpreter();
     let expected = Value::Numeric(42);
     let actual = interpreter.interpret("(/ 1260 2 3 5)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_interpret_lazy_function_application() -> TestResult {
+    let library = r#"
+        (module test
+          (public lazy function foo |x|
+            (x)))
+        "#;
+    let interpreter = Interpreter::with_library(library)?;
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(foo 42)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_lazy_function_arguments_are_evaluated_lazily() -> TestResult {
+    let library = r#"
+        (module test
+          (public lazy function foo |x a y b z|
+            (internal add (a) (b))))
+        "#;
+    let interpreter = Interpreter::with_library(library)?;
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret("(foo (/ 1 0) 20 (/ 1 0) 22 (/ 1 0))")?;
     assert_eq!(expected, actual);
     Ok(())
 }

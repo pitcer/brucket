@@ -22,10 +22,9 @@
  * SOFTWARE.
  */
 
-use std::slice::Iter;
-
-use crate::lexer::{Keyword, Operator, Parenthesis, Token};
+use crate::lexer::{Keyword, Modifier, Operator, Parenthesis, Token};
 use std::collections::HashSet;
+use std::slice::Iter;
 
 type ExpressionResult = Result<Expression, String>;
 
@@ -41,7 +40,7 @@ pub enum Expression {
     If(Box<Expression>, Box<Expression>, Box<Expression>),
     Lambda(Lambda),
     Module(Module),
-    Function(Visibility, String, Lambda),
+    Function(Visibility, ApplicationStrategy, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
     And(Vec<Expression>),
     Or(Vec<Expression>),
@@ -149,6 +148,22 @@ impl Visibility {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ApplicationStrategy {
+    Eager,
+    Lazy,
+}
+
+impl ApplicationStrategy {
+    pub fn is_eager(&self) -> bool {
+        matches!(self, ApplicationStrategy::Eager)
+    }
+
+    pub fn is_lazy(&self) -> bool {
+        matches!(self, ApplicationStrategy::Lazy)
+    }
+}
+
 impl Token {
     fn as_symbol(&self) -> Result<String, String> {
         match self {
@@ -203,8 +218,9 @@ impl Parser {
             ))),
             Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(*value))),
             Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(*value))),
-            Token::Keyword(_keyword) => Err("Unexpected keyword".to_string()),
+            Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword)),
             Token::Symbol(symbol) => Ok(Expression::Identifier(symbol.clone())),
+            Token::Modifier(modifier) => Err(format!("Unexpected token: {:?}", modifier)),
         }
     }
 
@@ -231,13 +247,12 @@ impl Parser {
                 Keyword::Lambda => Self::parse_lambda(tokens).map(Expression::Lambda),
                 Keyword::Internal => Self::parse_internal(tokens),
                 Keyword::Module => Self::parse_module(tokens),
-                Keyword::Function => Self::parse_function(Visibility::Private, tokens),
-                Keyword::Constant => Self::parse_constant(Visibility::Private, tokens),
+                Keyword::Function => Self::parse_function(Vec::new(), tokens),
+                Keyword::Constant => Self::parse_constant(Vec::new(), tokens),
                 Keyword::And => Self::parse_and(tokens),
                 Keyword::Or => Self::parse_or(tokens),
-                Keyword::Public => Self::parse_public_member(tokens),
-                Keyword::Private => Self::parse_private_member(tokens),
             },
+            Token::Modifier(modifier) => Self::parse_modifiers(modifier, tokens),
             Token::Symbol(symbol) => {
                 let identifier = Expression::Identifier(symbol.clone());
                 Self::parse_application(identifier, tokens)
@@ -276,36 +291,51 @@ impl Parser {
         ))
     }
 
-    fn parse_public_member(tokens: &mut Tokens) -> ExpressionResult {
-        Self::parse_member_with_visibility(Visibility::Public, tokens)
+    fn parse_modifiers(first_modifier: &Modifier, tokens: &mut Tokens) -> ExpressionResult {
+        let mut modifiers = vec![first_modifier];
+        while let Some(token) = tokens.next() {
+            if let Token::Modifier(modifier) = token {
+                modifiers.push(modifier);
+            } else {
+                return Self::parse_with_modifiers(token, modifiers, tokens);
+            }
+        }
+        Err("Invalid token".to_string())
     }
 
-    fn parse_private_member(tokens: &mut Tokens) -> ExpressionResult {
-        Self::parse_member_with_visibility(Visibility::Private, tokens)
-    }
-
-    fn parse_member_with_visibility(
-        visibility: Visibility,
+    fn parse_with_modifiers(
+        current_token: &Token,
+        modifiers: Vec<&Modifier>,
         tokens: &mut Tokens,
     ) -> ExpressionResult {
-        let token = tokens.next();
-        match token {
-            Some(token) => match token {
-                Token::Keyword(keyword) => match keyword {
-                    Keyword::Function => Self::parse_function(visibility, tokens),
-                    Keyword::Constant => Self::parse_constant(visibility, tokens),
-                    _ => Err("Invalid token".to_string()),
-                },
+        match current_token {
+            Token::Keyword(keyword) => match keyword {
+                Keyword::Function => Self::parse_function(modifiers, tokens),
+                Keyword::Constant => Self::parse_constant(modifiers, tokens),
                 _ => Err("Invalid token".to_string()),
             },
-            None => Err("Invalid token".to_string()),
+            _ => Err("Invalid token".to_string()),
         }
     }
 
-    fn parse_function(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_function(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let lambda = Self::parse_lambda(tokens)?;
-        Ok(Expression::Function(visibility, identifier, lambda))
+        let mut visibility = Visibility::Private;
+        let mut application_strategy = ApplicationStrategy::Eager;
+        for modifier in modifiers {
+            match modifier {
+                Modifier::Public => visibility = Visibility::Public,
+                Modifier::Private => visibility = Visibility::Private,
+                Modifier::Lazy => application_strategy = ApplicationStrategy::Lazy,
+            }
+        }
+        Ok(Expression::Function(
+            visibility,
+            application_strategy,
+            identifier,
+            lambda,
+        ))
     }
 
     fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, String> {
@@ -372,7 +402,7 @@ impl Parser {
                     Self::insert_used_identifiers(argument, identifiers);
                 }
             }
-            Expression::Function(_, _, lambda) => {
+            Expression::Function(_, _, _, lambda) => {
                 for identifier in lambda.used_identifiers() {
                     identifiers.insert(identifier.clone());
                 }
@@ -397,7 +427,7 @@ impl Parser {
             }
             let member = Self::parse_first_token(token, tokens)?;
             match member {
-                Expression::Function(_, _, _) => functions.push(member),
+                Expression::Function(_, _, _, _) => functions.push(member),
                 Expression::Constant(_, _, _) => constants.push(member),
                 _ => return Err("Invalid module member".to_string()),
             }
@@ -406,11 +436,19 @@ impl Parser {
         Ok(Expression::Module(module))
     }
 
-    fn parse_constant(visibility: Visibility, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_constant(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
             return Err("Invalid constant expression".to_string());
+        }
+        let mut visibility = Visibility::Private;
+        for modifier in modifiers {
+            match modifier {
+                Modifier::Public => visibility = Visibility::Public,
+                Modifier::Private => visibility = Visibility::Private,
+                _ => return Err(format!("Invalid modifier: {:?}", modifier)),
+            }
         }
         Ok(Expression::Constant(
             visibility,

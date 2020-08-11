@@ -278,6 +278,7 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         "foo".to_string(),
         vec![Expression::Function(
             Visibility::Private,
+            ApplicationStrategy::Eager,
             "x".to_string(),
             Lambda::new(
                 Vec::new(),
@@ -318,6 +319,7 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Function(
         Visibility::Private,
+        ApplicationStrategy::Eager,
         "foo".to_string(),
         Lambda::new(
             vec![
@@ -437,6 +439,7 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
     let parser = Parser::default();
     let expected = Expression::Function(
         Visibility::Public,
+        ApplicationStrategy::Eager,
         "foo".to_string(),
         Lambda::new(
             Vec::new(),
@@ -446,7 +449,7 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Public),
+        Token::Modifier(Modifier::Public),
         Token::Keyword(Keyword::Function),
         Token::Symbol("foo".to_string()),
         Token::Parenthesis(Parenthesis::Parameters),
@@ -468,9 +471,64 @@ fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Public),
+        Token::Modifier(Modifier::Public),
         Token::Keyword(Keyword::Constant),
         Token::Symbol("foo".to_string()),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Function(
+        Visibility::Private,
+        ApplicationStrategy::Lazy,
+        "foo".to_string(),
+        Lambda::new(
+            Vec::new(),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            HashSet::new(),
+        ),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Modifier(Modifier::Lazy),
+        Token::Keyword(Keyword::Function),
+        Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Function(
+        Visibility::Public,
+        ApplicationStrategy::Lazy,
+        "foo".to_string(),
+        Lambda::new(
+            Vec::new(),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            HashSet::new(),
+        ),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Modifier(Modifier::Public),
+        Token::Modifier(Modifier::Lazy),
+        Token::Keyword(Keyword::Function),
+        Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Parameters),
+        Token::Parenthesis(Parenthesis::Parameters),
         Token::Number(42),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
