@@ -276,6 +276,7 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Module(Module::new(
         "foo".to_string(),
+        vec![Expression::Import("foo".to_string())],
         vec![Expression::Function(
             Visibility::Private,
             ApplicationStrategy::Eager,
@@ -296,6 +297,10 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Module),
         Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Import),
+        Token::Symbol("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
         Token::Symbol("x".to_string()),
@@ -490,6 +495,20 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
         Token::Parenthesis(Parenthesis::Parameters),
         Token::Parenthesis(Parenthesis::Parameters),
         Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_import_tokens_are_import_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Import("foobar".to_string());
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Import),
+        Token::Symbol("foobar".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);

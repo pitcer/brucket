@@ -23,11 +23,13 @@
  */
 
 use crate::evaluator::environment::Environment;
+use crate::evaluator::internal::InternalEnvironment;
+use crate::interpreter::Interpreter;
 use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Lambda, Module, Parameter};
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::slice::Iter;
 
 #[macro_use]
@@ -35,25 +37,6 @@ pub mod environment;
 mod internal;
 
 type ValueResult = Result<Value, String>;
-type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
-
-macro_rules! internal_environment {
-    ($($identifier:expr => $function:expr),*) => {
-        {
-            let mut environment = InternalEnvironment::new();
-            $(
-                environment.insert($identifier, $function);
-            )*
-            environment.shrink_to_fit();
-            environment
-        }
-    };
-}
-
-pub struct Evaluator {
-    default_environment: Environment,
-    internal_environment: InternalEnvironment,
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -94,31 +77,17 @@ impl Closure {
     }
 }
 
-impl Default for Evaluator {
-    fn default() -> Self {
-        let default_environment = Environment::new();
-        Self::new(default_environment)
-    }
+pub struct Evaluator {
+    interpreter: Weak<Interpreter>,
+    default_environment: Environment,
+    internal_environment: InternalEnvironment,
 }
 
 impl Evaluator {
-    pub fn new(default_environment: Environment) -> Self {
-        let internal_environment = internal_environment! {
-            "add" => internal::add,
-            "subtract" => internal::subtract,
-            "multiply" => internal::multiply,
-            "divide" => internal::divide,
-            "remainder" => internal::remainder,
-            "is_equal" => internal::is_equal,
-            "is_greater" => internal::is_greater,
-            "is_greater_or_equal" => internal::is_greater_or_equal,
-            "is_less" => internal::is_less,
-            "is_less_or_equal" => internal::is_less_or_equal,
-            "pair_new" => internal::pair::new,
-            "pair_first" => internal::pair::first,
-            "pair_second" => internal::pair::second
-        };
+    pub fn new(interpreter: Weak<Interpreter>, default_environment: Environment) -> Self {
+        let internal_environment = InternalEnvironment::default();
         Self {
+            interpreter,
             default_environment,
             internal_environment,
         }
@@ -162,6 +131,7 @@ impl Evaluator {
                 Self::evaluate_lambda(lambda, environment),
             )),
             Expression::Constant(_, _, value) => self.evaluate_environment(value, environment),
+            Expression::Import(identifier) => self.evaluate_import(identifier, environment),
         }
     }
 
@@ -373,6 +343,12 @@ impl Evaluator {
     }
 
     fn evaluate_module(&self, module: &Module, environment: &mut Environment) -> ValueResult {
+        for import in module.imports() {
+            if let Expression::Import(identifier) = import {
+            } else {
+                return Err("Invalid import type".to_string());
+            }
+        }
         let module_environment = Environment::new();
         let mut constants_environment = environment.clone();
         let mut closures = Vec::new();
@@ -436,6 +412,10 @@ impl Evaluator {
             }
         }
         Ok(())
+    }
+
+    fn evaluate_import(&self, identifier: &String, environment: &mut Environment) -> ValueResult {
+        unimplemented!()
     }
 }
 

@@ -28,39 +28,48 @@ use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 type ValueResult = Result<Value, String>;
 
 pub struct Interpreter {
     lexer: Lexer,
     parser: Parser,
-    evaluator: Evaluator,
+    evaluator: Option<Evaluator>,
 }
 
 impl Default for Interpreter {
     fn default() -> Self {
         let lexer = Lexer::default();
         let parser = Parser::default();
-        let evaluator = Evaluator::default();
-        Interpreter {
+        let mut interpreter = Interpreter::new(lexer, parser, None);
+        let rc = Rc::new(interpreter);
+        let weak = Rc::downgrade(&rc);
+        let evaluator = Evaluator::new(weak, Environment::new());
+        interpreter.evaluator = Some(evaluator);
+        interpreter
+    }
+}
+
+impl Interpreter {
+    fn new(lexer: Lexer, parser: Parser, evaluator: Option<Evaluator>) -> Self {
+        let evaluator = RefCell::new(evaluator);
+        Self {
             lexer,
             parser,
             evaluator,
         }
     }
-}
 
-impl Interpreter {
     pub fn with_library(library_syntax: &str) -> Result<Self, String> {
         let lexer = Lexer::default();
         let parser = Parser::default();
         let default_environment = Self::interpret_library(library_syntax)?;
-        let evaluator = Evaluator::new(default_environment);
-        Ok(Interpreter {
-            lexer,
-            parser,
-            evaluator,
-        })
+        let mut interpreter = Interpreter::new(lexer, parser, None);
+        let evaluator = Evaluator::new(interpreter, default_environment);
+        interpreter.evaluator = Some(evaluator);
+        Ok(interpreter)
     }
 
     fn interpret_library(library_syntax: &str) -> Result<Environment, String> {
@@ -76,7 +85,7 @@ impl Interpreter {
     pub fn interpret(&self, syntax: &str) -> ValueResult {
         let tokenized = self.lexer.tokenize(syntax)?;
         let parsed = self.parser.parse(&tokenized)?;
-        self.evaluator.evaluate(&parsed)
+        self.evaluator.unwrap().evaluate(&parsed)
     }
 }
 
