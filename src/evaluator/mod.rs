@@ -22,38 +22,24 @@
  * SOFTWARE.
  */
 
-use crate::evaluator::environment::Environment;
-use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Lambda, Module, Parameter};
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
 use std::rc::Rc;
 use std::slice::Iter;
 
+use crate::evaluator::environment::Environment;
+use crate::evaluator::internal::InternalEnvironment;
+use crate::interpreter::ModuleEnvironment;
+use crate::parser::{
+    ApplicationStrategy, ConstantValue, Expression, Lambda, Module, Parameter, Path,
+};
+
 #[macro_use]
 pub mod environment;
 mod internal;
 
 type ValueResult = Result<Value, String>;
-type InternalEnvironment = HashMap<&'static str, fn(Vec<Value>) -> ValueResult>;
-
-macro_rules! internal_environment {
-    ($($identifier:expr => $function:expr),*) => {
-        {
-            let mut environment = InternalEnvironment::new();
-            $(
-                environment.insert($identifier, $function);
-            )*
-            environment.shrink_to_fit();
-            environment
-        }
-    };
-}
-
-pub struct Evaluator {
-    default_environment: Environment,
-    internal_environment: InternalEnvironment,
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -66,7 +52,7 @@ pub enum Value {
     Closure(Closure),
     FunctionClosure(ApplicationStrategy, Closure),
     Thunk(Box<Expression>, Environment),
-    Module(String, Environment),
+    Module(bool, String, Environment),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -94,44 +80,55 @@ impl Closure {
     }
 }
 
+pub struct Evaluator {
+    internal_environment: InternalEnvironment,
+}
+
 impl Default for Evaluator {
     fn default() -> Self {
-        let default_environment = Environment::new();
-        Self::new(default_environment)
+        let internal_environment = InternalEnvironment::default();
+        Self::new(internal_environment)
     }
 }
 
 impl Evaluator {
-    pub fn new(default_environment: Environment) -> Self {
-        let internal_environment = internal_environment! {
-            "add" => internal::add,
-            "subtract" => internal::subtract,
-            "multiply" => internal::multiply,
-            "divide" => internal::divide,
-            "remainder" => internal::remainder,
-            "is_equal" => internal::is_equal,
-            "is_greater" => internal::is_greater,
-            "is_greater_or_equal" => internal::is_greater_or_equal,
-            "is_less" => internal::is_less,
-            "is_less_or_equal" => internal::is_less_or_equal,
-            "pair_new" => internal::pair::new,
-            "pair_first" => internal::pair::first,
-            "pair_second" => internal::pair::second
-        };
+    fn new(internal_environment: InternalEnvironment) -> Self {
         Self {
-            default_environment,
             internal_environment,
         }
     }
 
-    pub fn evaluate(&self, expression: &Expression) -> ValueResult {
-        let mut environment = self.default_environment.clone();
-        self.evaluate_environment(expression, &mut environment)
+    #[cfg(test)]
+    fn evaluate(&self, expression: &Expression) -> ValueResult {
+        let module_environment = ModuleEnvironment::default();
+        let static_module_environment = Environment::new();
+        self.evaluate_with_module_environment(
+            expression,
+            &static_module_environment,
+            &module_environment,
+        )
+    }
+
+    pub fn evaluate_with_module_environment(
+        &self,
+        expression: &Expression,
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
+    ) -> ValueResult {
+        let mut environment = Environment::default();
+        self.evaluate_environment(
+            expression,
+            static_module_environment,
+            module_environment,
+            &mut environment,
+        )
     }
 
     fn evaluate_environment(
         &self,
         expression: &Expression,
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
         match expression {
@@ -142,26 +139,61 @@ impl Evaluator {
                 ConstantValue::Boolean(value) => Ok(Value::Boolean(*value)),
                 ConstantValue::String(value) => Ok(Value::Textual(value.clone())),
             },
-            Expression::Identifier(value) => Self::get_from_environment(environment, value),
-            Expression::Application(identifier, arguments) => {
-                self.evaluate_application(identifier, arguments, environment)
-            }
-            Expression::InternalCall(identifier, arguments) => {
-                self.evaluate_internal_call(identifier, arguments, environment)
-            }
-            Expression::Let(name, value, then) => self.evaluate_let(name, value, then, environment),
-            Expression::If(condition, if_true_then, if_false_then) => {
-                self.evaluate_if(condition, if_true_then, if_false_then, environment)
-            }
+            Expression::Identifier(value) => Self::get_from_environment(
+                static_module_environment,
+                module_environment,
+                environment,
+                value,
+            ),
+            Expression::Application(identifier, arguments) => self.evaluate_application(
+                identifier,
+                arguments,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
+            Expression::InternalCall(identifier, arguments) => self.evaluate_internal_call(
+                identifier,
+                arguments,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
+            Expression::Let(name, value, then) => self.evaluate_let(
+                name,
+                value,
+                then,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
+            Expression::If(condition, if_true_then, if_false_then) => self.evaluate_if(
+                condition,
+                if_true_then,
+                if_false_then,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
             Expression::Lambda(lambda) => {
                 Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
             }
-            Expression::Module(module) => self.evaluate_module(module, environment),
+            Expression::Module(module) => self.evaluate_module(
+                module,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
             Expression::Function(_, application_strategy, _, lambda) => Ok(Value::FunctionClosure(
                 application_strategy.clone(),
                 Self::evaluate_lambda(lambda, environment),
             )),
-            Expression::Constant(_, _, value) => self.evaluate_environment(value, environment),
+            Expression::Constant(_, _, value) => self.evaluate_environment(
+                value,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
         }
     }
 
@@ -170,12 +202,19 @@ impl Evaluator {
         identifier: &str,
         value: &Expression,
         then: &Expression,
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        let evaluated_value = self.evaluate_environment(value, environment)?;
+        let evaluated_value = self.evaluate_environment(
+            value,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         let evaluated_value = Rc::new(evaluated_value);
-        if let Value::Closure(closure) = evaluated_value.borrow() {
-            if let Expression::Lambda(lambda) = value {
+        if let Expression::Lambda(lambda) = value {
+            if let Value::Closure(closure) = evaluated_value.borrow() {
                 let identifier = identifier.to_string();
                 if lambda.used_identifiers().contains(&identifier) {
                     let closure_environment = closure.environment();
@@ -184,7 +223,12 @@ impl Evaluator {
             }
         }
         environment.insert(identifier.to_string(), evaluated_value);
-        let result = self.evaluate_environment(then, environment);
+        let result = self.evaluate_environment(
+            then,
+            static_module_environment,
+            module_environment,
+            environment,
+        );
         environment.remove(identifier);
         result
     }
@@ -194,12 +238,24 @@ impl Evaluator {
         condition: &Expression,
         if_true_then: &Expression,
         if_false_then: &Expression,
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        let condition = self.evaluate_environment(condition, environment)?;
+        let condition = self.evaluate_environment(
+            condition,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         if let Value::Boolean(value) = condition {
             let body = if value { if_true_then } else { if_false_then };
-            self.evaluate_environment(body, environment)
+            self.evaluate_environment(
+                body,
+                static_module_environment,
+                module_environment,
+                environment,
+            )
         } else {
             Err("Invalid condition type".to_string())
         }
@@ -227,15 +283,54 @@ impl Evaluator {
         new_env
     }
 
-    fn get_from_environment(environment: &Environment, name: &str) -> ValueResult {
-        let value = environment
-            .get(name)
-            .or_else(|| environment.get_weak(name).and_then(|value| value.upgrade()));
-        if let Some(value) = value {
-            let value: &Value = &value;
-            Ok(value.clone())
-        } else {
-            Err(format!("Undefined variable: {}", name))
+    fn get_from_environment(
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
+        environment: &Environment,
+        path: &Path,
+    ) -> ValueResult {
+        match path {
+            Path::Simple(identifier) => {
+                let value = environment.get(identifier).or_else(|| {
+                    environment
+                        .get_weak(identifier)
+                        .and_then(|value| value.upgrade())
+                });
+                if let Some(value) = value {
+                    let value: &Value = &value;
+                    Ok(value.clone())
+                } else {
+                    let value = static_module_environment.get(identifier).or_else(|| {
+                        static_module_environment
+                            .get_weak(identifier)
+                            .and_then(|value| value.upgrade())
+                    });
+                    if let Some(value) = value {
+                        let value: &Value = &value;
+                        Ok(value.clone())
+                    } else {
+                        Err(format!("Undefined variable: {}", identifier))
+                    }
+                }
+            }
+            Path::Complex(path) => {
+                let first_path = path.path().get(0);
+                if let Some(first_path) = first_path {
+                    let module_env = module_environment.get(first_path);
+                    if let Some(module_env) = module_env {
+                        Self::get_from_environment(
+                            static_module_environment,
+                            module_environment,
+                            module_env,
+                            &Path::Simple(path.identifier().clone()),
+                        )
+                    } else {
+                        Err("".to_string())
+                    }
+                } else {
+                    Err("".to_string())
+                }
+            }
         }
     }
 
@@ -243,13 +338,22 @@ impl Evaluator {
         &self,
         identifier: &Expression,
         arguments: &[Expression],
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        let identifier = self.evaluate_environment(identifier, environment)?;
+        let identifier = self.evaluate_environment(
+            identifier,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         match identifier {
             Value::Closure(closure) => self.evaluate_closure_application(
                 ApplicationStrategy::Eager,
                 arguments,
+                static_module_environment,
+                module_environment,
                 environment,
                 closure,
             ),
@@ -257,12 +361,17 @@ impl Evaluator {
                 .evaluate_closure_application(
                     application_strategy,
                     arguments,
+                    static_module_environment,
+                    module_environment,
                     environment,
                     closure,
                 ),
-            Value::Thunk(body, mut environment) => {
-                self.evaluate_environment(&body, &mut environment)
-            }
+            Value::Thunk(body, mut environment) => self.evaluate_environment(
+                &body,
+                static_module_environment,
+                module_environment,
+                &mut environment,
+            ),
             _ => Err(format!(
                 "Invalid identifier type. Expected: Closure or Thunk, Actual: {:?}",
                 identifier
@@ -274,6 +383,8 @@ impl Evaluator {
         &self,
         application_strategy: ApplicationStrategy,
         arguments: &[Expression],
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
         mut closure: Closure,
     ) -> Result<Value, String> {
@@ -286,7 +397,12 @@ impl Evaluator {
                         .next()
                         .ok_or_else(|| "Missing argument.".to_string())?;
                     let argument = if application_strategy.is_eager() {
-                        self.evaluate_environment(argument, environment)
+                        self.evaluate_environment(
+                            argument,
+                            static_module_environment,
+                            module_environment,
+                            environment,
+                        )
                     } else {
                         Ok(Value::Thunk(
                             Box::new(argument.clone()),
@@ -299,6 +415,8 @@ impl Evaluator {
                     let list = self.create_pair_list(
                         application_strategy,
                         arguments_iterator,
+                        static_module_environment,
+                        module_environment,
                         environment,
                     )?;
                     closure.environment.insert(name.clone(), Rc::new(list));
@@ -315,9 +433,14 @@ impl Evaluator {
                 parameters_length, arguments_length
             ));
         }
-        let result = self.evaluate_environment(&closure.body, &mut closure.environment);
+        let result = self.evaluate_environment(
+            &closure.body,
+            static_module_environment,
+            module_environment,
+            &mut closure.environment,
+        );
         for parameter in &closure.parameters {
-            let name = parameter.get_name();
+            let name = parameter.name();
             closure.environment.remove(name);
         }
         result
@@ -327,12 +450,19 @@ impl Evaluator {
         &self,
         application_strategy: ApplicationStrategy,
         arguments: Iter<Expression>,
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
         let mut result = Value::Null;
         for argument in arguments.rev() {
             let argument = if application_strategy.is_eager() {
-                self.evaluate_environment(argument, environment)
+                self.evaluate_environment(
+                    argument,
+                    static_module_environment,
+                    module_environment,
+                    environment,
+                )
             } else {
                 Ok(Value::Thunk(
                     Box::new(argument.clone()),
@@ -348,6 +478,8 @@ impl Evaluator {
         &self,
         identifier: &str,
         arguments: &[Expression],
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
         let function = self.internal_environment.get(identifier);
@@ -355,24 +487,42 @@ impl Evaluator {
             return Err(format!("Undefined internal identifier: {}", identifier));
         }
         let function = function.unwrap();
-        let arguments = self.evaluate_arguments(arguments, environment)?;
+        let arguments = self.evaluate_arguments(
+            arguments,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         function(arguments)
     }
 
     fn evaluate_arguments(
         &self,
         arguments: &[Expression],
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> Result<Vec<Value>, String> {
         let mut result = Vec::new();
         for argument in arguments {
-            let argument = self.evaluate_environment(argument, environment)?;
+            let argument = self.evaluate_environment(
+                argument,
+                static_module_environment,
+                module_environment,
+                environment,
+            )?;
             result.push(argument);
         }
         Ok(result)
     }
 
-    fn evaluate_module(&self, module: &Module, environment: &mut Environment) -> ValueResult {
+    fn evaluate_module(
+        &self,
+        module: &Module,
+        static_module_environment: &Environment,
+        global_module_environment: &ModuleEnvironment,
+        environment: &mut Environment,
+    ) -> ValueResult {
         let module_environment = Environment::new();
         let mut constants_environment = environment.clone();
         let mut closures = Vec::new();
@@ -399,7 +549,12 @@ impl Evaluator {
         let mut evaluated_constants = HashMap::new();
         for constant in module.constants() {
             if let Expression::Constant(visibility, identifier, value) = constant {
-                let value = self.evaluate_environment(value, &mut constants_environment)?;
+                let value = self.evaluate_environment(
+                    value,
+                    static_module_environment,
+                    global_module_environment,
+                    &mut constants_environment,
+                )?;
                 let value = Rc::new(value);
                 if visibility.is_public() {
                     module_environment.insert(identifier.clone(), Rc::clone(&value));
@@ -412,7 +567,11 @@ impl Evaluator {
         }
         Self::fill_closures(&closures, &evaluated_constants)?;
         let identifier = module.identifier();
-        Ok(Value::Module(identifier.to_string(), module_environment))
+        Ok(Value::Module(
+            module.is_static(),
+            identifier.to_string(),
+            module_environment,
+        ))
     }
 
     fn fill_closures(

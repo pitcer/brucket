@@ -90,6 +90,42 @@ fn test_tokenized_multi_character_number_is_number_token() -> TestResult {
 }
 
 #[test]
+fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Symbol("x".to_string())];
+    let actual = lexer.tokenize("x")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_multi_character_symbol_is_symbol_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Symbol("xyz".to_string())];
+    let actual = lexer.tokenize("xyz")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_null_is_null_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Null];
+    let actual = lexer.tokenize("null")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_boolean_symbol_is_boolean_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Boolean(true), Token::Boolean(false)];
+    let actual = lexer.tokenize("true false")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_tokenized_let_keyword_is_let_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Keyword(Keyword::Let)];
@@ -162,16 +198,7 @@ fn test_tokenized_constant_keyword_is_constant_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_null_is_null_token() -> TestResult {
-    let lexer = Lexer::default();
-    let expected = vec![Token::Null];
-    let actual = lexer.tokenize("null")?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_tokenized_public_keyword_is_public_token() -> TestResult {
+fn test_tokenized_public_modifier_is_public_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Modifier(Modifier::Public)];
     let actual = lexer.tokenize("public")?;
@@ -180,7 +207,7 @@ fn test_tokenized_public_keyword_is_public_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_private_keyword_is_private_token() -> TestResult {
+fn test_tokenized_private_modifier_is_private_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Modifier(Modifier::Private)];
     let actual = lexer.tokenize("private")?;
@@ -189,7 +216,7 @@ fn test_tokenized_private_keyword_is_private_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_lazy_keyword_is_lazy_token() -> TestResult {
+fn test_tokenized_lazy_modifier_is_lazy_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Modifier(Modifier::Lazy)];
     let actual = lexer.tokenize("lazy")?;
@@ -198,28 +225,10 @@ fn test_tokenized_lazy_keyword_is_lazy_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
+fn test_tokenized_static_modifier_is_static_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Symbol("x".to_string())];
-    let actual = lexer.tokenize("x")?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_tokenized_multi_character_symbol_is_symbol_token() -> TestResult {
-    let lexer = Lexer::default();
-    let expected = vec![Token::Symbol("xyz".to_string())];
-    let actual = lexer.tokenize("xyz")?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_tokenized_boolean_symbol_is_boolean_token() -> TestResult {
-    let lexer = Lexer::default();
-    let expected = vec![Token::Boolean(true), Token::Boolean(false)];
-    let actual = lexer.tokenize("true false")?;
+    let expected = vec![Token::Modifier(Modifier::Static)];
+    let actual = lexer.tokenize("static")?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -295,6 +304,45 @@ fn test_tokenized_three_dots_are_variadic_operator_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Operator(Operator::Variadic)];
     let actual = lexer.tokenize("...")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_two_colons_are_path_operator_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Operator(Operator::Path)];
+    let actual = lexer.tokenize("::")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_path_is_path_tokens() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("bar".to_string()),
+    ];
+    let actual = lexer.tokenize("foo::bar")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_complex_path_is_path_tokens() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("bar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("foobar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("barfoo".to_string()),
+    ];
+    let actual = lexer.tokenize("foo::bar::foobar::barfoo")?;
     assert_eq!(expected, actual);
     Ok(())
 }

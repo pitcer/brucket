@@ -56,7 +56,7 @@ fn test_parsed_string_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Identifier("foobar".to_string());
+    let expected = Expression::Identifier(Path::Simple("foobar".to_string()));
     let actual = parser.parse(&[Token::Symbol("foobar".to_string())])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -87,7 +87,7 @@ fn test_parsed_null_token_is_null_expression() -> TestResult {
 fn test_parsed_constant_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Application(
-        Box::new(Expression::Identifier("foobar".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
         Vec::new(),
     );
     let actual = parser.parse(&[
@@ -103,7 +103,7 @@ fn test_parsed_constant_function_tokens_are_application_expression() -> TestResu
 fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Application(
-        Box::new(Expression::Identifier("foobar".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
         vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
     );
     let actual = parser.parse(&[
@@ -120,7 +120,7 @@ fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult 
 fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Application(
-        Box::new(Expression::Identifier("foobar".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
         vec![
             Expression::ConstantValue(ConstantValue::Numeric(42)),
             Expression::ConstantValue(ConstantValue::Numeric(24)),
@@ -145,7 +145,7 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let expected = Expression::Let(
         "x".to_string(),
         Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        Box::new(Expression::Identifier("x".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -184,7 +184,7 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
     let parser = Parser::default();
     let expected = Expression::Lambda(Lambda::new(
         Vec::new(),
-        Box::new(Expression::Identifier("x".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         maplit::hashset!("x".to_string()),
     ));
     let actual = parser.parse(&[
@@ -204,7 +204,7 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
     let parser = Parser::default();
     let expected = Expression::Lambda(Lambda::new(
         vec![Parameter::Unary("x".to_string())],
-        Box::new(Expression::Identifier("x".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         HashSet::new(),
     ));
     let actual = parser.parse(&[
@@ -229,7 +229,7 @@ fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestRes
             Parameter::Unary("y".to_string()),
             Parameter::Unary("z".to_string()),
         ],
-        Box::new(Expression::Identifier("x".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         HashSet::new(),
     ));
     let actual = parser.parse(&[
@@ -253,9 +253,9 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
     let expected = Expression::InternalCall(
         "foo".to_string(),
         vec![
-            Expression::Identifier("x".to_string()),
+            Expression::Identifier(Path::Simple("x".to_string())),
             Expression::ConstantValue(ConstantValue::Numeric(42)),
-            Expression::Identifier("y".to_string()),
+            Expression::Identifier(Path::Simple("y".to_string())),
         ],
     );
     let actual = parser.parse(&[
@@ -275,6 +275,7 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Module(Module::new(
+        false,
         "foo".to_string(),
         vec![Expression::Function(
             Visibility::Private,
@@ -328,7 +329,7 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
                 Parameter::Unary("z".to_string()),
             ],
             Box::new(Expression::Application(
-                Box::new(Expression::Identifier("bar".to_string())),
+                Box::new(Expression::Identifier(Path::Simple("bar".to_string()))),
                 vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
             )),
             maplit::hashset!("bar".to_string()),
@@ -377,7 +378,7 @@ fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> 
     let parser = Parser::default();
     let expected = Expression::Lambda(Lambda::new(
         vec![Parameter::Variadic("xs".to_string())],
-        Box::new(Expression::Identifier("x".to_string())),
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         maplit::hashset!("x".to_string()),
     ));
     let actual = parser.parse(&[
@@ -490,6 +491,72 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
         Token::Parenthesis(Parenthesis::Parameters),
         Token::Parenthesis(Parenthesis::Parameters),
         Token::Number(42),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_application_simple_path_identifier_tokens_are_application_expression() -> TestResult
+{
+    let parser = Parser::default();
+    let expected = Expression::Application(
+        Box::new(Expression::Identifier(Path::Complex(ComplexPath::new(
+            "foobar".to_string(),
+            vec!["foo".to_string()],
+        )))),
+        vec![Expression::ConstantValue(ConstantValue::String(
+            "foo".to_string(),
+        ))],
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("foobar".to_string()),
+        Token::String("foo".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_application_complex_path_identifier_tokens_are_application_expression() -> TestResult
+{
+    let parser = Parser::default();
+    let expected = Expression::Application(
+        Box::new(Expression::Identifier(Path::Complex(ComplexPath::new(
+            "barfoo".to_string(),
+            vec!["foo".to_string(), "bar".to_string(), "foobar".to_string()],
+        )))),
+        Vec::new(),
+    );
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("bar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("foobar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("barfoo".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Module(Module::new(true, "foo".to_string(), Vec::new(), Vec::new()));
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Modifier(Modifier::Static),
+        Token::Keyword(Keyword::Module),
+        Token::Symbol("foo".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);

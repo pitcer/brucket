@@ -1,4 +1,4 @@
-(module base
+(static module base
   (public constant + add)
 
   (public function add |arguments...|
