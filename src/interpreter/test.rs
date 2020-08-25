@@ -22,64 +22,63 @@
  * SOFTWARE.
  */
 
-use super::*;
 use crate::evaluator::Closure;
-use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Parameter};
-use std::fs::File;
-use std::io::Read;
+use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Parameter, Path};
+
+use super::*;
 
 type TestResult = Result<(), String>;
 
 #[test]
 fn test_interpret_number() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("42")?;
+    let actual = interpreter.interpret_with_base_library("42")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_unit_function() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Unit;
-    let actual = interpreter.interpret("()")?;
+    let actual = interpreter.interpret_with_base_library("()")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_simple_arithmetic_expression() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(3);
-    let actual = interpreter.interpret("(+ 1 2)")?;
+    let actual = interpreter.interpret_with_base_library("(+ 1 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_arithmetic_expression() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(9);
-    let actual = interpreter.interpret("(+ (* 2 3) (- 7 4))")?;
+    let actual = interpreter.interpret_with_base_library("(+ (* 2 3) (- 7 4))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_expression_with_comment() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("# foobar\n(+ 40 2)\n#another comment")?;
+    let actual = interpreter.interpret_with_base_library("# foobar\n(+ 40 2)\n#another comment")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret(
+    let actual = interpreter.interpret_with_base_library(
         r#"
         (let x (+ 40 2)
           (- (let y 2 (* x y))
@@ -92,9 +91,9 @@ fn test_interpret_arithmetic_expression_with_variables() -> TestResult {
 
 #[test]
 fn test_interpret_expression_with_constant_condition() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret(
+    let actual = interpreter.interpret_with_base_library(
         r#"
         (let x (+ 20 2)
           (if false
@@ -109,30 +108,30 @@ fn test_interpret_expression_with_constant_condition() -> TestResult {
 #[test]
 #[should_panic(expected = "attempt to divide by zero")]
 fn test_division_by_zero_should_panic() {
-    let interpreter = create_interpreter();
-    let _result = interpreter.interpret("(/ 1 0)");
+    let interpreter = Interpreter::default();
+    let _result = interpreter.interpret_with_base_library("(/ 1 0)");
 }
 
 #[test]
 fn test_if_expression_is_evaluated_lazily() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(if false (/ 1 0) 42)")?;
+    let actual = interpreter.interpret_with_base_library("(if false (/ 1 0) 42)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_environment_is_cleared() {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Err("Undefined variable: x".to_string());
-    let actual = interpreter.interpret("(+ (let x 42 x) x)");
+    let actual = interpreter.interpret_with_base_library("(+ (let x 42 x) x)");
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn test_interpret_module() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Module(
         "foo".to_string(),
         environment! {
@@ -154,7 +153,7 @@ fn test_interpret_module() -> TestResult {
             ))
         },
     );
-    let actual = interpreter.interpret(
+    let actual = interpreter.interpret_with_base_library(
         r#"
         (module foo
           (public constant bar 1)
@@ -172,75 +171,111 @@ fn test_interpret_module() -> TestResult {
 
 #[test]
 fn test_interpret_function() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
             vec![Parameter::Unary("x".to_string())],
-            Box::from(Expression::Identifier("x".to_string())),
+            Box::from(Expression::Identifier(Path::Simple("x".to_string()))),
             Environment::new(),
         ),
     );
-    let actual = interpreter.interpret("(function foo |x| x))")?;
+    let actual = interpreter.interpret_with_base_library("(function foo |x| x))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_comparison_functions() -> TestResult {
-    let interpreter = create_interpreter();
-    assert_eq!(Value::Boolean(false), interpreter.interpret("(= 42 24)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(= 42 42)")?);
-    assert_eq!(Value::Boolean(false), interpreter.interpret("(> 24 42)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(> 42 24)")?);
-    assert_eq!(Value::Boolean(false), interpreter.interpret("(>= 24 42)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(>= 42 24)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(>= 42 42)")?);
-    assert_eq!(Value::Boolean(false), interpreter.interpret("(< 42 24)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(< 24 42)")?);
-    assert_eq!(Value::Boolean(false), interpreter.interpret("(<= 42 24)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(<= 24 42)")?);
-    assert_eq!(Value::Boolean(true), interpreter.interpret("(<= 42 42)")?);
+    let interpreter = Interpreter::default();
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret_with_base_library("(= 42 24)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(= 42 42)")?
+    );
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret_with_base_library("(> 24 42)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(> 42 24)")?
+    );
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret_with_base_library("(>= 24 42)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(>= 42 24)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(>= 42 42)")?
+    );
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret_with_base_library("(< 42 24)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(< 24 42)")?
+    );
+    assert_eq!(
+        Value::Boolean(false),
+        interpreter.interpret_with_base_library("(<= 42 24)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(<= 24 42)")?
+    );
+    assert_eq!(
+        Value::Boolean(true),
+        interpreter.interpret_with_base_library("(<= 42 42)")?
+    );
     Ok(())
 }
 
 #[test]
 fn test_and_is_evaluated_lazily() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Boolean(false);
-    let actual = interpreter.interpret("(and true false (/ 1 0))")?;
+    let actual = interpreter.interpret_with_base_library("(and true false (/ 1 0))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_or_is_evaluated_lazily() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Boolean(true);
-    let actual = interpreter.interpret("(or false true (/ 1 0))")?;
+    let actual = interpreter.interpret_with_base_library("(or false true (/ 1 0))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_negate_function_negates_correctly() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     assert_eq!(
         Value::Boolean(false),
-        interpreter.interpret("(negate true)")?
+        interpreter.interpret_with_base_library("(negate true)")?
     );
     assert_eq!(
         Value::Boolean(true),
-        interpreter.interpret("(negate false)")?
+        interpreter.interpret_with_base_library("(negate false)")?
     );
     Ok(())
 }
 
 #[test]
 fn test_recursive_lambda() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(0);
-    let actual = interpreter.interpret(
+    let actual = interpreter.interpret_with_base_library(
         r#"
         (let foo
           (-> |x|
@@ -256,35 +291,35 @@ fn test_recursive_lambda() -> TestResult {
 
 #[test]
 fn test_pair() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     assert_eq!(
         Value::Numeric(42),
-        interpreter.interpret("(pair_first (new_pair 42 24))")?
+        interpreter.interpret_with_base_library("(pair_first (new_pair 42 24))")?
     );
     assert_eq!(
         Value::Numeric(24),
-        interpreter.interpret("(pair_second (new_pair 42 24))")?
+        interpreter.interpret_with_base_library("(pair_second (new_pair 42 24))")?
     );
     Ok(())
 }
 
 #[test]
 fn test_is_null() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     assert_eq!(
         Value::Boolean(true),
-        interpreter.interpret("(is_null null)")?
+        interpreter.interpret_with_base_library("(is_null null)")?
     );
     assert_eq!(
         Value::Boolean(false),
-        interpreter.interpret("(is_null 42)")?
+        interpreter.interpret_with_base_library("(is_null 42)")?
     );
     Ok(())
 }
 
 #[test]
 fn test_variadic_parameter() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     assert_eq!(
         Value::Pair(
             Box::new(Value::Numeric(2)),
@@ -296,11 +331,11 @@ fn test_variadic_parameter() -> TestResult {
                 )),
             )),
         ),
-        interpreter.interpret("((-> |x xs... y| xs) 1 2 3 4)")?
+        interpreter.interpret_with_base_library("((-> |x xs... y| xs) 1 2 3 4)")?
     );
     assert_eq!(
         Value::Numeric(1),
-        interpreter.interpret("((-> |x xs... y| x) 1 2 3 4)")?
+        interpreter.interpret_with_base_library("((-> |x xs... y| x) 1 2 3 4)")?
     );
     Ok(())
 }
@@ -320,9 +355,10 @@ fn test_call_other_members_in_module() -> TestResult {
           (function bar |x|
             x))
         "#;
-    let interpreter = Interpreter::with_library(library)?;
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(foobar)")?;
+    let actual =
+        interpreter.interpret_with_base_library_and_modules("(test::foobar)", vec![library])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -346,153 +382,154 @@ fn test_call_other_members_in_module_including_recursive_function() -> TestResul
 
           (constant STEP 3))
         "#;
-    let interpreter = Interpreter::with_library(library)?;
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(bar)")?;
+    let actual =
+        interpreter.interpret_with_base_library_and_modules("(test::bar)", vec![library])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_add_with_zero_arguments_returns_zero() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(0);
-    let actual = interpreter.interpret("(+)")?;
+    let actual = interpreter.interpret_with_base_library("(+)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_add_with_one_argument_returns_that_argument() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(+ 42)")?;
+    let actual = interpreter.interpret_with_base_library("(+ 42)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_add_with_two_arguments_returns_their_sum() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(+ 40 2)")?;
+    let actual = interpreter.interpret_with_base_library("(+ 40 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_add_with_many_arguments_returns_their_sum() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(+ 18 2 9 13)")?;
+    let actual = interpreter.interpret_with_base_library("(+ 18 2 9 13)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_subtract_with_zero_arguments_returns_zero() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(0);
-    let actual = interpreter.interpret("(-)")?;
+    let actual = interpreter.interpret_with_base_library("(-)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_subtract_with_one_argument_returns_that_argument_with_opposite_sign() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(-42);
-    let actual = interpreter.interpret("(- 42)")?;
+    let actual = interpreter.interpret_with_base_library("(- 42)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_subtract_with_two_arguments_returns_their_difference() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(40);
-    let actual = interpreter.interpret("(- 42 2)")?;
+    let actual = interpreter.interpret_with_base_library("(- 42 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_subtract_with_many_arguments_returns_their_difference() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(10);
-    let actual = interpreter.interpret("(- 42 10 20 2)")?;
+    let actual = interpreter.interpret_with_base_library("(- 42 10 20 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_multiply_with_zero_arguments_returns_one() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(1);
-    let actual = interpreter.interpret("(*)")?;
+    let actual = interpreter.interpret_with_base_library("(*)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_multiply_with_one_argument_returns_that_argument() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(* 42)")?;
+    let actual = interpreter.interpret_with_base_library("(* 42)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_multiply_with_two_arguments_returns_their_product() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(* 21 2)")?;
+    let actual = interpreter.interpret_with_base_library("(* 21 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_multiply_with_many_arguments_returns_their_product() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(* 7 3 2 1)")?;
+    let actual = interpreter.interpret_with_base_library("(* 7 3 2 1)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_divide_with_zero_arguments_returns_one() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(1);
-    let actual = interpreter.interpret("(/)")?;
+    let actual = interpreter.interpret_with_base_library("(/)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_divide_with_one_argument_returns_inverse_of_that_argument() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(1 / 42);
-    let actual = interpreter.interpret("(/ 42)")?;
+    let actual = interpreter.interpret_with_base_library("(/ 42)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_divide_with_two_arguments_returns_their_quotient() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(/ 84 2)")?;
+    let actual = interpreter.interpret_with_base_library("(/ 84 2)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_divide_with_many_arguments_returns_their_quotient() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(/ 1260 2 3 5)")?;
+    let actual = interpreter.interpret_with_base_library("(/ 1260 2 3 5)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -504,9 +541,10 @@ fn test_interpret_lazy_function_application() -> TestResult {
           (public lazy function foo |x|
             (x)))
         "#;
-    let interpreter = Interpreter::with_library(library)?;
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(foo 42)")?;
+    let actual =
+        interpreter.interpret_with_base_library_and_modules("(test::foo 42)", vec![library])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -518,54 +556,46 @@ fn test_lazy_function_arguments_are_evaluated_lazily() -> TestResult {
           (public lazy function foo |x a y b z|
             (internal add (a) (b))))
         "#;
-    let interpreter = Interpreter::with_library(library)?;
+    let interpreter = Interpreter::default();
     let expected = Value::Numeric(42);
-    let actual = interpreter.interpret("(foo (/ 1 0) 20 (/ 1 0) 22 (/ 1 0))")?;
+    let syntax = "(test::foo (/ 1 0) 20 (/ 1 0) 22 (/ 1 0))";
+    let actual = interpreter.interpret_with_base_library_and_modules(syntax, vec![library])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_and_is_false_if_false_argument_exists() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Boolean(false);
-    let actual = interpreter.interpret("(and true true false true)")?;
+    let actual = interpreter.interpret_with_base_library("(and true true false true)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_and_is_true_if_every_argument_is_true() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Boolean(true);
-    let actual = interpreter.interpret("(and true true true true)")?;
+    let actual = interpreter.interpret_with_base_library("(and true true true true)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_or_is_true_if_true_argument_exists() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Boolean(true);
-    let actual = interpreter.interpret("(or false false true false)")?;
+    let actual = interpreter.interpret_with_base_library("(or false false true false)")?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_or_is_false_if_every_argument_is_false() -> TestResult {
-    let interpreter = create_interpreter();
+    let interpreter = Interpreter::default();
     let expected = Value::Boolean(false);
-    let actual = interpreter.interpret("(or false false false false)")?;
+    let actual = interpreter.interpret_with_base_library("(or false false false false)")?;
     assert_eq!(expected, actual);
     Ok(())
-}
-
-fn create_interpreter() -> Interpreter {
-    let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
-    let mut library_syntax = String::new();
-    library_file
-        .read_to_string(&mut library_syntax)
-        .expect("Cannot read library file");
-    Interpreter::with_library(&library_syntax).expect("Cannot create an interpreter with library")
 }

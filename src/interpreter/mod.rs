@@ -22,39 +22,35 @@
  * SOFTWARE.
  */
 
-pub use crate::evaluator::Value;
+use std::collections::HashMap;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
+pub use crate::evaluator::Value;
 use crate::lexer::Lexer;
-use crate::parser::Parser;
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::parser::{Expression, Parser};
+
+pub type ModuleEnvironment = HashMap<String, Environment>;
 
 type ValueResult = Result<Value, String>;
 
 pub struct Interpreter {
     lexer: Lexer,
     parser: Parser,
-    evaluator: Option<Evaluator>,
+    evaluator: Evaluator,
 }
 
 impl Default for Interpreter {
     fn default() -> Self {
         let lexer = Lexer::default();
         let parser = Parser::default();
-        let mut interpreter = Interpreter::new(lexer, parser, None);
-        let rc = Rc::new(interpreter);
-        let weak = Rc::downgrade(&rc);
-        let evaluator = Evaluator::new(weak, Environment::new());
-        interpreter.evaluator = Some(evaluator);
-        interpreter
+        let evaluator = Evaluator::default();
+        Interpreter::new(lexer, parser, evaluator)
     }
 }
 
 impl Interpreter {
-    fn new(lexer: Lexer, parser: Parser, evaluator: Option<Evaluator>) -> Self {
-        let evaluator = RefCell::new(evaluator);
+    fn new(lexer: Lexer, parser: Parser, evaluator: Evaluator) -> Self {
         Self {
             lexer,
             parser,
@@ -62,30 +58,68 @@ impl Interpreter {
         }
     }
 
-    pub fn with_library(library_syntax: &str) -> Result<Self, String> {
-        let lexer = Lexer::default();
-        let parser = Parser::default();
-        let default_environment = Self::interpret_library(library_syntax)?;
-        let mut interpreter = Interpreter::new(lexer, parser, None);
-        let evaluator = Evaluator::new(interpreter, default_environment);
-        interpreter.evaluator = Some(evaluator);
-        Ok(interpreter)
+    pub fn interpret_with_modules(
+        &self,
+        endpoint_syntax: &str,
+        modules_syntax: Vec<String>,
+    ) -> ValueResult {
+        let mut module_environment = ModuleEnvironment::new();
+        for module_syntax in modules_syntax {
+            let result =
+                self.interpret_with_module_environment(&module_syntax, &module_environment)?;
+            if let Value::Module(name, environment) = result {
+                module_environment.insert(name, environment);
+            } else {
+                return Err("One of the given modules did not evaluate to module".to_string());
+            }
+        }
+        self.interpret_with_module_environment(endpoint_syntax, &module_environment)
     }
 
-    fn interpret_library(library_syntax: &str) -> Result<Environment, String> {
-        let interpreter = Self::default();
-        let library = interpreter.interpret(library_syntax)?;
-        if let Value::Module(_identifier, environment) = library {
-            Ok(environment)
-        } else {
-            Err("Given library syntax is not a module".to_string())
-        }
+    fn interpret_with_module_environment(
+        &self,
+        syntax: &str,
+        module_environment: &ModuleEnvironment,
+    ) -> ValueResult {
+        let expression = self.parse_syntax(syntax)?;
+        self.evaluator
+            .evaluate_with_module_environment(&expression, module_environment)
     }
 
     pub fn interpret(&self, syntax: &str) -> ValueResult {
-        let tokenized = self.lexer.tokenize(syntax)?;
-        let parsed = self.parser.parse(&tokenized)?;
-        self.evaluator.unwrap().evaluate(&parsed)
+        let module_environment = ModuleEnvironment::new();
+        self.interpret_with_module_environment(syntax, &module_environment)
+    }
+
+    fn parse_syntax(&self, syntax: &str) -> Result<Expression, String> {
+        let tokens = self.lexer.tokenize(syntax)?;
+        self.parser.parse(&tokens)
+    }
+
+    #[cfg(test)]
+    pub fn interpret_with_base_library(&self, syntax: &str) -> ValueResult {
+        self.interpret_with_base_library_and_modules(syntax, Vec::default())
+    }
+
+    #[cfg(test)]
+    pub fn interpret_with_base_library_and_modules(
+        &self,
+        syntax: &str,
+        modules: Vec<&str>,
+    ) -> ValueResult {
+        let mut library_file =
+            std::fs::File::open("lib/base.bk").expect("Cannot open library file");
+        let mut library_syntax = String::new();
+        use std::io::Read;
+        library_file
+            .read_to_string(&mut library_syntax)
+            .expect("Cannot read library file");
+        let mut modules_vec = Vec::new();
+        modules_vec.push(library_syntax);
+        for module in modules {
+            modules_vec.push(module.to_string())
+        }
+        self.interpret_with_modules(syntax, modules_vec)
     }
 }
 

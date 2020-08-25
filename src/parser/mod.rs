@@ -22,9 +22,11 @@
  * SOFTWARE.
  */
 
-use crate::lexer::{Keyword, Modifier, Operator, Parenthesis, Token};
 use std::collections::HashSet;
+use std::iter::Peekable;
 use std::slice::Iter;
+
+use crate::lexer::{Keyword, Modifier, Operator, Parenthesis, Token};
 
 type ExpressionResult = Result<Expression, String>;
 
@@ -33,7 +35,7 @@ pub struct Parser;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     ConstantValue(ConstantValue),
-    Identifier(String),
+    Identifier(Path),
     Application(Box<Expression>, Vec<Expression>),
     InternalCall(String, Vec<Expression>),
     Let(String, Box<Expression>, Box<Expression>),
@@ -42,7 +44,33 @@ pub enum Expression {
     Module(Module),
     Function(Visibility, ApplicationStrategy, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
-    Import(String),
+    Import(Path),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Path {
+    Simple(String),
+    Complex(ComplexPath),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ComplexPath {
+    identifier: String,
+    path: Vec<String>,
+}
+
+impl ComplexPath {
+    pub fn new(identifier: String, path: Vec<String>) -> Self {
+        Self { identifier, path }
+    }
+
+    pub fn identifier(&self) -> &String {
+        &self.identifier
+    }
+
+    pub fn path(&self) -> &Vec<String> {
+        &self.path
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -134,7 +162,7 @@ pub enum Parameter {
 }
 
 impl Parameter {
-    pub fn get_name(&self) -> &String {
+    pub fn name(&self) -> &String {
         match self {
             Parameter::Unary(name) => name,
             Parameter::Variadic(name) => name,
@@ -191,7 +219,7 @@ impl Token {
     }
 }
 
-type Tokens<'a> = Iter<'a, Token>;
+type Tokens<'a> = Peekable<Iter<'a, Token>>;
 
 impl Default for Parser {
     fn default() -> Self {
@@ -201,7 +229,7 @@ impl Default for Parser {
 
 impl Parser {
     pub fn parse(&self, tokens: &[Token]) -> ExpressionResult {
-        let mut iterator = tokens.iter();
+        let mut iterator = tokens.iter().peekable();
         Self::parse_first(&mut iterator)
     }
 
@@ -221,6 +249,7 @@ impl Parser {
             },
             Token::Operator(operator) => match operator {
                 Operator::Variadic => Err("Unexpected variadic operator".to_string()),
+                Operator::Path => Err("Unexpected path operator".to_string()),
             },
             Token::Null => Ok(Expression::ConstantValue(ConstantValue::Null)),
             Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(
@@ -229,12 +258,15 @@ impl Parser {
             Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(*value))),
             Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(*value))),
             Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword)),
-            Token::Symbol(symbol) => Ok(Expression::Identifier(symbol.clone())),
+            Token::Symbol(symbol) => Ok(Expression::Identifier(Self::parse_path_symbol(
+                symbol.clone(),
+                tokens,
+            )?)),
             Token::Modifier(modifier) => Err(format!("Unexpected token: {:?}", modifier)),
         }
     }
 
-    fn parse_section(tokens: &mut Iter<Token>) -> ExpressionResult {
+    fn parse_section(tokens: &mut Tokens) -> ExpressionResult {
         match tokens.next() {
             Some(token) => Self::parse_section_token(token, tokens),
             None => Err("Empty tokens".to_string()),
@@ -263,7 +295,8 @@ impl Parser {
             },
             Token::Modifier(modifier) => Self::parse_modifiers(modifier, tokens),
             Token::Symbol(symbol) => {
-                let identifier = Expression::Identifier(symbol.clone());
+                let path = Self::parse_path_symbol(symbol.clone(), tokens)?;
+                let identifier = Expression::Identifier(path);
                 Self::parse_application(identifier, tokens)
             }
             _ => Err("Invalid token".to_string()),
@@ -356,7 +389,7 @@ impl Parser {
         let mut used_identifiers = HashSet::new();
         Self::insert_used_identifiers(&body, &mut used_identifiers);
         for parameter in &parameters {
-            let name = parameter.get_name();
+            let name = parameter.name();
             used_identifiers.remove(name);
         }
         Ok(Lambda::new(parameters, Box::new(body), used_identifiers))
@@ -364,9 +397,12 @@ impl Parser {
 
     fn insert_used_identifiers(expression: &Expression, identifiers: &mut HashSet<String>) {
         match expression {
-            Expression::Identifier(identifier) => {
-                identifiers.insert(identifier.clone());
-            }
+            Expression::Identifier(identifier) => match identifier {
+                Path::Simple(identifier) => {
+                    identifiers.insert(identifier.clone());
+                }
+                Path::Complex(_) => (),
+            },
             Expression::Application(identifier, arguments) => {
                 Self::insert_used_identifiers(identifier, identifiers);
                 for argument in arguments {
@@ -460,11 +496,61 @@ impl Parser {
     }
 
     fn parse_import(tokens: &mut Tokens) -> ExpressionResult {
-        let identifier = Self::parse_identifier(tokens)?;
+        let path = Self::parse_path(tokens)?;
         if !Self::is_section_closed(tokens) {
             return Err("Invalid import expression".to_string());
         }
-        Ok(Expression::Import(identifier))
+        Ok(Expression::Import(path))
+    }
+
+    fn parse_path(tokens: &mut Tokens) -> Result<Path, String> {
+        let next = tokens.next();
+        if let Some(next) = next {
+            match next {
+                Token::Symbol(symbol) => Self::parse_path_symbol(symbol.clone(), tokens),
+                _ => Err("Invalid symbol token".to_string()),
+            }
+        } else {
+            Err("Missing token".to_string())
+        }
+    }
+
+    fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> Result<Path, String> {
+        let mut path = Vec::new();
+        path.push(symbol);
+        let mut last_path_operator = false;
+        while let Some(token) = tokens.peek() {
+            match token {
+                Token::Operator(operator) => match operator {
+                    Operator::Path => {
+                        if last_path_operator {
+                            return Err("Unexpected path operator".to_string());
+                        } else {
+                            last_path_operator = true;
+                            tokens.next();
+                        }
+                    }
+                    _ => break,
+                },
+                Token::Symbol(symbol) => {
+                    if last_path_operator {
+                        last_path_operator = false;
+                        path.push(symbol.clone());
+                        tokens.next();
+                    } else {
+                        break;
+                    }
+                }
+                _ => break,
+            }
+        }
+        let length = path.len();
+        let identifier = path.swap_remove(length - 1);
+        if length == 1 {
+            Ok(Path::Simple(identifier))
+        } else {
+            Ok(Path::Complex(ComplexPath::new(identifier, path)))
+        }
     }
 
     fn parse_identifier(tokens: &mut Tokens) -> Result<String, String> {

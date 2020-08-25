@@ -307,3 +307,25 @@ fn test_tokenized_three_dots_are_variadic_operator_token() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_tokenized_two_colons_are_path_operator_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Operator(Operator::Path)];
+    let actual = lexer.tokenize("::")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_path_is_path_tokens() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("bar".to_string()),
+    ];
+    let actual = lexer.tokenize("foo::bar")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

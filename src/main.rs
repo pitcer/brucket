@@ -22,20 +22,20 @@
  * SOFTWARE.
  */
 
-use brucket::interpreter::Interpreter;
 use std::fs::File;
 use std::io;
 use std::io::Read;
+
+use brucket::interpreter::Interpreter;
 
 fn main() {
     let mut stdin = io::stdin();
     let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
     let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
     let library_syntax = read(&mut library_file).expect("Cannot read library file");
-    let interpreter =
-        Interpreter::with_library(&library_syntax).expect("Cannot create interpreter");
+    let interpreter = Interpreter::default();
     let result = interpreter
-        .interpret(&input_syntax)
+        .interpret_with_modules(&input_syntax, vec![library_syntax])
         .expect("Cannot interpret input program");
     println!("Result: {:?}", result);
 }

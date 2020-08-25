@@ -53,6 +53,7 @@ pub enum Parenthesis {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Operator {
     Variadic,
+    Path,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -114,7 +115,7 @@ impl LexerCharacter for char {
             || self.is_opening_parenthesis()
             || self.is_closing_parenthesis()
             || self.is_parameter_parenthesis()
-            || matches!(self, '.')
+            || matches!(self, '.' | ':')
     }
 
     fn is_quote(&self) -> bool {
@@ -176,6 +177,7 @@ impl Lexer {
                 Ok(None)
             }
             '.' => Self::tokenize_dots(characters),
+            ':' => Self::tokenize_path(characters),
             parenthesis if parenthesis.is_opening_parenthesis() => {
                 Ok(Some(Token::Parenthesis(Parenthesis::Open(parenthesis))))
             }
@@ -221,6 +223,15 @@ impl Lexer {
             Ok(Some(Token::Operator(Operator::Variadic)))
         } else {
             Err("Invalid dots operator".to_string())
+        }
+    }
+
+    fn tokenize_path(characters: &mut Characters) -> Result<Option<Token>, String> {
+        let second = characters.next();
+        if second.is_some() && second.unwrap() == ':' {
+            Ok(Some(Token::Operator(Operator::Path)))
+        } else {
+            Err("Invalid path operator".to_string())
         }
     }
 
