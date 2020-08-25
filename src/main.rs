@@ -23,8 +23,8 @@
  */
 
 use std::fs::File;
-use std::io;
 use std::io::Read;
+use std::{env, io};
 
 use brucket::interpreter::Interpreter;
 
@@ -33,9 +33,19 @@ fn main() {
     let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
     let mut library_file = File::open("lib/base.bk").expect("Cannot open library file");
     let library_syntax = read(&mut library_file).expect("Cannot read library file");
+    let mut modules = Vec::new();
+    modules.push(library_syntax);
+    let mut args = env::args();
+    args.next();
+    for argument in args {
+        let mut file = File::open(argument.as_str())
+            .unwrap_or_else(|_| panic!("Cannot open file {}", argument));
+        let syntax = read(&mut file).unwrap_or_else(|_| panic!("Cannot read file {}", argument));
+        modules.push(syntax);
+    }
     let interpreter = Interpreter::default();
     let result = interpreter
-        .interpret_with_modules(&input_syntax, vec![library_syntax])
+        .interpret_with_modules(&input_syntax, modules)
         .expect("Cannot interpret input program");
     println!("Result: {:?}", result);
 }
