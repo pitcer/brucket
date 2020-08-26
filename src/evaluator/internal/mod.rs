@@ -128,7 +128,6 @@ fn is_greater_or_equal(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
     let first = first.as_number()?;
     let second = second.as_number()?;
-
     Ok(Value::Boolean(first >= second))
 }
 

@@ -661,3 +661,30 @@ fn test_list_new_function_evaluates_to_pair_list() -> TestResult {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_list_get_length_function_returns_list_length() -> TestResult {
+    let interpreter = Interpreter::default();
+    let expected = Value::Numeric(3);
+    let actual = interpreter.interpret_with_base_library("(list::get_length (list::new 1 2 3))")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_sort_returns_sorted_list() -> TestResult {
+    let interpreter = Interpreter::default();
+    let expected = Value::Pair(
+        Box::from(Value::Numeric(1)),
+        Box::new(Value::Pair(
+            Box::from(Value::Numeric(2)),
+            Box::from(Value::Pair(
+                Box::from(Value::Numeric(3)),
+                Box::from(Value::Null),
+            )),
+        )),
+    );
+    let actual = interpreter.interpret_with_base_library("(sort::sort 3 1 2)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}

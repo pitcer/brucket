@@ -395,7 +395,7 @@ impl Evaluator {
                 Parameter::Unary(name) => {
                     let argument = arguments_iterator
                         .next()
-                        .ok_or_else(|| "Missing argument.".to_string())?;
+                        .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
                     let argument = if application_strategy.is_eager() {
                         self.evaluate_environment(
                             argument,

@@ -1,4 +1,16 @@
 (module list
 
   (public function new [members...]
-    members))
+    members)
+
+  (public constant is_empty is_null)
+
+  (public function get_length [list]
+    (get_length_iterate list 0))
+
+  (function get_length_iterate [tail length]
+    (if (is_empty tail)
+      length
+    (get_length_iterate
+      (pair::second tail)
+      (+ length 1)))))
