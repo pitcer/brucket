@@ -1,9 +1,9 @@
 (module sort
 
-  (public function sort [numbers...]
+  (pub fun sort [numbers... ]
     (merge_sort numbers))
 
-  (function merge_sort [numbers]
+  (fun merge_sort [numbers]
     (if (list::is_empty numbers)
       numbers
     (if (= (list::get_length numbers) 1)
@@ -13,7 +13,7 @@
       (merge_sort (pair::first splitted_list))
       (merge_sort (pair::second splitted_list)))))))
 
-  (function merge [first_list second_list]
+  (fun merge [first_list second_list]
     (if (list::is_empty first_list)
       second_list
     (if (list::is_empty second_list)
@@ -24,17 +24,17 @@
         (create_list first_list_element first_list second_list)
         (create_list second_list_element second_list first_list)))))))
 
-  (function create_list [first_element first_element_list second_list]
+  (fun create_list [first_element first_element_list second_list]
     (pair::new
       first_element
       (merge (pair::second first_element_list)
              second_list)))
 
-  (function split [origin_list]
+  (fun split [origin_list]
     (let half_length (/ (list::get_length origin_list) 2)
       (split_iterate half_length null origin_list 0)))
 
-  (function split_iterate [half_length head tail index]
+  (fun split_iterate [half_length head tail index]
     (if (< index half_length)
       (split_iterate
         half_length

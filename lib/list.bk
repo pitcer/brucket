@@ -1,14 +1,14 @@
 (module list
 
-  (public function new [members...]
+  (pub fun new [members...]
     members)
 
-  (public constant is_empty is_null)
+  (pub const is_empty is_null)
 
-  (public function get_length [list]
+  (pub fun get_length [list]
     (get_length_iterate list 0))
 
-  (function get_length_iterate [tail length]
+  (fun get_length_iterate [tail length]
     (if (is_empty tail)
       length
     (get_length_iterate

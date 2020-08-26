@@ -1,6 +1,6 @@
 (static module nullability
 
-  (public constant null? is_null)
+  (pub const null? is_null)
 
-  (public function is_null [nullable]
+  (pub fun is_null [nullable]
     (is_equal null nullable)))

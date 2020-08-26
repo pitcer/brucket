@@ -1,28 +1,28 @@
 (static module logic
 
-  (public constant not negate)
+  (pub const not negate)
 
-  (public constant ! negate)
+  (pub const ! negate)
 
-  (public function negate [argument]
+  (pub fun negate [argument]
     (if argument
       false
       true))
 
-  (public lazy function and [arguments...]
+  (lazy pub fun and [arguments...]
     (and_iterate arguments))
 
-  (function and_iterate [arguments]
+  (fun and_iterate [arguments]
     (if (is_null arguments)
       true
       (if (not ((pair::first arguments)))
         false
         (and_iterate (pair::second arguments)))))
 
-  (public lazy function or [arguments...]
+  (lazy pub fun or [arguments...]
     (or_iterate arguments))
 
-  (function or_iterate [arguments]
+  (fun or_iterate [arguments]
     (if (is_null arguments)
       false
       (if ((pair::first arguments))

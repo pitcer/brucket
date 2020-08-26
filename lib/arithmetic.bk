@@ -1,23 +1,23 @@
 (static module arithmetic
 
-  (public constant + add)
+  (pub const + add)
 
-  (public function add [arguments...]
+  (pub fun add [arguments...]
     (iterate_arithmetic
       0 arguments
       (-> [first second]
         (internal add first second))))
 
-  (public constant - subtract)
+  (pub const - subtract)
 
-  (public function subtract [arguments...]
+  (pub fun subtract [arguments...]
     (if (is_null arguments)
       0
       (subtract_list
         (pair::first arguments)
         (pair::second arguments))))
 
-  (function subtract_list [argument remaining]
+  (fun subtract_list [argument remaining]
     (if (is_null remaining)
       (internal subtract 0 argument)
       (iterate_arithmetic
@@ -25,24 +25,24 @@
         (-> [first second]
           (internal subtract first second)))))
 
-  (public constant * multiply)
+  (pub const * multiply)
 
-  (public function multiply [arguments...]
+  (pub fun multiply [arguments...]
     (iterate_arithmetic
       1 arguments
       (-> [first second]
         (internal multiply first second))))
 
-  (public constant / divide)
+  (pub const / divide)
 
-  (public function divide [arguments...]
+  (pub fun divide [arguments...]
     (if (is_null arguments)
       1
       (divide_list
         (pair::first arguments)
         (pair::second arguments))))
 
-  (function divide_list [argument remaining]
+  (fun divide_list [argument remaining]
     (if (is_null remaining)
       (internal divide 1 argument)
       (iterate_arithmetic
@@ -50,7 +50,7 @@
         (-> [first second]
           (internal divide first second)))))
 
-  (function iterate_arithmetic [accumulator arguments operation]
+  (fun iterate_arithmetic [accumulator arguments operation]
     (if (is_null arguments)
       accumulator
       (iterate_arithmetic
@@ -60,7 +60,7 @@
         (pair::second arguments)
         operation)))
 
-  (public constant % remainder)
+  (pub const % remainder)
 
-  (public function remainder [first second]
+  (pub fun remainder [first second]
     (internal remainder first second)))
