@@ -22,8 +22,9 @@
  * SOFTWARE.
  */
 
-use super::*;
 use crate::parser::Visibility;
+
+use super::*;
 
 type TestResult = Result<(), String>;
 
@@ -317,7 +318,6 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
     );
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
         "foo".to_string(),
-        Vec::new(),
         vec![Expression::Function(
             Visibility::Public,
             ApplicationStrategy::Eager,
@@ -437,7 +437,6 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
     );
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
         "foo".to_string(),
-        Vec::new(),
         vec![
             Expression::Function(
                 Visibility::Public,

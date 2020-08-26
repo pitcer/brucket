@@ -44,7 +44,6 @@ pub enum Expression {
     Module(Module),
     Function(Visibility, ApplicationStrategy, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
-    Import(Path),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -109,20 +108,13 @@ impl Lambda {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     identifier: String,
-    imports: Vec<Expression>,
     functions: Vec<Expression>,
     constants: Vec<Expression>,
 }
 
 impl Module {
-    pub fn new(
-        identifier: String,
-        imports: Vec<Expression>,
-        functions: Vec<Expression>,
-        constants: Vec<Expression>,
-    ) -> Self {
+    pub fn new(identifier: String, functions: Vec<Expression>, constants: Vec<Expression>) -> Self {
         Self {
-            imports,
             identifier,
             functions,
             constants,
@@ -131,10 +123,6 @@ impl Module {
 
     pub fn identifier(&self) -> &String {
         &self.identifier
-    }
-
-    pub fn imports(&self) -> &Vec<Expression> {
-        &self.imports
     }
 
     pub fn functions(&self) -> &Vec<Expression> {
@@ -291,7 +279,6 @@ impl Parser {
                 Keyword::Module => Self::parse_module(tokens),
                 Keyword::Function => Self::parse_function(Vec::new(), tokens),
                 Keyword::Constant => Self::parse_constant(Vec::new(), tokens),
-                Keyword::Import => Self::parse_import(tokens),
             },
             Token::Modifier(modifier) => Self::parse_modifiers(modifier, tokens),
             Token::Symbol(symbol) => {
@@ -443,7 +430,6 @@ impl Parser {
                 }
             }
             Expression::Constant(_, _, value) => Self::insert_used_identifiers(value, identifiers),
-            Expression::Import(_) => (),
         };
     }
 
@@ -455,7 +441,6 @@ impl Parser {
 
     fn parse_module(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
-        let mut imports = Vec::new();
         let mut functions = Vec::new();
         let mut constants = Vec::new();
         while let Some(token) = tokens.next() {
@@ -464,13 +449,12 @@ impl Parser {
             }
             let member = Self::parse_first_token(token, tokens)?;
             match member {
-                Expression::Import(_) => imports.push(member),
                 Expression::Function(_, _, _, _) => functions.push(member),
                 Expression::Constant(_, _, _) => constants.push(member),
                 _ => return Err("Invalid module member".to_string()),
             }
         }
-        let module = Module::new(identifier, imports, functions, constants);
+        let module = Module::new(identifier, functions, constants);
         Ok(Expression::Module(module))
     }
 
@@ -493,26 +477,6 @@ impl Parser {
             identifier,
             Box::from(value),
         ))
-    }
-
-    fn parse_import(tokens: &mut Tokens) -> ExpressionResult {
-        let path = Self::parse_path(tokens)?;
-        if !Self::is_section_closed(tokens) {
-            return Err("Invalid import expression".to_string());
-        }
-        Ok(Expression::Import(path))
-    }
-
-    fn parse_path(tokens: &mut Tokens) -> Result<Path, String> {
-        let next = tokens.next();
-        if let Some(next) = next {
-            match next {
-                Token::Symbol(symbol) => Self::parse_path_symbol(symbol.clone(), tokens),
-                _ => Err("Invalid symbol token".to_string()),
-            }
-        } else {
-            Err("Missing token".to_string())
-        }
     }
 
     fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> Result<Path, String> {

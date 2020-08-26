@@ -198,15 +198,6 @@ fn test_tokenized_constant_keyword_is_constant_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_import_keyword_is_import_token() -> TestResult {
-    let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::Import)];
-    let actual = lexer.tokenize("import")?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_tokenized_public_modifier_is_public_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Modifier(Modifier::Public)];
@@ -326,6 +317,23 @@ fn test_tokenized_path_is_path_tokens() -> TestResult {
         Token::Symbol("bar".to_string()),
     ];
     let actual = lexer.tokenize("foo::bar")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_complex_path_is_path_tokens() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("bar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("foobar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("barfoo".to_string()),
+    ];
+    let actual = lexer.tokenize("foo::bar::foobar::barfoo")?;
     assert_eq!(expected, actual);
     Ok(())
 }

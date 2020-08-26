@@ -98,7 +98,8 @@ impl Evaluator {
         }
     }
 
-    pub fn evaluate(&self, expression: &Expression) -> ValueResult {
+    #[cfg(test)]
+    fn evaluate(&self, expression: &Expression) -> ValueResult {
         let module_environment = ModuleEnvironment::default();
         self.evaluate_with_module_environment(expression, &module_environment)
     }
@@ -158,7 +159,6 @@ impl Evaluator {
             Expression::Constant(_, _, value) => {
                 self.evaluate_environment(value, module_environment, environment)
             }
-            Expression::Import(identifier) => self.evaluate_import(identifier, environment),
         }
     }
 
@@ -426,13 +426,6 @@ impl Evaluator {
         global_module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        for import in module.imports() {
-            if let Expression::Import(path) = import {
-                self.evaluate_import(path, environment);
-            } else {
-                return Err("Invalid import type".to_string());
-            }
-        }
         let module_environment = Environment::new();
         let mut constants_environment = environment.clone();
         let mut closures = Vec::new();
@@ -500,10 +493,6 @@ impl Evaluator {
             }
         }
         Ok(())
-    }
-
-    fn evaluate_import(&self, path: &Path, environment: &mut Environment) -> ValueResult {
-        unimplemented!()
     }
 }
 

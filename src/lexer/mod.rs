@@ -65,7 +65,6 @@ pub enum Keyword {
     Module,
     Function,
     Constant,
-    Import,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -148,7 +147,6 @@ impl Default for Lexer {
             "module" => Token::Keyword(Keyword::Module),
             "function" => Token::Keyword(Keyword::Function),
             "constant" => Token::Keyword(Keyword::Constant),
-            "import" => Token::Keyword(Keyword::Import),
             "public" => Token::Modifier(Modifier::Public),
             "private" => Token::Modifier(Modifier::Private),
             "lazy" => Token::Modifier(Modifier::Lazy),

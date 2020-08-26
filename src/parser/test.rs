@@ -276,7 +276,6 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Module(Module::new(
         "foo".to_string(),
-        vec![Expression::Import(Path::Simple("foo".to_string()))],
         vec![Expression::Function(
             Visibility::Private,
             ApplicationStrategy::Eager,
@@ -297,10 +296,6 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Module),
         Token::Symbol("foo".to_string()),
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Import),
-        Token::Symbol("foo".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
         Token::Symbol("x".to_string()),
@@ -502,41 +497,6 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
 }
 
 #[test]
-fn test_parsed_import_tokens_are_import_expression() -> TestResult {
-    let parser = Parser::default();
-    let expected = Expression::Import(Path::Simple("foobar".to_string()));
-    let actual = parser.parse(&[
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Import),
-        Token::Symbol("foobar".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
-    ])?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
-fn test_parsed_complex_import_tokens_are_import_expression() -> TestResult {
-    let parser = Parser::default();
-    let expected = Expression::Import(Path::Complex(ComplexPath::new(
-        "foobar".to_string(),
-        vec!["foo".to_string(), "bar".to_string()],
-    )));
-    let actual = parser.parse(&[
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Import),
-        Token::Symbol("foo".to_string()),
-        Token::Operator(Operator::Path),
-        Token::Symbol("bar".to_string()),
-        Token::Operator(Operator::Path),
-        Token::Symbol("foobar".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
-    ])?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_parsed_application_simple_path_identifier_tokens_are_application_expression() -> TestResult
 {
     let parser = Parser::default();
@@ -567,8 +527,8 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
     let parser = Parser::default();
     let expected = Expression::Application(
         Box::new(Expression::Identifier(Path::Complex(ComplexPath::new(
-            "foobar".to_string(),
-            vec!["foo".to_string(), "bar".to_string()],
+            "barfoo".to_string(),
+            vec!["foo".to_string(), "bar".to_string(), "foobar".to_string()],
         )))),
         Vec::new(),
     );
@@ -579,6 +539,8 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
         Token::Symbol("bar".to_string()),
         Token::Operator(Operator::Path),
         Token::Symbol("foobar".to_string()),
+        Token::Operator(Operator::Path),
+        Token::Symbol("barfoo".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
