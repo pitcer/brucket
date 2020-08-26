@@ -112,6 +112,12 @@ impl Environment {
         self.map.borrow_mut().insert(key, value);
     }
 
+    pub fn insert_all(&self, other: &Self) {
+        for (key, value) in other.map.borrow().iter() {
+            self.insert(key.clone(), Rc::clone(value));
+        }
+    }
+
     pub fn insert_weak(&self, key: String, value: Weak<Value>) {
         self.weak_map
             .borrow_mut()

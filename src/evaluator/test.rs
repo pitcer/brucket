@@ -305,6 +305,7 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
 fn test_evaluated_module_expression_is_module_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Module(
+        false,
         "foo".to_string(),
         environment! {
             "bar" => Value::FunctionClosure(
@@ -317,6 +318,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
         },
     );
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
+        false,
         "foo".to_string(),
         vec![Expression::Function(
             Visibility::Public,
@@ -423,6 +425,7 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
 fn test_private_members_are_not_included_in_module_environment() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Module(
+        false,
         "foo".to_string(),
         environment! {
             "bar" => Value::FunctionClosure(
@@ -436,6 +439,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
         },
     );
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
+        false,
         "foo".to_string(),
         vec![
             Expression::Function(
@@ -521,6 +525,20 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
         )),
         vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
     ))?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
+    let evaluator = Evaluator::default();
+    let expected = Value::Module(true, "foo".to_string(), Environment::new());
+    let actual = evaluator.evaluate(&Expression::Module(Module::new(
+        true,
+        "foo".to_string(),
+        Vec::new(),
+        Vec::new(),
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }

@@ -275,6 +275,7 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Module(Module::new(
+        false,
         "foo".to_string(),
         vec![Expression::Function(
             Visibility::Private,
@@ -541,6 +542,21 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
         Token::Symbol("foobar".to_string()),
         Token::Operator(Operator::Path),
         Token::Symbol("barfoo".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Module(Module::new(true, "foo".to_string(), Vec::new(), Vec::new()));
+    let actual = parser.parse(&[
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Modifier(Modifier::Static),
+        Token::Keyword(Keyword::Module),
+        Token::Symbol("foo".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);

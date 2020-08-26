@@ -225,6 +225,15 @@ fn test_tokenized_lazy_modifier_is_lazy_token() -> TestResult {
 }
 
 #[test]
+fn test_tokenized_static_modifier_is_static_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Modifier(Modifier::Static)];
+    let actual = lexer.tokenize("static")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_statement_is_tokenized_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![

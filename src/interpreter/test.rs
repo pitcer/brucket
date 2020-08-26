@@ -133,6 +133,7 @@ fn test_environment_is_cleared() {
 fn test_interpret_module() -> TestResult {
     let interpreter = Interpreter::default();
     let expected = Value::Module(
+        false,
         "foo".to_string(),
         environment! {
             "bar" => Value::Numeric(1),
@@ -596,6 +597,49 @@ fn test_or_is_false_if_every_argument_is_false() -> TestResult {
     let interpreter = Interpreter::default();
     let expected = Value::Boolean(false);
     let actual = interpreter.interpret_with_base_library("(or false false false false)")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_interpret_static_module() -> TestResult {
+    let interpreter = Interpreter::default();
+    let expected = Value::Module(
+        true,
+        "foo".to_string(),
+        environment! {
+            "bar" => Value::Numeric(1)
+        },
+    );
+    let actual = interpreter.interpret_with_base_library(
+        r#"
+        (static module foo
+          (public constant bar 1)
+        )
+        "#,
+    )?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_static_module_members_do_not_require_path_to_access() -> TestResult {
+    let module = r#"
+        (static module test
+          (constant X 42)
+
+          (function foo |x|
+            x)
+
+          (public function foobar ||
+            (foo (bar X)))
+
+          (function bar |x|
+            x))
+        "#;
+    let interpreter = Interpreter::default();
+    let expected = Value::Numeric(42);
+    let actual = interpreter.interpret_with_base_library_and_modules("(foobar)", vec![module])?;
     assert_eq!(expected, actual);
     Ok(())
 }

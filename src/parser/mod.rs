@@ -107,18 +107,29 @@ impl Lambda {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
+    is_static: bool,
     identifier: String,
     functions: Vec<Expression>,
     constants: Vec<Expression>,
 }
 
 impl Module {
-    pub fn new(identifier: String, functions: Vec<Expression>, constants: Vec<Expression>) -> Self {
+    pub fn new(
+        is_static: bool,
+        identifier: String,
+        functions: Vec<Expression>,
+        constants: Vec<Expression>,
+    ) -> Self {
         Self {
+            is_static,
             identifier,
             functions,
             constants,
         }
+    }
+
+    pub fn is_static(&self) -> bool {
+        self.is_static
     }
 
     pub fn identifier(&self) -> &String {
@@ -276,7 +287,7 @@ impl Parser {
                 Keyword::If => Self::parse_if(tokens),
                 Keyword::Lambda => Self::parse_lambda(tokens).map(Expression::Lambda),
                 Keyword::Internal => Self::parse_internal(tokens),
-                Keyword::Module => Self::parse_module(tokens),
+                Keyword::Module => Self::parse_module(Vec::new(), tokens),
                 Keyword::Function => Self::parse_function(Vec::new(), tokens),
                 Keyword::Constant => Self::parse_constant(Vec::new(), tokens),
             },
@@ -341,6 +352,7 @@ impl Parser {
             Token::Keyword(keyword) => match keyword {
                 Keyword::Function => Self::parse_function(modifiers, tokens),
                 Keyword::Constant => Self::parse_constant(modifiers, tokens),
+                Keyword::Module => Self::parse_module(modifiers, tokens),
                 _ => Err("Invalid token".to_string()),
             },
             _ => Err("Invalid token".to_string()),
@@ -357,6 +369,9 @@ impl Parser {
                 Modifier::Public => visibility = Visibility::Public,
                 Modifier::Private => visibility = Visibility::Private,
                 Modifier::Lazy => application_strategy = ApplicationStrategy::Lazy,
+                Modifier::Static => {
+                    return Err("Static is an invalid modifier for function".to_string())
+                }
             }
         }
         Ok(Expression::Function(
@@ -439,7 +454,7 @@ impl Parser {
         Ok(Expression::InternalCall(identifier, arguments))
     }
 
-    fn parse_module(tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_module(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let mut functions = Vec::new();
         let mut constants = Vec::new();
@@ -454,7 +469,14 @@ impl Parser {
                 _ => return Err("Invalid module member".to_string()),
             }
         }
-        let module = Module::new(identifier, functions, constants);
+        let mut is_static = false;
+        for modifier in modifiers {
+            match modifier {
+                Modifier::Static => is_static = true,
+                _ => return Err("Invalid module modifier".to_string()),
+            }
+        }
+        let module = Module::new(is_static, identifier, functions, constants);
         Ok(Expression::Module(module))
     }
 

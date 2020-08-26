@@ -52,7 +52,7 @@ pub enum Value {
     Closure(Closure),
     FunctionClosure(ApplicationStrategy, Closure),
     Thunk(Box<Expression>, Environment),
-    Module(String, Environment),
+    Module(bool, String, Environment),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -101,21 +101,33 @@ impl Evaluator {
     #[cfg(test)]
     fn evaluate(&self, expression: &Expression) -> ValueResult {
         let module_environment = ModuleEnvironment::default();
-        self.evaluate_with_module_environment(expression, &module_environment)
+        let static_module_environment = Environment::new();
+        self.evaluate_with_module_environment(
+            expression,
+            &static_module_environment,
+            &module_environment,
+        )
     }
 
     pub fn evaluate_with_module_environment(
         &self,
         expression: &Expression,
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
     ) -> ValueResult {
         let mut environment = Environment::default();
-        self.evaluate_environment(expression, module_environment, &mut environment)
+        self.evaluate_environment(
+            expression,
+            static_module_environment,
+            module_environment,
+            &mut environment,
+        )
     }
 
     fn evaluate_environment(
         &self,
         expression: &Expression,
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
@@ -127,38 +139,61 @@ impl Evaluator {
                 ConstantValue::Boolean(value) => Ok(Value::Boolean(*value)),
                 ConstantValue::String(value) => Ok(Value::Textual(value.clone())),
             },
-            Expression::Identifier(value) => {
-                Self::get_from_environment(module_environment, environment, value)
-            }
-            Expression::Application(identifier, arguments) => {
-                self.evaluate_application(identifier, arguments, module_environment, environment)
-            }
-            Expression::InternalCall(identifier, arguments) => {
-                self.evaluate_internal_call(identifier, arguments, module_environment, environment)
-            }
-            Expression::Let(name, value, then) => {
-                self.evaluate_let(name, value, then, module_environment, environment)
-            }
+            Expression::Identifier(value) => Self::get_from_environment(
+                static_module_environment,
+                module_environment,
+                environment,
+                value,
+            ),
+            Expression::Application(identifier, arguments) => self.evaluate_application(
+                identifier,
+                arguments,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
+            Expression::InternalCall(identifier, arguments) => self.evaluate_internal_call(
+                identifier,
+                arguments,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
+            Expression::Let(name, value, then) => self.evaluate_let(
+                name,
+                value,
+                then,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
             Expression::If(condition, if_true_then, if_false_then) => self.evaluate_if(
                 condition,
                 if_true_then,
                 if_false_then,
+                static_module_environment,
                 module_environment,
                 environment,
             ),
             Expression::Lambda(lambda) => {
                 Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
             }
-            Expression::Module(module) => {
-                self.evaluate_module(module, module_environment, environment)
-            }
+            Expression::Module(module) => self.evaluate_module(
+                module,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
             Expression::Function(_, application_strategy, _, lambda) => Ok(Value::FunctionClosure(
                 application_strategy.clone(),
                 Self::evaluate_lambda(lambda, environment),
             )),
-            Expression::Constant(_, _, value) => {
-                self.evaluate_environment(value, module_environment, environment)
-            }
+            Expression::Constant(_, _, value) => self.evaluate_environment(
+                value,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
         }
     }
 
@@ -167,10 +202,16 @@ impl Evaluator {
         identifier: &str,
         value: &Expression,
         then: &Expression,
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        let evaluated_value = self.evaluate_environment(value, module_environment, environment)?;
+        let evaluated_value = self.evaluate_environment(
+            value,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         let evaluated_value = Rc::new(evaluated_value);
         if let Expression::Lambda(lambda) = value {
             if let Value::Closure(closure) = evaluated_value.borrow() {
@@ -182,7 +223,12 @@ impl Evaluator {
             }
         }
         environment.insert(identifier.to_string(), evaluated_value);
-        let result = self.evaluate_environment(then, module_environment, environment);
+        let result = self.evaluate_environment(
+            then,
+            static_module_environment,
+            module_environment,
+            environment,
+        );
         environment.remove(identifier);
         result
     }
@@ -192,13 +238,24 @@ impl Evaluator {
         condition: &Expression,
         if_true_then: &Expression,
         if_false_then: &Expression,
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        let condition = self.evaluate_environment(condition, module_environment, environment)?;
+        let condition = self.evaluate_environment(
+            condition,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         if let Value::Boolean(value) = condition {
             let body = if value { if_true_then } else { if_false_then };
-            self.evaluate_environment(body, module_environment, environment)
+            self.evaluate_environment(
+                body,
+                static_module_environment,
+                module_environment,
+                environment,
+            )
         } else {
             Err("Invalid condition type".to_string())
         }
@@ -227,25 +284,13 @@ impl Evaluator {
     }
 
     fn get_from_environment(
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
         path: &Path,
     ) -> ValueResult {
         match path {
             Path::Simple(identifier) => {
-                for module in module_environment.iter() {
-                    if module.0.eq("base") {
-                        let value = module.1.get(identifier).or_else(|| {
-                            environment
-                                .get_weak(identifier)
-                                .and_then(|value| value.upgrade())
-                        });
-                        if let Some(value) = value {
-                            let value: &Value = &value;
-                            return Ok(value.clone());
-                        }
-                    }
-                }
                 let value = environment.get(identifier).or_else(|| {
                     environment
                         .get_weak(identifier)
@@ -255,7 +300,17 @@ impl Evaluator {
                     let value: &Value = &value;
                     Ok(value.clone())
                 } else {
-                    Err(format!("Undefined variable: {}", identifier))
+                    let value = static_module_environment.get(identifier).or_else(|| {
+                        static_module_environment
+                            .get_weak(identifier)
+                            .and_then(|value| value.upgrade())
+                    });
+                    if let Some(value) = value {
+                        let value: &Value = &value;
+                        Ok(value.clone())
+                    } else {
+                        Err(format!("Undefined variable: {}", identifier))
+                    }
                 }
             }
             Path::Complex(path) => {
@@ -264,6 +319,7 @@ impl Evaluator {
                     let module_env = module_environment.get(first_path);
                     if let Some(module_env) = module_env {
                         Self::get_from_environment(
+                            static_module_environment,
                             module_environment,
                             module_env,
                             &Path::Simple(path.identifier().clone()),
@@ -282,14 +338,21 @@ impl Evaluator {
         &self,
         identifier: &Expression,
         arguments: &[Expression],
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
-        let identifier = self.evaluate_environment(identifier, module_environment, environment)?;
+        let identifier = self.evaluate_environment(
+            identifier,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         match identifier {
             Value::Closure(closure) => self.evaluate_closure_application(
                 ApplicationStrategy::Eager,
                 arguments,
+                static_module_environment,
                 module_environment,
                 environment,
                 closure,
@@ -298,13 +361,17 @@ impl Evaluator {
                 .evaluate_closure_application(
                     application_strategy,
                     arguments,
+                    static_module_environment,
                     module_environment,
                     environment,
                     closure,
                 ),
-            Value::Thunk(body, mut environment) => {
-                self.evaluate_environment(&body, module_environment, &mut environment)
-            }
+            Value::Thunk(body, mut environment) => self.evaluate_environment(
+                &body,
+                static_module_environment,
+                module_environment,
+                &mut environment,
+            ),
             _ => Err(format!(
                 "Invalid identifier type. Expected: Closure or Thunk, Actual: {:?}",
                 identifier
@@ -316,6 +383,7 @@ impl Evaluator {
         &self,
         application_strategy: ApplicationStrategy,
         arguments: &[Expression],
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
         mut closure: Closure,
@@ -329,7 +397,12 @@ impl Evaluator {
                         .next()
                         .ok_or_else(|| "Missing argument.".to_string())?;
                     let argument = if application_strategy.is_eager() {
-                        self.evaluate_environment(argument, module_environment, environment)
+                        self.evaluate_environment(
+                            argument,
+                            static_module_environment,
+                            module_environment,
+                            environment,
+                        )
                     } else {
                         Ok(Value::Thunk(
                             Box::new(argument.clone()),
@@ -342,6 +415,7 @@ impl Evaluator {
                     let list = self.create_pair_list(
                         application_strategy,
                         arguments_iterator,
+                        static_module_environment,
                         module_environment,
                         environment,
                     )?;
@@ -359,8 +433,12 @@ impl Evaluator {
                 parameters_length, arguments_length
             ));
         }
-        let result =
-            self.evaluate_environment(&closure.body, module_environment, &mut closure.environment);
+        let result = self.evaluate_environment(
+            &closure.body,
+            static_module_environment,
+            module_environment,
+            &mut closure.environment,
+        );
         for parameter in &closure.parameters {
             let name = parameter.name();
             closure.environment.remove(name);
@@ -372,13 +450,19 @@ impl Evaluator {
         &self,
         application_strategy: ApplicationStrategy,
         arguments: Iter<Expression>,
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
         let mut result = Value::Null;
         for argument in arguments.rev() {
             let argument = if application_strategy.is_eager() {
-                self.evaluate_environment(argument, module_environment, environment)
+                self.evaluate_environment(
+                    argument,
+                    static_module_environment,
+                    module_environment,
+                    environment,
+                )
             } else {
                 Ok(Value::Thunk(
                     Box::new(argument.clone()),
@@ -394,6 +478,7 @@ impl Evaluator {
         &self,
         identifier: &str,
         arguments: &[Expression],
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
@@ -402,19 +487,30 @@ impl Evaluator {
             return Err(format!("Undefined internal identifier: {}", identifier));
         }
         let function = function.unwrap();
-        let arguments = self.evaluate_arguments(arguments, module_environment, environment)?;
+        let arguments = self.evaluate_arguments(
+            arguments,
+            static_module_environment,
+            module_environment,
+            environment,
+        )?;
         function(arguments)
     }
 
     fn evaluate_arguments(
         &self,
         arguments: &[Expression],
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> Result<Vec<Value>, String> {
         let mut result = Vec::new();
         for argument in arguments {
-            let argument = self.evaluate_environment(argument, module_environment, environment)?;
+            let argument = self.evaluate_environment(
+                argument,
+                static_module_environment,
+                module_environment,
+                environment,
+            )?;
             result.push(argument);
         }
         Ok(result)
@@ -423,6 +519,7 @@ impl Evaluator {
     fn evaluate_module(
         &self,
         module: &Module,
+        static_module_environment: &Environment,
         global_module_environment: &ModuleEnvironment,
         environment: &mut Environment,
     ) -> ValueResult {
@@ -454,6 +551,7 @@ impl Evaluator {
             if let Expression::Constant(visibility, identifier, value) = constant {
                 let value = self.evaluate_environment(
                     value,
+                    static_module_environment,
                     global_module_environment,
                     &mut constants_environment,
                 )?;
@@ -469,7 +567,11 @@ impl Evaluator {
         }
         Self::fill_closures(&closures, &evaluated_constants)?;
         let identifier = module.identifier();
-        Ok(Value::Module(identifier.to_string(), module_environment))
+        Ok(Value::Module(
+            module.is_static(),
+            identifier.to_string(),
+            module_environment,
+        ))
     }
 
     fn fill_closures(

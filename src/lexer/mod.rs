@@ -72,6 +72,7 @@ pub enum Modifier {
     Public,
     Private,
     Lazy,
+    Static,
 }
 
 trait LexerCharacter {
@@ -150,6 +151,7 @@ impl Default for Lexer {
             "public" => Token::Modifier(Modifier::Public),
             "private" => Token::Modifier(Modifier::Private),
             "lazy" => Token::Modifier(Modifier::Lazy),
+            "static" => Token::Modifier(Modifier::Static),
         };
         Self { symbol_map }
     }

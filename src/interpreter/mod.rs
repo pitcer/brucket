@@ -63,32 +63,54 @@ impl Interpreter {
         endpoint_syntax: &str,
         modules_syntax: Vec<String>,
     ) -> ValueResult {
+        let static_module_environment = Environment::new();
         let mut module_environment = ModuleEnvironment::new();
         for module_syntax in modules_syntax {
-            let result =
-                self.interpret_with_module_environment(&module_syntax, &module_environment)?;
-            if let Value::Module(name, environment) = result {
-                module_environment.insert(name, environment);
+            let result = self.interpret_with_module_environment(
+                &module_syntax,
+                &static_module_environment,
+                &module_environment,
+            )?;
+            if let Value::Module(is_static, name, environment) = result {
+                if is_static {
+                    static_module_environment.insert_all(&environment);
+                    static_module_environment.insert_all_weak(&environment);
+                } else {
+                    module_environment.insert(name, environment);
+                }
             } else {
                 return Err("One of the given modules did not evaluate to module".to_string());
             }
         }
-        self.interpret_with_module_environment(endpoint_syntax, &module_environment)
+        self.interpret_with_module_environment(
+            endpoint_syntax,
+            &static_module_environment,
+            &module_environment,
+        )
     }
 
     fn interpret_with_module_environment(
         &self,
         syntax: &str,
+        static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
     ) -> ValueResult {
         let expression = self.parse_syntax(syntax)?;
-        self.evaluator
-            .evaluate_with_module_environment(&expression, module_environment)
+        self.evaluator.evaluate_with_module_environment(
+            &expression,
+            static_module_environment,
+            module_environment,
+        )
     }
 
     pub fn interpret(&self, syntax: &str) -> ValueResult {
         let module_environment = ModuleEnvironment::new();
-        self.interpret_with_module_environment(syntax, &module_environment)
+        let static_module_environment = Environment::new();
+        self.interpret_with_module_environment(
+            syntax,
+            &static_module_environment,
+            &module_environment,
+        )
     }
 
     fn parse_syntax(&self, syntax: &str) -> Result<Expression, String> {
