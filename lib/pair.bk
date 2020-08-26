@@ -1,0 +1,14 @@
+(module pair
+
+  (public function new |first second|
+    (internal pair_new first second))
+
+  (public constant car first)
+
+  (public function first |pair|
+    (internal pair_first pair))
+
+  (public constant cdr second)
+
+  (public function second |pair|
+    (internal pair_second pair)))

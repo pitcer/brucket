@@ -1,0 +1,66 @@
+(static module arithmetic
+
+  (public constant + add)
+
+  (public function add |arguments...|
+    (iterate_arithmetic
+      0 arguments
+      (-> |first second|
+        (internal add first second))))
+
+  (public constant - subtract)
+
+  (public function subtract |arguments...|
+    (if (is_null arguments)
+      0
+      (subtract_list
+        (pair::first arguments)
+        (pair::second arguments))))
+
+  (function subtract_list |argument remaining|
+    (if (is_null remaining)
+      (internal subtract 0 argument)
+      (iterate_arithmetic
+        argument remaining
+        (-> |first second|
+          (internal subtract first second)))))
+
+  (public constant * multiply)
+
+  (public function multiply |arguments...|
+    (iterate_arithmetic
+      1 arguments
+      (-> |first second|
+        (internal multiply first second))))
+
+  (public constant / divide)
+
+  (public function divide |arguments...|
+    (if (is_null arguments)
+      1
+      (divide_list
+        (pair::first arguments)
+        (pair::second arguments))))
+
+  (function divide_list |argument remaining|
+    (if (is_null remaining)
+      (internal divide 1 argument)
+      (iterate_arithmetic
+        argument remaining
+        (-> |first second|
+          (internal divide first second)))))
+
+  (function iterate_arithmetic |accumulator arguments operation|
+    (if (is_null arguments)
+      accumulator
+      (iterate_arithmetic
+        (operation
+          accumulator
+          (pair::first arguments))
+        (pair::second arguments)
+        operation)))
+
+  (public constant % remainder)
+
+  (public function remainder |first second|
+    (internal remainder first second)))

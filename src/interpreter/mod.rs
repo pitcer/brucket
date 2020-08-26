@@ -129,15 +129,18 @@ impl Interpreter {
         syntax: &str,
         modules: Vec<&str>,
     ) -> ValueResult {
-        let mut library_file =
-            std::fs::File::open("lib/base.bk").expect("Cannot open library file");
-        let mut library_syntax = String::new();
+        let directory = std::fs::read_dir("lib/").expect("Cannot read directory lib/");
         use std::io::Read;
-        library_file
-            .read_to_string(&mut library_syntax)
-            .expect("Cannot read library file");
         let mut modules_vec = Vec::new();
-        modules_vec.push(library_syntax);
+        for file in directory {
+            let path = file.unwrap().path();
+            let mut library_file = std::fs::File::open(path).expect("Cannot open library file");
+            let mut library_syntax = String::new();
+            library_file
+                .read_to_string(&mut library_syntax)
+                .expect("Cannot read library file");
+            modules_vec.push(library_syntax);
+        }
         for module in modules {
             modules_vec.push(module.to_string())
         }

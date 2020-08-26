@@ -295,11 +295,11 @@ fn test_pair() -> TestResult {
     let interpreter = Interpreter::default();
     assert_eq!(
         Value::Numeric(42),
-        interpreter.interpret_with_base_library("(pair_first (new_pair 42 24))")?
+        interpreter.interpret_with_base_library("(pair::first (pair::new 42 24))")?
     );
     assert_eq!(
         Value::Numeric(24),
-        interpreter.interpret_with_base_library("(pair_second (new_pair 42 24))")?
+        interpreter.interpret_with_base_library("(pair::second (pair::new 42 24))")?
     );
     Ok(())
 }
