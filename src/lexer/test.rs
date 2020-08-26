@@ -54,10 +54,19 @@ fn test_tokenized_close_parenthesis_is_parenthesis_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_parameters_parenthesis_is_parenthesis_token() -> TestResult {
+fn test_tokenized_open_square_bracket_is_parenthesis_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Parenthesis(Parenthesis::Parameters)];
-    let actual = lexer.tokenize("|")?;
+    let expected = vec![Token::Parenthesis(Parenthesis::Open('['))];
+    let actual = lexer.tokenize("[")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_close_square_bracket_is_parenthesis_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Parenthesis(Parenthesis::Close(']'))];
+    let actual = lexer.tokenize("]")?;
     assert_eq!(expected, actual);
     Ok(())
 }

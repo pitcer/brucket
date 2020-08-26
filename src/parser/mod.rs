@@ -209,12 +209,12 @@ impl Token {
         }
     }
 
-    fn is_close_parenthesis(&self) -> bool {
-        matches!(self, Token::Parenthesis(Parenthesis::Close(_)))
+    fn is_open_parenthesis(&self) -> bool {
+        matches!(self, Token::Parenthesis(Parenthesis::Open(_)))
     }
 
-    fn is_parameters_parenthesis(&self) -> bool {
-        matches!(self, Token::Parenthesis(Parenthesis::Parameters))
+    fn is_close_parenthesis(&self) -> bool {
+        matches!(self, Token::Parenthesis(Parenthesis::Close(_)))
     }
 }
 
@@ -244,7 +244,6 @@ impl Parser {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => Self::parse_section(tokens),
                 Parenthesis::Close(_) => Err("Unexpected close parenthesis".to_string()),
-                Parenthesis::Parameters => Err("Unexpected parameters parenthesis".to_string()),
             },
             Token::Operator(operator) => match operator {
                 Operator::Variadic => Err("Unexpected variadic operator".to_string()),
@@ -280,7 +279,6 @@ impl Parser {
                     Self::parse_application(identifier, tokens)
                 }
                 Parenthesis::Close(_) => Ok(Expression::ConstantValue(ConstantValue::Unit)),
-                Parenthesis::Parameters => Err("Unexpected parameters parenthesis".to_string()),
             },
             Token::Keyword(keyword) => match keyword {
                 Keyword::Let => Self::parse_let(tokens),
@@ -561,13 +559,13 @@ impl Parser {
     }
 
     fn parse_parameters(tokens: &mut Tokens) -> Result<Vec<Parameter>, String> {
-        if !Self::is_parameters_section(tokens) {
+        if !Self::is_section_opened(tokens) {
             return Err("Missing parameters section".to_string());
         }
         let mut tokens = tokens.peekable();
         let mut parameters = Vec::new();
         while let Some(token) = tokens.next() {
-            if token.is_parameters_parenthesis() {
+            if token.is_close_parenthesis() {
                 break;
             }
             let name = token.as_symbol()?;
@@ -583,16 +581,16 @@ impl Parser {
         Ok(parameters)
     }
 
-    fn is_section_closed(tokens: &mut Tokens) -> bool {
+    fn is_section_opened(tokens: &mut Tokens) -> bool {
         match tokens.next() {
-            Some(token) => token.is_close_parenthesis(),
+            Some(token) => token.is_open_parenthesis(),
             None => false,
         }
     }
 
-    fn is_parameters_section(tokens: &mut Tokens) -> bool {
+    fn is_section_closed(tokens: &mut Tokens) -> bool {
         match tokens.next() {
-            Some(token) => token.is_parameters_parenthesis(),
+            Some(token) => token.is_close_parenthesis(),
             None => false,
         }
     }

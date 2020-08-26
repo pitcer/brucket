@@ -2,5 +2,5 @@
 
   (public constant null? is_null)
 
-  (public function is_null |nullable|
+  (public function is_null [nullable]
     (is_equal null nullable)))

@@ -4,25 +4,25 @@
 
   (public constant ! negate)
 
-  (public function negate |argument|
+  (public function negate [argument]
     (if argument
       false
       true))
 
-  (public lazy function and |arguments...|
+  (public lazy function and [arguments...]
     (and_iterate arguments))
 
-  (function and_iterate |arguments|
+  (function and_iterate [arguments]
     (if (is_null arguments)
       true
       (if (not ((pair::first arguments)))
         false
         (and_iterate (pair::second arguments)))))
 
-  (public lazy function or |arguments...|
+  (public lazy function or [arguments...]
     (or_iterate arguments))
 
-  (function or_iterate |arguments|
+  (function or_iterate [arguments]
     (if (is_null arguments)
       false
       (if ((pair::first arguments))

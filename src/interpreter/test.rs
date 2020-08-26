@@ -158,11 +158,11 @@ fn test_interpret_module() -> TestResult {
         r#"
         (module foo
           (public constant bar 1)
-          (public function barfoo |x| 2)
-          (private function barr |x| 0)
+          (public function barfoo [x] 2)
+          (private function barr [x] 0)
           (private constant baar 0)
           (public constant foobar 3)
-          (public function fooo |x| 4)
+          (public function fooo [x] 4)
         )
         "#,
     )?;
@@ -181,7 +181,7 @@ fn test_interpret_function() -> TestResult {
             Environment::new(),
         ),
     );
-    let actual = interpreter.interpret_with_base_library("(function foo |x| x))")?;
+    let actual = interpreter.interpret_with_base_library("(function foo [x] x))")?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -279,7 +279,7 @@ fn test_recursive_lambda() -> TestResult {
     let actual = interpreter.interpret_with_base_library(
         r#"
         (let foo
-          (-> |x|
+          (-> [x]
             (if (> x 0)
               (foo (- x 1))
               x))
@@ -332,11 +332,11 @@ fn test_variadic_parameter() -> TestResult {
                 )),
             )),
         ),
-        interpreter.interpret_with_base_library("((-> |x xs... y| xs) 1 2 3 4)")?
+        interpreter.interpret_with_base_library("((-> [x xs... y] xs) 1 2 3 4)")?
     );
     assert_eq!(
         Value::Numeric(1),
-        interpreter.interpret_with_base_library("((-> |x xs... y| x) 1 2 3 4)")?
+        interpreter.interpret_with_base_library("((-> [x xs... y] x) 1 2 3 4)")?
     );
     Ok(())
 }
@@ -347,13 +347,13 @@ fn test_call_other_members_in_module() -> TestResult {
         (module test
           (constant X 42)
 
-          (function foo |x|
+          (function foo [x]
             x)
 
-          (public function foobar ||
+          (public function foobar []
             (foo (bar X)))
 
-          (function bar |x|
+          (function bar [x]
             x))
         "#;
     let interpreter = Interpreter::default();
@@ -370,13 +370,13 @@ fn test_call_other_members_in_module_including_recursive_function() -> TestResul
         (module test
           (constant X 42)
 
-          (function foo |x|
+          (function foo [x]
             (iter x STEP))
 
-          (public function bar ||
+          (public function bar []
             (foo X))
 
-          (function iter |x y|
+          (function iter [x y]
             (if (internal is_greater y 0)
               (iter x (internal subtract y 1))
               x))
@@ -539,7 +539,7 @@ fn test_divide_with_many_arguments_returns_their_quotient() -> TestResult {
 fn test_interpret_lazy_function_application() -> TestResult {
     let library = r#"
         (module test
-          (public lazy function foo |x|
+          (public lazy function foo [x]
             (x)))
         "#;
     let interpreter = Interpreter::default();
@@ -554,7 +554,7 @@ fn test_interpret_lazy_function_application() -> TestResult {
 fn test_lazy_function_arguments_are_evaluated_lazily() -> TestResult {
     let library = r#"
         (module test
-          (public lazy function foo |x a y b z|
+          (public lazy function foo [x a y b z]
             (internal add (a) (b))))
         "#;
     let interpreter = Interpreter::default();
@@ -628,13 +628,13 @@ fn test_static_module_members_do_not_require_path_to_access() -> TestResult {
         (static module test
           (constant X 42)
 
-          (function foo |x|
+          (function foo [x]
             x)
 
-          (public function foobar ||
+          (public function foobar []
             (foo (bar X)))
 
-          (function bar |x|
+          (function bar [x]
             x))
         "#;
     let interpreter = Interpreter::default();

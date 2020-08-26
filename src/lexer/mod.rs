@@ -47,7 +47,6 @@ pub enum Token {
 pub enum Parenthesis {
     Open(char),
     Close(char),
-    Parameters,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -82,8 +81,6 @@ trait LexerCharacter {
 
     fn is_closing_parenthesis(&self) -> bool;
 
-    fn is_parameter_parenthesis(&self) -> bool;
-
     fn is_section_break(&self) -> bool;
 
     fn is_quote(&self) -> bool;
@@ -106,15 +103,10 @@ impl LexerCharacter for char {
         matches!(self, ')' | ']' | '}')
     }
 
-    fn is_parameter_parenthesis(&self) -> bool {
-        matches!(self, '|')
-    }
-
     fn is_section_break(&self) -> bool {
         self.is_ascii_whitespace()
             || self.is_opening_parenthesis()
             || self.is_closing_parenthesis()
-            || self.is_parameter_parenthesis()
             || matches!(self, '.' | ':')
     }
 
@@ -183,9 +175,6 @@ impl Lexer {
             }
             parenthesis if parenthesis.is_closing_parenthesis() => {
                 Ok(Some(Token::Parenthesis(Parenthesis::Close(parenthesis))))
-            }
-            parenthesis if parenthesis.is_parameter_parenthesis() => {
-                Ok(Some(Token::Parenthesis(Parenthesis::Parameters)))
             }
             quote if quote.is_quote() => {
                 let string = Self::tokenize_string(characters);
