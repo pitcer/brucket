@@ -5,7 +5,7 @@
   (pub fun add [arguments...]
     (iterate_arithmetic
       0 arguments
-      (-> [first second]
+      (=> [first second]
         (internal add first second))))
 
   (pub const - subtract)
@@ -22,7 +22,7 @@
       (internal subtract 0 argument)
       (iterate_arithmetic
         argument remaining
-        (-> [first second]
+        (=> [first second]
           (internal subtract first second)))))
 
   (pub const * multiply)
@@ -30,7 +30,7 @@
   (pub fun multiply [arguments...]
     (iterate_arithmetic
       1 arguments
-      (-> [first second]
+      (=> [first second]
         (internal multiply first second))))
 
   (pub const / divide)
@@ -47,7 +47,7 @@
       (internal divide 1 argument)
       (iterate_arithmetic
         argument remaining
-        (-> [first second]
+        (=> [first second]
           (internal divide first second)))))
 
   (fun iterate_arithmetic [accumulator arguments operation]

@@ -4,25 +4,25 @@
 
   (pub const ! negate)
 
-  (pub fun negate [argument]
+  (pub fun negate [argument: boo] -> boo
     (if argument
       false
       true))
 
-  (lazy pub fun and [arguments...]
+  (lazy pub fun and [arguments: boo...] -> boo
     (and_iterate arguments))
 
-  (fun and_iterate [arguments]
+  (fun and_iterate [arguments: any] -> boo
     (if (is_null arguments)
       true
       (if (not ((pair::first arguments)))
         false
         (and_iterate (pair::second arguments)))))
 
-  (lazy pub fun or [arguments...]
+  (lazy pub fun or [arguments: boo...] -> boo
     (or_iterate arguments))
 
-  (fun or_iterate [arguments]
+  (fun or_iterate [arguments: any] -> boo
     (if (is_null arguments)
       false
       (if ((pair::first arguments))

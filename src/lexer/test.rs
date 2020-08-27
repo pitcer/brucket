@@ -162,10 +162,19 @@ fn test_tokenized_lambda_keyword_is_lambda_token() -> TestResult {
 }
 
 #[test]
-fn test_tokenized_right_arrow_symbol_is_lambda_token() -> TestResult {
+fn test_tokenized_skinny_right_arrow_symbol_is_skinny_arrow_right_operator() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::Lambda)];
+    let expected = vec![Token::Operator(Operator::SkinnyArrowRight)];
     let actual = lexer.tokenize("->")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_tokenized_thick_right_arrow_symbol_is_thick_arrow_right_operator() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Operator(Operator::ThickArrowRight)];
+    let actual = lexer.tokenize("=>")?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -318,6 +327,15 @@ fn test_tokenized_three_dots_are_variadic_operator_token() -> TestResult {
 }
 
 #[test]
+fn test_tokenized_colon_is_type_operator_token() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![Token::Operator(Operator::Type)];
+    let actual = lexer.tokenize(":")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_tokenized_two_colons_are_path_operator_token() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![Token::Operator(Operator::Path)];
@@ -353,5 +371,47 @@ fn test_tokenized_complex_path_is_path_tokens() -> TestResult {
     ];
     let actual = lexer.tokenize("foo::bar::foobar::barfoo")?;
     assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_typed_variadic_parameter_is_tokenized_correctly() -> TestResult {
+    let lexer = Lexer::default();
+    let expected = vec![
+        Token::Symbol("foo".to_string()),
+        Token::Operator(Operator::Type),
+        Token::PrimitiveType(PrimitiveType::Any),
+        Token::Operator(Operator::Variadic),
+    ];
+    let actual = lexer.tokenize("foo:any...")?;
+    assert_eq!(expected, actual);
+    let actual = lexer.tokenize("foo: any ...")?;
+    assert_eq!(expected, actual);
+    let actual = lexer.tokenize("foo : any...")?;
+    assert_eq!(expected, actual);
+    let actual = lexer.tokenize("foo :any ...")?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_primitive_types_are_tokenized_correctly() -> TestResult {
+    let lexer = Lexer::default();
+    assert_eq!(
+        vec![Token::PrimitiveType(PrimitiveType::Boolean)],
+        lexer.tokenize("boo")?
+    );
+    assert_eq!(
+        vec![Token::PrimitiveType(PrimitiveType::Integer)],
+        lexer.tokenize("int")?
+    );
+    assert_eq!(
+        vec![Token::PrimitiveType(PrimitiveType::String)],
+        lexer.tokenize("str")?
+    );
+    assert_eq!(
+        vec![Token::PrimitiveType(PrimitiveType::Any)],
+        lexer.tokenize("any")?
+    );
     Ok(())
 }

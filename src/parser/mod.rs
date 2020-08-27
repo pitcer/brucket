@@ -24,9 +24,10 @@
 
 use std::collections::HashSet;
 use std::iter::Peekable;
+use std::option::Option::Some;
 use std::slice::Iter;
 
-use crate::lexer::{Keyword, Modifier, Operator, Parenthesis, Token};
+use crate::lexer::{Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
 
 type ExpressionResult = Result<Expression, String>;
 
@@ -75,6 +76,7 @@ impl ComplexPath {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lambda {
     parameters: Vec<Parameter>,
+    return_type: Type,
     body: Box<Expression>,
     used_identifiers: HashSet<String>,
 }
@@ -82,11 +84,13 @@ pub struct Lambda {
 impl Lambda {
     pub fn new(
         parameters: Vec<Parameter>,
+        return_type: Type,
         body: Box<Expression>,
         used_identifiers: HashSet<String>,
     ) -> Self {
         Self {
             parameters,
+            return_type,
             body,
             used_identifiers,
         }
@@ -94,6 +98,10 @@ impl Lambda {
 
     pub fn parameters(&self) -> &Vec<Parameter> {
         &self.parameters
+    }
+
+    pub fn return_type(&self) -> &Type {
+        &self.return_type
     }
 
     pub fn body(&self) -> &Expression {
@@ -155,17 +163,46 @@ pub enum ConstantValue {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Parameter {
-    Unary(String),
-    Variadic(String),
+pub struct Parameter {
+    name: String,
+    parameter_type: Type,
+    arity: Arity,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Type {
+    Boolean,
+    Integer,
+    String,
+    Any,
+    Symbol(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Arity {
+    Unary,
+    Variadic,
 }
 
 impl Parameter {
-    pub fn name(&self) -> &String {
-        match self {
-            Parameter::Unary(name) => name,
-            Parameter::Variadic(name) => name,
+    pub fn new(name: String, parameter_type: Type, arity: Arity) -> Self {
+        Self {
+            name,
+            parameter_type,
+            arity,
         }
+    }
+
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn parameter_type(&self) -> &Type {
+        &self.parameter_type
+    }
+
+    pub fn arity(&self) -> &Arity {
+        &self.arity
     }
 }
 
@@ -205,7 +242,7 @@ impl Token {
     fn as_symbol(&self) -> Result<String, String> {
         match self {
             Token::Symbol(symbol) => Ok(symbol.clone()),
-            _ => Err("Token is not a symbol".to_string()),
+            _ => Err(format!("Token is not a symbol: {:?}", self)),
         }
     }
 
@@ -248,6 +285,9 @@ impl Parser {
             Token::Operator(operator) => match operator {
                 Operator::Variadic => Err("Unexpected variadic operator".to_string()),
                 Operator::Path => Err("Unexpected path operator".to_string()),
+                Operator::Type => Err("Unexpected type operator".to_string()),
+                Operator::SkinnyArrowRight => Err("Unexpected '->'".to_string()),
+                Operator::ThickArrowRight => Err("Unexpected '=>'".to_string()),
             },
             Token::Null => Ok(Expression::ConstantValue(ConstantValue::Null)),
             Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(
@@ -261,6 +301,7 @@ impl Parser {
                 tokens,
             )?)),
             Token::Modifier(modifier) => Err(format!("Unexpected token: {:?}", modifier)),
+            Token::PrimitiveType(type_token) => Err(format!("Unexpected token: {:?}", type_token)),
         }
     }
 
@@ -295,7 +336,11 @@ impl Parser {
                 let identifier = Expression::Identifier(path);
                 Self::parse_application(identifier, tokens)
             }
-            _ => Err("Invalid token".to_string()),
+            Token::Operator(operator) => match operator {
+                Operator::ThickArrowRight => Self::parse_lambda(tokens).map(Expression::Lambda),
+                _ => Err(format!("Invalid operator: {:?}", operator)),
+            },
+            _ => Err(format!("Invalid token: {:?}", token)),
         }
     }
 
@@ -382,6 +427,7 @@ impl Parser {
 
     fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, String> {
         let parameters = Self::parse_parameters(tokens)?;
+        let return_type = Self::parse_return_type(tokens)?;
         let body = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
             return Err("Invalid lambda expression".to_string());
@@ -392,7 +438,45 @@ impl Parser {
             let name = parameter.name();
             used_identifiers.remove(name);
         }
-        Ok(Lambda::new(parameters, Box::new(body), used_identifiers))
+        Ok(Lambda::new(
+            parameters,
+            return_type,
+            Box::new(body),
+            used_identifiers,
+        ))
+    }
+
+    fn parse_return_type(tokens: &mut Tokens) -> Result<Type, String> {
+        let next = tokens.peek();
+        if let Some(token) = next {
+            match token {
+                Token::Operator(Operator::SkinnyArrowRight) => {
+                    tokens.next();
+                    Self::parse_type(tokens)
+                }
+                _ => Ok(Type::Any),
+            }
+        } else {
+            Err("An unexpected end of tokens".to_string())
+        }
+    }
+
+    fn parse_type(tokens: &mut Tokens) -> Result<Type, String> {
+        let next = tokens.next();
+        if let Some(token) = next {
+            match token {
+                Token::PrimitiveType(primitive_type) => match primitive_type {
+                    PrimitiveType::Boolean => Ok(Type::Boolean),
+                    PrimitiveType::Integer => Ok(Type::Integer),
+                    PrimitiveType::String => Ok(Type::String),
+                    PrimitiveType::Any => Ok(Type::Any),
+                },
+                Token::Symbol(symbol) => Ok(Type::Symbol(symbol.clone())),
+                _ => Err("Invalid type token".to_string()),
+            }
+        } else {
+            Err("End of tokens".to_string())
+        }
     }
 
     fn insert_used_identifiers(expression: &Expression, identifiers: &mut HashSet<String>) {
@@ -464,7 +548,7 @@ impl Parser {
             match member {
                 Expression::Function(_, _, _, _) => functions.push(member),
                 Expression::Constant(_, _, _) => constants.push(member),
-                _ => return Err("Invalid module member".to_string()),
+                _ => return Err(format!("Invalid module member: {:?}", member)),
             }
         }
         let mut is_static = false;
@@ -562,23 +646,50 @@ impl Parser {
         if !Self::is_section_opened(tokens) {
             return Err("Missing parameters section".to_string());
         }
-        let mut tokens = tokens.peekable();
         let mut parameters = Vec::new();
         while let Some(token) = tokens.next() {
             if token.is_close_parenthesis() {
                 break;
             }
-            let name = token.as_symbol()?;
-            let next = tokens.peek();
-            let parameter = if let Some(Token::Operator(Operator::Variadic)) = next {
-                tokens.next();
-                Parameter::Variadic(name)
-            } else {
-                Parameter::Unary(name)
-            };
+            let parameter = Self::parse_parameter(token, tokens)?;
             parameters.push(parameter)
         }
         Ok(parameters)
+    }
+
+    fn parse_parameter(token: &Token, tokens: &mut Tokens) -> Result<Parameter, String> {
+        let name = token.as_symbol()?;
+        let next = tokens.peek();
+        if let Some(token) = next {
+            match token {
+                Token::Operator(operator) => match operator {
+                    Operator::Variadic => {
+                        tokens.next();
+                        Ok(Parameter::new(name, Type::Any, Arity::Variadic))
+                    }
+                    Operator::Type => {
+                        tokens.next();
+                        let parameter_type = Self::parse_type(tokens)?;
+                        let next = tokens.peek();
+                        let arity = if let Some(next) = next {
+                            if let Token::Operator(Operator::Variadic) = next {
+                                tokens.next();
+                                Arity::Variadic
+                            } else {
+                                Arity::Unary
+                            }
+                        } else {
+                            return Err("End of tokens in parameters section".to_string());
+                        };
+                        Ok(Parameter::new(name, parameter_type, arity))
+                    }
+                    _ => Err("Invalid operator".to_string()),
+                },
+                _ => Ok(Parameter::new(name, Type::Any, Arity::Unary)),
+            }
+        } else {
+            Err("End of tokens in parameters section".to_string())
+        }
     }
 
     fn is_section_opened(tokens: &mut Tokens) -> bool {

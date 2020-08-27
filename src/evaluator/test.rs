@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::parser::Visibility;
+use crate::parser::{Type, Visibility};
 
 use super::*;
 
@@ -148,6 +148,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
         Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         Box::new(Expression::Lambda(Lambda::new(
             Vec::new(),
+            Type::Any,
             Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
             maplit::hashset!("x".to_string()),
         ))),
@@ -160,7 +161,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
 fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        vec![Parameter::Unary("y".to_string())],
+        vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
         Box::from(Expression::Identifier(Path::Simple("y".to_string()))),
         Environment::new(),
     ));
@@ -168,7 +169,8 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
         "x".to_string(),
         Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         Box::new(Expression::Lambda(Lambda::new(
-            vec![Parameter::Unary("y".to_string())],
+            vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
+            Type::Any,
             Box::new(Expression::Identifier(Path::Simple("y".to_string()))),
             HashSet::new(),
         ))),
@@ -182,9 +184,9 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
     let evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         vec![
-            Parameter::Unary("y".to_string()),
-            Parameter::Unary("z".to_string()),
-            Parameter::Unary("a".to_string()),
+            Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+            Parameter::new("z".to_string(), Type::Any, Arity::Unary),
+            Parameter::new("a".to_string(), Type::Any, Arity::Unary),
         ],
         Box::from(Expression::Identifier(Path::Simple("y".to_string()))),
         Environment::new(),
@@ -194,10 +196,11 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
         Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         Box::new(Expression::Lambda(Lambda::new(
             vec![
-                Parameter::Unary("y".to_string()),
-                Parameter::Unary("z".to_string()),
-                Parameter::Unary("a".to_string()),
+                Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+                Parameter::new("z".to_string(), Type::Any, Arity::Unary),
+                Parameter::new("a".to_string(), Type::Any, Arity::Unary),
             ],
+            Type::Any,
             Box::new(Expression::Identifier(Path::Simple("y".to_string()))),
             HashSet::new(),
         ))),
@@ -216,6 +219,7 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(Lambda::new(
                 Vec::new(),
+                Type::Any,
                 Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
                 maplit::hashset!("x".to_string()),
             ))),
@@ -235,7 +239,8 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
         Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(Lambda::new(
-                vec![Parameter::Unary("y".to_string())],
+                vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
+                Type::Any,
                 Box::new(Expression::Identifier(Path::Simple("y".to_string()))),
                 HashSet::new(),
             ))),
@@ -256,10 +261,11 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(Lambda::new(
                 vec![
-                    Parameter::Unary("y".to_string()),
-                    Parameter::Unary("z".to_string()),
-                    Parameter::Unary("a".to_string()),
+                    Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+                    Parameter::new("z".to_string(), Type::Any, Arity::Unary),
+                    Parameter::new("a".to_string(), Type::Any, Arity::Unary),
                 ],
+                Type::Any,
                 Box::new(Expression::Identifier(Path::Simple("y".to_string()))),
                 HashSet::new(),
             ))),
@@ -284,7 +290,8 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
         Box::new(Expression::Let(
             "y".to_string(),
             Box::new(Expression::Lambda(Lambda::new(
-                vec![Parameter::Unary("a".to_string())],
+                vec![Parameter::new("a".to_string(), Type::Any, Arity::Unary)],
+                Type::Any,
                 Box::new(Expression::Identifier(Path::Simple("z".to_string()))),
                 maplit::hashset!("z".to_string()),
             ))),
@@ -326,6 +333,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
             "bar".to_string(),
             Lambda::new(
                 Vec::new(),
+                Type::Any,
                 Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
                 HashSet::new(),
             ),
@@ -342,7 +350,7 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
-            vec![Parameter::Unary("x".to_string())],
+            vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
             Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
             Environment::new(),
         ),
@@ -352,7 +360,8 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
         ApplicationStrategy::Eager,
         "foo".to_string(),
         Lambda::new(
-            vec![Parameter::Unary("x".to_string())],
+            vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+            Type::Any,
             Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
             HashSet::new(),
         ),
@@ -366,19 +375,20 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
     let evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         vec![
-            Parameter::Unary("x".to_string()),
-            Parameter::Unary("y".to_string()),
-            Parameter::Variadic("z".to_string()),
+            Parameter::new("x".to_string(), Type::Any, Arity::Unary),
+            Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+            Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
         ],
         Box::from(Expression::Identifier(Path::Simple("x".to_string()))),
         Environment::new(),
     ));
     let actual = evaluator.evaluate(&Expression::Lambda(Lambda::new(
         vec![
-            Parameter::Unary("x".to_string()),
-            Parameter::Unary("y".to_string()),
-            Parameter::Variadic("z".to_string()),
+            Parameter::new("x".to_string(), Type::Any, Arity::Unary),
+            Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+            Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
         ],
+        Type::Any,
         Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         HashSet::new(),
     )))?;
@@ -402,10 +412,11 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
     let actual = evaluator.evaluate(&Expression::Application(
         Box::new(Expression::Lambda(Lambda::new(
             vec![
-                Parameter::Unary("x".to_string()),
-                Parameter::Unary("y".to_string()),
-                Parameter::Variadic("z".to_string()),
+                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
+                Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+                Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
             ],
+            Type::Any,
             Box::new(Expression::Identifier(Path::Simple("z".to_string()))),
             HashSet::new(),
         ))),
@@ -448,6 +459,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 "bar".to_string(),
                 Lambda::new(
                     Vec::new(),
+                    Type::Any,
                     Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
                     HashSet::new(),
                 ),
@@ -458,6 +470,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 "fooo".to_string(),
                 Lambda::new(
                     Vec::new(),
+                    Type::Any,
                     Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
                     HashSet::new(),
                 ),
@@ -497,6 +510,7 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
         "foo".to_string(),
         Lambda::new(
             Vec::new(),
+            Type::Any,
             Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
             HashSet::new(),
         ),
@@ -518,7 +532,8 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
             ApplicationStrategy::Lazy,
             "foo".to_string(),
             Lambda::new(
-                vec![Parameter::Unary("x".to_string())],
+                vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+                Type::Any,
                 Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
                 HashSet::new(),
             ),

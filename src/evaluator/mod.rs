@@ -32,7 +32,7 @@ use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;
 use crate::interpreter::ModuleEnvironment;
 use crate::parser::{
-    ApplicationStrategy, ConstantValue, Expression, Lambda, Module, Parameter, Path,
+    ApplicationStrategy, Arity, ConstantValue, Expression, Lambda, Module, Parameter, Path,
 };
 
 #[macro_use]
@@ -391,8 +391,10 @@ impl Evaluator {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
         for parameter in &closure.parameters {
-            match parameter {
-                Parameter::Unary(name) => {
+            let name = parameter.name();
+            let arity = parameter.arity();
+            match arity {
+                Arity::Unary => {
                     let argument = arguments_iterator
                         .next()
                         .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
@@ -411,7 +413,7 @@ impl Evaluator {
                     }?;
                     closure.environment.insert(name.clone(), Rc::new(argument));
                 }
-                Parameter::Variadic(name) => {
+                Arity::Variadic => {
                     let list = self.create_pair_list(
                         application_strategy,
                         arguments_iterator,

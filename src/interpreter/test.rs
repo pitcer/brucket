@@ -23,7 +23,7 @@
  */
 
 use crate::evaluator::Closure;
-use crate::parser::{ApplicationStrategy, ConstantValue, Expression, Parameter, Path};
+use crate::parser::{ApplicationStrategy, Arity, ConstantValue, Expression, Parameter, Path, Type};
 
 use super::*;
 
@@ -140,7 +140,7 @@ fn test_interpret_module() -> TestResult {
             "barfoo" => Value::FunctionClosure(
                 ApplicationStrategy::Eager,
                 Closure::new(
-                    vec![Parameter::Unary("x".to_string())],
+                    vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
                     Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
                     Environment::new(),
             )),
@@ -148,7 +148,7 @@ fn test_interpret_module() -> TestResult {
             "fooo" => Value::FunctionClosure(
                 ApplicationStrategy::Eager,
                 Closure::new(
-                    vec![Parameter::Unary("x".to_string())],
+                    vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
                     Box::new(Expression::ConstantValue(ConstantValue::Numeric(4))),
                     Environment::new(),
             ))
@@ -176,7 +176,7 @@ fn test_interpret_function() -> TestResult {
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
-            vec![Parameter::Unary("x".to_string())],
+            vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
             Box::from(Expression::Identifier(Path::Simple("x".to_string()))),
             Environment::new(),
         ),
@@ -279,7 +279,7 @@ fn test_recursive_lambda() -> TestResult {
     let actual = interpreter.interpret_with_base_library(
         r#"
         (let foo
-          (-> [x]
+          (=> [x]
             (if (> x 0)
               (foo (- x 1))
               x))
@@ -332,11 +332,11 @@ fn test_variadic_parameter() -> TestResult {
                 )),
             )),
         ),
-        interpreter.interpret_with_base_library("((-> [x xs... y] xs) 1 2 3 4)")?
+        interpreter.interpret_with_base_library("((=> [x xs... y] xs) 1 2 3 4)")?
     );
     assert_eq!(
         Value::Numeric(1),
-        interpreter.interpret_with_base_library("((-> [x xs... y] x) 1 2 3 4)")?
+        interpreter.interpret_with_base_library("((=> [x xs... y] x) 1 2 3 4)")?
     );
     Ok(())
 }

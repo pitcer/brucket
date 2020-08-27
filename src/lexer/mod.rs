@@ -24,6 +24,7 @@
 
 use std::collections::HashMap;
 use std::iter::Peekable;
+use std::option::Option::Some;
 use std::str::Chars;
 
 pub struct Lexer {
@@ -40,6 +41,7 @@ pub enum Token {
     Null,
     Keyword(Keyword),
     Modifier(Modifier),
+    PrimitiveType(PrimitiveType),
     Symbol(String),
 }
 
@@ -53,6 +55,9 @@ pub enum Parenthesis {
 pub enum Operator {
     Variadic,
     Path,
+    Type,
+    SkinnyArrowRight,
+    ThickArrowRight,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -72,6 +77,14 @@ pub enum Modifier {
     Private,
     Lazy,
     Static,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum PrimitiveType {
+    Boolean,
+    Integer,
+    String,
+    Any,
 }
 
 trait LexerCharacter {
@@ -135,18 +148,23 @@ impl Default for Lexer {
             "let" => Token::Keyword(Keyword::Let),
             "if" => Token::Keyword(Keyword::If),
             "lambda" => Token::Keyword(Keyword::Lambda),
-            "->" => Token::Keyword(Keyword::Lambda),
             "internal" => Token::Keyword(Keyword::Internal),
             "module" => Token::Keyword(Keyword::Module),
             "function" => Token::Keyword(Keyword::Function),
             "fun" => Token::Keyword(Keyword::Function),
             "constant" => Token::Keyword(Keyword::Constant),
             "const" => Token::Keyword(Keyword::Constant),
+            "->" => Token::Operator(Operator::SkinnyArrowRight),
+            "=>" => Token::Operator(Operator::ThickArrowRight),
             "public" => Token::Modifier(Modifier::Public),
             "pub" => Token::Modifier(Modifier::Public),
             "private" => Token::Modifier(Modifier::Private),
             "lazy" => Token::Modifier(Modifier::Lazy),
             "static" => Token::Modifier(Modifier::Static),
+            "boo" => Token::PrimitiveType(PrimitiveType::Boolean),
+            "int" => Token::PrimitiveType(PrimitiveType::Integer),
+            "str" => Token::PrimitiveType(PrimitiveType::String),
+            "any" => Token::PrimitiveType(PrimitiveType::Any),
         };
         Self { symbol_map }
     }
@@ -172,7 +190,7 @@ impl Lexer {
                 Ok(None)
             }
             '.' => Self::tokenize_dots(characters),
-            ':' => Self::tokenize_path(characters),
+            ':' => Self::tokenize_colon(characters),
             parenthesis if parenthesis.is_opening_parenthesis() => {
                 Ok(Some(Token::Parenthesis(Parenthesis::Open(parenthesis))))
             }
@@ -218,13 +236,15 @@ impl Lexer {
         }
     }
 
-    fn tokenize_path(characters: &mut Characters) -> Result<Option<Token>, String> {
-        let second = characters.next();
-        if second.is_some() && second.unwrap() == ':' {
-            Ok(Some(Token::Operator(Operator::Path)))
-        } else {
-            Err("Invalid path operator".to_string())
+    fn tokenize_colon(characters: &mut Characters) -> Result<Option<Token>, String> {
+        let second = characters.peek();
+        if let Some(second) = second {
+            if let ':' = second {
+                characters.next();
+                return Ok(Some(Token::Operator(Operator::Path)));
+            }
         }
+        Ok(Some(Token::Operator(Operator::Type)))
     }
 
     fn tokenize_string(characters: &mut Characters) -> String {
