@@ -9,7 +9,7 @@
       false
       true))
 
-  (lazy pub fun and [arguments: boo...] -> boo
+  (pub lazy fun and [arguments: boo...] -> boo
     (and_iterate arguments))
 
   (fun and_iterate [arguments: any] -> boo
@@ -19,7 +19,7 @@
         false
         (and_iterate (pair::second arguments)))))
 
-  (lazy pub fun or [arguments: boo...] -> boo
+  (pub lazy fun or [arguments: boo...] -> boo
     (or_iterate arguments))
 
   (fun or_iterate [arguments: any] -> boo
