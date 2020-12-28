@@ -26,6 +26,9 @@ use std::collections::HashMap;
 
 use crate::evaluator::{Value, ValueResult};
 
+#[cfg(test)]
+mod test;
+
 macro_rules! internal_environment_map {
     ($($identifier:expr => $function:expr),*) => {
         {
@@ -208,6 +211,3 @@ impl Value {
         }
     }
 }
-
-#[cfg(test)]
-mod test;

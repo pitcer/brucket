@@ -22,38 +22,53 @@
  * SOFTWARE.
  */
 
-use std::fs::File;
-use std::io::Read;
-use std::{env, io};
+use brucket_ast::ast::{ApplicationStrategy, Expression, Parameter};
 
-use crate::interpreter::Interpreter;
+use crate::evaluator::environment::Environment;
 
-#[macro_use]
-mod evaluator;
-pub mod interpreter;
-mod value;
-
-fn main() {
-    let mut stdin = io::stdin();
-    let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
-    let mut args = env::args();
-    args.next();
-    let modules = args
-        .map(|argument| {
-            let mut file =
-                File::open(&argument).unwrap_or_else(|_| panic!("Cannot open file {}", argument));
-            read(&mut file).unwrap_or_else(|_| panic!("Cannot read file {}", argument))
-        })
-        .collect();
-    let interpreter = Interpreter::default();
-    let result = interpreter
-        .interpret_with_modules(&input_syntax, modules)
-        .expect("Cannot interpret input program");
-    println!("Result: {:?}", result);
+#[derive(Debug, PartialEq, Clone)]
+pub enum Value {
+    Unit,
+    Null,
+    Numeric(i32),
+    Textual(String),
+    Boolean(bool),
+    Pair(Box<Value>, Box<Value>),
+    Closure(Closure),
+    FunctionClosure(ApplicationStrategy, Closure),
+    Thunk(Box<Expression>, Environment),
+    Module(bool, String, Environment),
 }
 
-fn read(input: &mut impl Read) -> io::Result<String> {
-    let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
+#[derive(Debug, PartialEq, Clone)]
+pub struct Closure {
+    parameters: Vec<Parameter>,
+    body: Box<Expression>,
+    environment: Environment,
+}
+
+impl Closure {
+    pub fn new(
+        parameters: Vec<Parameter>,
+        body: Box<Expression>,
+        environment: Environment,
+    ) -> Self {
+        Self {
+            parameters,
+            body,
+            environment,
+        }
+    }
+
+    pub fn parameters(&self) -> &Vec<Parameter> {
+        &self.parameters
+    }
+
+    pub fn body(&self) -> &Expression {
+        &self.body
+    }
+
+    pub fn environment(&self) -> &Environment {
+        &self.environment
+    }
 }

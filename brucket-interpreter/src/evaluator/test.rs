@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use brucket_ast::parser::{Type, Visibility};
+use brucket_ast::ast::{Parameter, Type, Visibility};
 
 use super::*;
 

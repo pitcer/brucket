@@ -22,38 +22,58 @@
  * SOFTWARE.
  */
 
-use std::fs::File;
-use std::io::Read;
-use std::{env, io};
-
-use crate::interpreter::Interpreter;
-
-#[macro_use]
-mod evaluator;
-pub mod interpreter;
-mod value;
-
-fn main() {
-    let mut stdin = io::stdin();
-    let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
-    let mut args = env::args();
-    args.next();
-    let modules = args
-        .map(|argument| {
-            let mut file =
-                File::open(&argument).unwrap_or_else(|_| panic!("Cannot open file {}", argument));
-            read(&mut file).unwrap_or_else(|_| panic!("Cannot read file {}", argument))
-        })
-        .collect();
-    let interpreter = Interpreter::default();
-    let result = interpreter
-        .interpret_with_modules(&input_syntax, modules)
-        .expect("Cannot interpret input program");
-    println!("Result: {:?}", result);
+#[derive(Debug, PartialEq, Clone)]
+pub enum Token {
+    Parenthesis(Parenthesis),
+    Operator(Operator),
+    String(String),
+    Number(u32),
+    Boolean(bool),
+    Null,
+    Keyword(Keyword),
+    Modifier(Modifier),
+    PrimitiveType(PrimitiveType),
+    Symbol(String),
 }
 
-fn read(input: &mut impl Read) -> io::Result<String> {
-    let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
+#[derive(Debug, PartialEq, Clone)]
+pub enum Parenthesis {
+    Open(char),
+    Close(char),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Operator {
+    Variadic,
+    Path,
+    Type,
+    SkinnyArrowRight,
+    ThickArrowRight,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Keyword {
+    Let,
+    If,
+    Lambda,
+    Internal,
+    Module,
+    Function,
+    Constant,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Modifier {
+    Public,
+    Private,
+    Lazy,
+    Static,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum PrimitiveType {
+    Boolean,
+    Integer,
+    String,
+    Any,
 }

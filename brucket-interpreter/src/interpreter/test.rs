@@ -22,11 +22,12 @@
  * SOFTWARE.
  */
 
-use brucket_ast::parser::{
+use brucket_ast::ast::{
     ApplicationStrategy, Arity, ConstantValue, Expression, Parameter, Path, Type,
 };
 
-use crate::evaluator::Closure;
+use crate::value::Closure;
+use crate::value::Value;
 
 use super::*;
 

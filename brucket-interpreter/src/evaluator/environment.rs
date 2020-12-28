@@ -29,7 +29,7 @@ use std::iter::FromIterator;
 use std::option::Option::Some;
 use std::rc::{Rc, Weak};
 
-use crate::evaluator::Value;
+use crate::value::Value;
 
 #[cfg(test)]
 macro_rules! environment {
@@ -142,7 +142,7 @@ impl Environment {
             .map(|value| WeakWrapper::clone(value))
     }
 
-    pub fn remove(&mut self, key: &str) {
+    pub fn remove(&self, key: &str) {
         self.map.borrow_mut().remove(key);
     }
 }

@@ -24,12 +24,16 @@
 
 use std::collections::HashMap;
 
+use brucket_ast::ast::Expression;
 use brucket_ast::lexer::Lexer;
-use brucket_ast::parser::{Expression, Parser};
+use brucket_ast::parser::Parser;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
-pub use crate::evaluator::Value;
+use crate::value::Value;
+
+#[cfg(test)]
+mod test;
 
 pub type ModuleEnvironment = HashMap<String, Environment>;
 
@@ -130,7 +134,9 @@ impl Interpreter {
         syntax: &str,
         modules: Vec<&str>,
     ) -> ValueResult {
-        let directory = std::fs::read_dir("lib/").expect("Cannot read directory lib/");
+        let path = "../lib/";
+        let directory = std::fs::read_dir(path)
+            .unwrap_or_else(|_| panic!("Cannot read library directory in a path '{}'", path));
         use std::io::Read;
         let mut modules_vec = Vec::new();
         for file in directory {
@@ -148,6 +154,3 @@ impl Interpreter {
         self.interpret_with_modules(syntax, modules_vec)
     }
 }
-
-#[cfg(test)]
-mod test;

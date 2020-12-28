@@ -27,64 +27,13 @@ use std::iter::Peekable;
 use std::option::Option::Some;
 use std::str::Chars;
 
+use crate::token::{Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
+
+#[cfg(test)]
+mod test;
+
 pub struct Lexer {
     symbol_map: HashMap<&'static str, Token>,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Token {
-    Parenthesis(Parenthesis),
-    Operator(Operator),
-    String(String),
-    Number(u32),
-    Boolean(bool),
-    Null,
-    Keyword(Keyword),
-    Modifier(Modifier),
-    PrimitiveType(PrimitiveType),
-    Symbol(String),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Parenthesis {
-    Open(char),
-    Close(char),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Operator {
-    Variadic,
-    Path,
-    Type,
-    SkinnyArrowRight,
-    ThickArrowRight,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Keyword {
-    Let,
-    If,
-    Lambda,
-    Internal,
-    Module,
-    Function,
-    Constant,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Modifier {
-    Public,
-    Private,
-    Lazy,
-    Static,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum PrimitiveType {
-    Boolean,
-    Integer,
-    String,
-    Any,
 }
 
 trait LexerCharacter {
@@ -292,6 +241,3 @@ impl Lexer {
         result
     }
 }
-
-#[cfg(test)]
-mod test;
