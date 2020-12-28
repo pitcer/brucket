@@ -28,12 +28,13 @@ use std::option::Option::Some;
 use std::rc::Rc;
 use std::slice::Iter;
 
+use brucket_ast::parser::{
+    ApplicationStrategy, Arity, ConstantValue, Expression, Lambda, Module, Parameter, Path,
+};
+
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;
 use crate::interpreter::ModuleEnvironment;
-use crate::parser::{
-    ApplicationStrategy, Arity, ConstantValue, Expression, Lambda, Module, Parameter, Path,
-};
 
 #[macro_use]
 pub mod environment;
@@ -531,7 +532,7 @@ impl Evaluator {
         let mut evaluated_closures = HashMap::new();
         for function in module.functions() {
             if let Expression::Function(visibility, application_strategy, identifier, lambda) =
-                &function
+            &function
             {
                 let closure = Self::evaluate_lambda(lambda, environment);
                 let closure = Value::FunctionClosure(application_strategy.clone(), closure);

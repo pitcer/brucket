@@ -22,13 +22,14 @@
  * SOFTWARE.
  */
 
-use crate::evaluator::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::option::Option::Some;
 use std::rc::{Rc, Weak};
+
+use crate::evaluator::Value;
 
 #[cfg(test)]
 macro_rules! environment {

@@ -1,8 +1,6 @@
-[package]
-name = "brucket"
-version = "0.1.0"
-authors = ["Piotr Dobiech"]
-edition = "2018"
-
-[dependencies]
-maplit = "1.0.2"
+[workspace]
+members = [
+    "brucket-ast",
+    "brucket-interpreter",
+    "brucket-transpiler"
+]

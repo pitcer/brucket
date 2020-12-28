@@ -24,11 +24,12 @@
 
 use std::collections::HashMap;
 
+use brucket_ast::lexer::Lexer;
+use brucket_ast::parser::{Expression, Parser};
+
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
 pub use crate::evaluator::Value;
-use crate::lexer::Lexer;
-use crate::parser::{Expression, Parser};
 
 pub type ModuleEnvironment = HashMap<String, Environment>;
 

@@ -21,34 +21,3 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-use std::fs::File;
-use std::io::Read;
-use std::{env, io};
-
-use brucket::interpreter::Interpreter;
-
-fn main() {
-    let mut stdin = io::stdin();
-    let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
-    let mut args = env::args();
-    args.next();
-    #[allow(clippy::expect_fun_call)]
-    let modules = args
-        .map(|argument| {
-            let mut file = File::open(&argument).expect(&format!("Cannot open file {}", argument));
-            read(&mut file).expect(&format!("Cannot read file {}", argument))
-        })
-        .collect();
-    let interpreter = Interpreter::default();
-    let result = interpreter
-        .interpret_with_modules(&input_syntax, modules)
-        .expect("Cannot interpret input program");
-    println!("Result: {:?}", result);
-}
-
-fn read(input: &mut impl Read) -> io::Result<String> {
-    let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
-}

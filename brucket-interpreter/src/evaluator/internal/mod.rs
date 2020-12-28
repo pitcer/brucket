@@ -22,8 +22,9 @@
  * SOFTWARE.
  */
 
-use crate::evaluator::{Value, ValueResult};
 use std::collections::HashMap;
+
+use crate::evaluator::{Value, ValueResult};
 
 macro_rules! internal_environment_map {
     ($($identifier:expr => $function:expr),*) => {

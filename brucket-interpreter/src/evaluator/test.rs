@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::parser::{Type, Visibility};
+use brucket_ast::parser::{Type, Visibility};
 
 use super::*;
 
