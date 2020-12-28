@@ -22,33 +22,7 @@
  * SOFTWARE.
  */
 
-use std::fs::File;
-use std::io::Read;
-use std::{env, io};
-
-use brucket_interpreter::interpreter::Interpreter;
-
-fn main() {
-    let mut stdin = io::stdin();
-    let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
-    let mut args = env::args();
-    args.next();
-    let modules = args
-        .map(|argument| {
-            let mut file =
-                File::open(&argument).unwrap_or_else(|_| panic!("Cannot open file {}", argument));
-            read(&mut file).unwrap_or_else(|_| panic!("Cannot read file {}", argument))
-        })
-        .collect();
-    let interpreter = Interpreter::default();
-    let result = interpreter
-        .interpret_with_modules(&input_syntax, modules)
-        .expect("Cannot interpret input program");
-    println!("Result: {:?}", result);
-}
-
-fn read(input: &mut impl Read) -> io::Result<String> {
-    let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
-}
+#[macro_use]
+mod evaluator;
+pub mod interpreter;
+mod value;
