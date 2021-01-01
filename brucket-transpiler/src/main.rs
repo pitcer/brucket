@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+#![forbid(unsafe_code)]
+
 use std::io;
 use std::io::Read;
 

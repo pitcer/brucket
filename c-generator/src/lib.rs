@@ -22,5 +22,7 @@
  * SOFTWARE.
  */
 
+#![forbid(unsafe_code)]
+
 pub mod generator;
 pub mod syntax;

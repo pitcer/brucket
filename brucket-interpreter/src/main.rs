@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+#![forbid(unsafe_code)]
+
 use std::fs::File;
 use std::io::Read;
 use std::{env, io};
