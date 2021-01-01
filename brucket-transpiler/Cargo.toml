@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 brucket-ast = { path = "../brucket-ast" }
+c-generator = { path = "../c-generator" }

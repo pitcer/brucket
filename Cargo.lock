@@ -20,7 +20,12 @@ name = "brucket-transpiler"
 version = "0.1.0"
 dependencies = [
  "brucket-ast",
+ "c-generator",
 ]
+
+[[package]]
+name = "c-generator"
+version = "0.1.0"
 
 [[package]]
 name = "maplit"

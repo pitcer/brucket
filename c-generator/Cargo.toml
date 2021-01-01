@@ -1,0 +1,5 @@
+[package]
+name = "c-generator"
+version = "0.1.0"
+authors = ["Piotr Dobiech"]
+edition = "2018"
