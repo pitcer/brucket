@@ -23,6 +23,7 @@
  */
 
 use super::*;
+use crate::ast::IfExpression;
 
 type TestResult = Result<(), String>;
 
@@ -162,11 +163,11 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 #[test]
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::If(
-        Box::new(Expression::ConstantValue(ConstantValue::Boolean(true))),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
-    );
+    let expected = Expression::If(IfExpression {
+        condition: Box::new(Expression::ConstantValue(ConstantValue::Boolean(true))),
+        if_true: Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        if_false: Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
+    });
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::If),

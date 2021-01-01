@@ -28,8 +28,8 @@ use std::option::Option::Some;
 use std::slice::Iter;
 
 use crate::ast::{
-    ApplicationStrategy, Arity, ComplexPath, ConstantValue, Expression, Lambda, Module, Parameter,
-    Path, Type, Visibility,
+    ApplicationStrategy, Arity, ComplexPath, ConstantValue, Expression, IfExpression, Lambda,
+    Module, Parameter, Path, Type, Visibility,
 };
 use crate::token::{Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
 
@@ -169,11 +169,11 @@ impl Parser {
         if !Self::is_section_closed(tokens) {
             return Err("Invalid if expression".to_string());
         }
-        Ok(Expression::If(
-            Box::new(condition),
-            Box::new(if_true_then),
-            Box::new(if_false_then),
-        ))
+        Ok(Expression::If(IfExpression {
+            condition: Box::new(condition),
+            if_true: Box::new(if_true_then),
+            if_false: Box::new(if_false_then),
+        }))
     }
 
     fn parse_modifiers(first_modifier: &Modifier, tokens: &mut Tokens) -> ExpressionResult {
@@ -304,7 +304,11 @@ impl Parser {
                 Self::insert_used_identifiers(value, identifiers);
                 Self::insert_used_identifiers(body, identifiers);
             }
-            Expression::If(condition, if_true, if_false) => {
+            Expression::If(IfExpression {
+                condition,
+                if_true,
+                if_false,
+            }) => {
                 Self::insert_used_identifiers(condition, identifiers);
                 Self::insert_used_identifiers(if_true, identifiers);
                 Self::insert_used_identifiers(if_false, identifiers);

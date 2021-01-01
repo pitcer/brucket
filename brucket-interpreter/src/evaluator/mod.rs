@@ -29,7 +29,7 @@ use std::rc::Rc;
 use std::slice::Iter;
 
 use brucket_ast::ast::{
-    ApplicationStrategy, Arity, ConstantValue, Expression, Lambda, Module, Path,
+    ApplicationStrategy, Arity, ConstantValue, Expression, IfExpression, Lambda, Module, Path,
 };
 
 use crate::evaluator::environment::Environment;
@@ -132,10 +132,14 @@ impl Evaluator {
                 module_environment,
                 environment,
             ),
-            Expression::If(condition, if_true_then, if_false_then) => self.evaluate_if(
+            Expression::If(IfExpression {
                 condition,
-                if_true_then,
-                if_false_then,
+                if_true,
+                if_false,
+            }) => self.evaluate_if(
+                condition,
+                if_true,
+                if_false,
                 static_module_environment,
                 module_environment,
                 environment,

@@ -31,11 +31,32 @@ pub enum Expression {
     Application(Box<Expression>, Vec<Expression>),
     InternalCall(String, Vec<Expression>),
     Let(String, Box<Expression>, Box<Expression>),
-    If(Box<Expression>, Box<Expression>, Box<Expression>),
+    If(IfExpression),
     Lambda(Lambda),
     Module(Module),
     Function(Visibility, ApplicationStrategy, String, Lambda),
     Constant(Visibility, String, Box<Expression>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfExpression {
+    pub condition: Box<Expression>,
+    pub if_true: Box<Expression>,
+    pub if_false: Box<Expression>,
+}
+
+impl IfExpression {
+    pub fn new(
+        condition: Box<Expression>,
+        if_true: Box<Expression>,
+        if_false: Box<Expression>,
+    ) -> Self {
+        Self {
+            condition,
+            if_true,
+            if_false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
