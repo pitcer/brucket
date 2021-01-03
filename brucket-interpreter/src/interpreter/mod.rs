@@ -135,12 +135,14 @@ impl Interpreter {
         modules: Vec<&str>,
     ) -> ValueResult {
         let path = "../lib/";
-        let directory = std::fs::read_dir(path)
-            .unwrap_or_else(|_| panic!("Cannot read library directory in a path '{}'", path));
+        let mut paths = std::fs::read_dir(path)
+            .unwrap_or_else(|_| panic!("Cannot read library directory in a path '{}'", path))
+            .map(|file| file.unwrap().path())
+            .collect::<Vec<_>>();
+        paths.sort_by(|first, second| first.cmp(second).reverse());
         use std::io::Read;
         let mut modules_vec = Vec::new();
-        for file in directory {
-            let path = file.unwrap().path();
+        for path in paths {
             let mut library_file = std::fs::File::open(path).expect("Cannot open library file");
             let mut library_syntax = String::new();
             library_file
