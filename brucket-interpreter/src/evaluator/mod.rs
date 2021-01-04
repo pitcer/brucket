@@ -29,8 +29,8 @@ use std::rc::Rc;
 use std::slice::Iter;
 
 use brucket_ast::ast::{
-    ApplicationStrategy, Arity, ConstantValue, Expression, IfExpression, Lambda, Module, Number,
-    Path,
+    Application, ApplicationStrategy, Arity, Constant, ConstantValue, Expression, Function, If,
+    InternalCall, Lambda, Let, Module, Number, Path,
 };
 
 use crate::evaluator::environment::Environment;
@@ -126,21 +126,27 @@ impl Evaluator {
                 environment,
                 value,
             ),
-            Expression::Application(identifier, arguments) => self.evaluate_application(
+            Expression::Application(Application {
+                identifier,
+                arguments,
+            }) => self.evaluate_application(
                 identifier,
                 arguments,
                 static_module_environment,
                 module_environment,
                 environment,
             ),
-            Expression::InternalCall(identifier, arguments) => self.evaluate_internal_call(
+            Expression::InternalCall(InternalCall {
+                identifier,
+                arguments,
+            }) => self.evaluate_internal_call(
                 identifier,
                 arguments,
                 static_module_environment,
                 module_environment,
                 environment,
             ),
-            Expression::Let(name, value, then) => self.evaluate_let(
+            Expression::Let(Let { name, value, then }) => self.evaluate_let(
                 name,
                 value,
                 then,
@@ -148,7 +154,7 @@ impl Evaluator {
                 module_environment,
                 environment,
             ),
-            Expression::If(IfExpression {
+            Expression::If(If {
                 condition,
                 if_true,
                 if_false,
@@ -169,11 +175,20 @@ impl Evaluator {
                 module_environment,
                 environment,
             ),
-            Expression::Function(_, application_strategy, _, lambda) => Ok(Value::FunctionClosure(
+            Expression::Function(Function {
+                visibility: _,
+                application_strategy,
+                name: _,
+                body: lambda,
+            }) => Ok(Value::FunctionClosure(
                 application_strategy.clone(),
                 Self::evaluate_lambda(lambda, environment),
             )),
-            Expression::Constant(_, _, value) => self.evaluate_environment(
+            Expression::Constant(Constant {
+                visibility: _,
+                name: _,
+                value,
+            }) => self.evaluate_environment(
                 value,
                 static_module_environment,
                 module_environment,
@@ -313,7 +328,7 @@ impl Evaluator {
                         Err(Cow::from(format!("Undefined environment: {}", first_path)))
                     }
                 } else {
-                    Err(Cow::from(format!("Undefined first_path")))
+                    Err(Cow::from("Undefined first_path"))
                 }
             }
         }
@@ -520,8 +535,12 @@ impl Evaluator {
         let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();
         for function in module.functions() {
-            if let Expression::Function(visibility, application_strategy, identifier, lambda) =
-                &function
+            if let Expression::Function(Function {
+                visibility,
+                application_strategy,
+                name: identifier,
+                body: lambda,
+            }) = &function
             {
                 let closure = Self::evaluate_lambda(lambda, environment);
                 let closure = Value::FunctionClosure(application_strategy.clone(), closure);
@@ -540,7 +559,12 @@ impl Evaluator {
         Self::fill_closures(&closures, &evaluated_closures)?;
         let mut evaluated_constants = HashMap::new();
         for constant in module.constants() {
-            if let Expression::Constant(visibility, identifier, value) = constant {
+            if let Expression::Constant(Constant {
+                visibility,
+                name: identifier,
+                value,
+            }) = constant
+            {
                 let value = self.evaluate_environment(
                     value,
                     static_module_environment,

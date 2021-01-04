@@ -28,8 +28,9 @@ use std::option::Option::Some;
 use std::slice::Iter;
 
 use crate::ast::{
-    ApplicationStrategy, Arity, Boolean, ComplexPath, ConstantValue, Expression, IfExpression,
-    Lambda, Module, Number, Parameter, Path, Type, Visibility,
+    Application, ApplicationStrategy, Arity, Boolean, ComplexPath, Constant, ConstantValue,
+    Expression, Function, If, InternalCall, Lambda, Let, Module, Number, Parameter, Path, Type,
+    Visibility,
 };
 
 use crate::token::{
@@ -181,7 +182,10 @@ impl Parser {
     fn parse_application(identifier: Expression, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Box::from(identifier);
         let arguments = Self::parse_arguments(tokens)?;
-        Ok(Expression::Application(identifier, arguments))
+        Ok(Expression::Application(Application {
+            identifier,
+            arguments,
+        }))
     }
 
     fn parse_let(tokens: &mut Tokens) -> ExpressionResult {
@@ -191,7 +195,11 @@ impl Parser {
         if !Self::is_section_closed(tokens) {
             return Err(Cow::from("Invalid let expression"));
         }
-        Ok(Expression::Let(name, Box::new(value), Box::new(then)))
+        Ok(Expression::Let(Let::new(
+            name,
+            Box::new(value),
+            Box::new(then),
+        )))
     }
 
     fn parse_if(tokens: &mut Tokens) -> ExpressionResult {
@@ -201,7 +209,7 @@ impl Parser {
         if !Self::is_section_closed(tokens) {
             return Err(Cow::from("Invalid if expression"));
         }
-        Ok(Expression::If(IfExpression {
+        Ok(Expression::If(If {
             condition: Box::new(condition),
             if_true: Box::new(if_true_then),
             if_false: Box::new(if_false_then),
@@ -251,12 +259,12 @@ impl Parser {
                 }
             }
         }
-        Ok(Expression::Function(
+        Ok(Expression::Function(Function {
             visibility,
             application_strategy,
-            identifier,
-            lambda,
-        ))
+            name: identifier,
+            body: lambda,
+        }))
     }
 
     fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, ExpressionError> {
@@ -321,22 +329,32 @@ impl Parser {
                 }
                 Path::Complex(_) => (),
             },
-            Expression::Application(identifier, arguments) => {
+            Expression::Application(Application {
+                identifier,
+                arguments,
+            }) => {
                 Self::insert_used_identifiers(identifier, identifiers);
                 for argument in arguments {
                     Self::insert_used_identifiers(argument, identifiers);
                 }
             }
-            Expression::InternalCall(_, arguments) => {
+            Expression::InternalCall(InternalCall {
+                identifier: _,
+                arguments,
+            }) => {
                 for argument in arguments {
                     Self::insert_used_identifiers(argument, identifiers);
                 }
             }
-            Expression::Let(_, value, body) => {
+            Expression::Let(Let {
+                name: _,
+                value,
+                then: body,
+            }) => {
                 Self::insert_used_identifiers(value, identifiers);
                 Self::insert_used_identifiers(body, identifiers);
             }
-            Expression::If(IfExpression {
+            Expression::If(If {
                 condition,
                 if_true,
                 if_false,
@@ -359,19 +377,31 @@ impl Parser {
                 }
             }
             Expression::ConstantValue(_) => (),
-            Expression::Function(_, _, _, lambda) => {
+            Expression::Function(Function {
+                visibility: _,
+                application_strategy: _,
+                name: _,
+                body: lambda,
+            }) => {
                 for identifier in lambda.used_identifiers() {
                     identifiers.insert(identifier.clone());
                 }
             }
-            Expression::Constant(_, _, value) => Self::insert_used_identifiers(value, identifiers),
+            Expression::Constant(Constant {
+                visibility: _,
+                name: _,
+                value,
+            }) => Self::insert_used_identifiers(value, identifiers),
         };
     }
 
     fn parse_internal(tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let arguments = Self::parse_arguments(tokens)?;
-        Ok(Expression::InternalCall(identifier, arguments))
+        Ok(Expression::InternalCall(InternalCall {
+            identifier,
+            arguments,
+        }))
     }
 
     fn parse_module(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
@@ -384,8 +414,17 @@ impl Parser {
             }
             let member = Self::parse_first_token(token, tokens)?;
             match member {
-                Expression::Function(_, _, _, _) => functions.push(member),
-                Expression::Constant(_, _, _) => constants.push(member),
+                Expression::Function(Function {
+                    visibility: _,
+                    application_strategy: _,
+                    name: _,
+                    body: _,
+                }) => functions.push(member),
+                Expression::Constant(Constant {
+                    visibility: _,
+                    name: _,
+                    value: _,
+                }) => constants.push(member),
                 _ => return Err(Cow::from(format!("Invalid module member: {:?}", member))),
             }
         }
@@ -414,11 +453,11 @@ impl Parser {
                 _ => return Err(Cow::from(format!("Invalid modifier: {:?}", modifier))),
             }
         }
-        Ok(Expression::Constant(
+        Ok(Expression::Constant(Constant {
             visibility,
-            identifier,
-            Box::from(value),
-        ))
+            name: identifier,
+            value: Box::from(value),
+        }))
     }
 
     fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> Result<Path, ExpressionError> {

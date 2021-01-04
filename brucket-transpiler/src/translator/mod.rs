@@ -25,12 +25,13 @@
 use std::borrow::Cow;
 
 use brucket_ast::ast::{
-    Boolean, ConstantValue, Expression as BrucketExpression, Expression, Number, Path,
+    Application, Boolean, Constant, ConstantValue, Expression as BrucketExpression, Expression,
+    Function, InternalCall, Let, Number, Path,
 };
 use c_generator::syntax::expression::{
     Arguments, Expression as CExpression, FunctionCallExpression, NumberExpression,
 };
-use c_generator::syntax::function::{Function, Parameters};
+use c_generator::syntax::function::{Function as CFunction, Parameters};
 use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableInstruction};
 use c_generator::syntax::module::{ModuleMember, ModuleMembers};
 use c_generator::syntax::{PrimitiveType, Type};
@@ -123,7 +124,10 @@ impl Translatable<CExpression> for BrucketExpression {
                 members.append(&mut value.1);
                 Ok(value.0)
             }
-            Expression::Application(identifier, arguments) => {
+            Expression::Application(Application {
+                identifier,
+                arguments,
+            }) => {
                 let name = identifier.translate(state.incremented())?.0;
                 if let CExpression::NamedReference(name) = name {
                     let arguments = arguments
@@ -141,7 +145,10 @@ impl Translatable<CExpression> for BrucketExpression {
                     Err(Cow::from("Unsupported function name in application type"))
                 }
             }
-            Expression::InternalCall(identifier, arguments) => {
+            Expression::InternalCall(InternalCall {
+                identifier,
+                arguments,
+            }) => {
                 let arguments = arguments
                     .iter()
                     .map(|argument| argument.translate(state.incremented()))
@@ -154,13 +161,13 @@ impl Translatable<CExpression> for BrucketExpression {
                     arguments,
                 )))
             }
-            Expression::Let(name, value, next) => {
+            Expression::Let(Let { name, value, then }) => {
                 let (value, mut value_members) = value.translate(state.incremented())?;
-                let (next, mut next_members) = next.translate(state.incremented().incremented())?;
+                let (next, mut next_members) = then.translate(state.incremented().incremented())?;
                 members.append(&mut value_members);
                 members.append(&mut next_members);
                 let function_name = format!("__internal_let_{}_{}", state.let_count, name);
-                let function = ModuleMember::Function(Function::new(
+                let function = ModuleMember::Function(CFunction::new(
                     Type::Primitive(PrimitiveType::Int),
                     function_name.clone(),
                     Parameters::default(),
@@ -192,7 +199,7 @@ impl Translatable<CExpression> for BrucketExpression {
                 members.append(&mut if_members);
                 members.append(&mut else_members);
                 let function_name = format!("__internal_if_{}", state.if_count);
-                let function = ModuleMember::Function(Function::new(
+                let function = ModuleMember::Function(CFunction::new(
                     Type::Primitive(PrimitiveType::Int),
                     function_name.clone(),
                     Parameters::default(),
@@ -210,8 +217,17 @@ impl Translatable<CExpression> for BrucketExpression {
             }
             Expression::Lambda(_) => Err(Cow::from("Unsupported expression")),
             Expression::Module(_) => Err(Cow::from("Unsupported expression")),
-            Expression::Function(_, _, _, _) => Err(Cow::from("Unsupported expression")),
-            Expression::Constant(_, _, _) => Err(Cow::from("Unsupported expression")),
+            Expression::Function(Function {
+                visibility: _,
+                application_strategy: _,
+                name: _,
+                body: _,
+            }) => Err(Cow::from("Unsupported expression")),
+            Expression::Constant(Constant {
+                visibility: _,
+                name: _,
+                value: _,
+            }) => Err(Cow::from("Unsupported expression")),
         };
         expression.map(|expression| (expression, members))
     }

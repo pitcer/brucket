@@ -28,24 +28,37 @@ use std::collections::HashSet;
 pub enum Expression {
     ConstantValue(ConstantValue),
     Identifier(Path),
-    Application(Box<Expression>, Vec<Expression>),
-    InternalCall(String, Vec<Expression>),
-    Let(String, Box<Expression>, Box<Expression>),
-    If(IfExpression),
+    Application(Application),
+    InternalCall(InternalCall),
+    Let(Let),
+    If(If),
     Lambda(Lambda),
     Module(Module),
-    Function(Visibility, ApplicationStrategy, String, Lambda),
-    Constant(Visibility, String, Box<Expression>),
+    Function(Function),
+    Constant(Constant),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct IfExpression {
+pub struct Let {
+    pub name: String,
+    pub value: Box<Expression>,
+    pub then: Box<Expression>,
+}
+
+impl Let {
+    pub fn new(name: String, value: Box<Expression>, then: Box<Expression>) -> Self {
+        Self { name, value, then }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct If {
     pub condition: Box<Expression>,
     pub if_true: Box<Expression>,
     pub if_false: Box<Expression>,
 }
 
-impl IfExpression {
+impl If {
     pub fn new(
         condition: Box<Expression>,
         if_true: Box<Expression>,
@@ -55,6 +68,77 @@ impl IfExpression {
             condition,
             if_true,
             if_false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    pub visibility: Visibility,
+    pub application_strategy: ApplicationStrategy,
+    pub name: String,
+    pub body: Lambda,
+}
+
+impl Function {
+    pub fn new(
+        visibility: Visibility,
+        application_strategy: ApplicationStrategy,
+        name: String,
+        body: Lambda,
+    ) -> Self {
+        Self {
+            visibility,
+            application_strategy,
+            name,
+            body,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Constant {
+    pub visibility: Visibility,
+    pub name: String,
+    pub value: Box<Expression>,
+}
+
+impl Constant {
+    pub fn new(visibility: Visibility, name: String, value: Box<Expression>) -> Self {
+        Self {
+            visibility,
+            name,
+            value,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Application {
+    pub identifier: Box<Expression>,
+    pub arguments: Vec<Expression>,
+}
+
+impl Application {
+    pub fn new(identifier: Box<Expression>, arguments: Vec<Expression>) -> Self {
+        Self {
+            identifier,
+            arguments,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InternalCall {
+    pub identifier: String,
+    pub arguments: Vec<Expression>,
+}
+
+impl InternalCall {
+    pub fn new(identifier: String, arguments: Vec<Expression>) -> Self {
+        Self {
+            identifier,
+            arguments,
         }
     }
 }
