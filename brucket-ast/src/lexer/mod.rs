@@ -30,6 +30,7 @@ use std::str::Chars;
 use crate::token::{
     Boolean, Keyword, Modifier, Number, Operator, Parenthesis, PrimitiveType, Token,
 };
+use std::borrow::Cow;
 
 #[cfg(test)]
 mod test;
@@ -91,7 +92,8 @@ impl LexerCharacter for char {
 }
 
 type Characters<'a> = Peekable<Chars<'a>>;
-type TokenResult = Result<Option<Token>, String>;
+type TokenError = Cow<'static, str>;
+type TokenResult = Result<Option<Token>, TokenError>;
 
 impl Default for Lexer {
     fn default() -> Self {
@@ -125,7 +127,7 @@ impl Default for Lexer {
 }
 
 impl Lexer {
-    pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, String> {
+    pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, TokenError> {
         let mut result = Vec::new();
         let mut characters = syntax.chars().peekable();
         while let Some(current) = characters.next() {
@@ -186,7 +188,7 @@ impl Lexer {
         if second.is_some() && second.unwrap() == '.' && third.is_some() && third.unwrap() == '.' {
             Ok(Some(Token::Operator(Operator::Variadic)))
         } else {
-            Err("Invalid dots operator".to_string())
+            Err(Cow::from("Invalid dots operator"))
         }
     }
 

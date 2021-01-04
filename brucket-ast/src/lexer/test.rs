@@ -24,7 +24,7 @@
 
 use super::*;
 
-type TestResult = Result<(), String>;
+type TestResult = Result<(), Cow<'static, str>>;
 
 #[test]
 fn test_comment_is_skipped() -> TestResult {

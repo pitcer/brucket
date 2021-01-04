@@ -36,19 +36,21 @@ use crate::token::{
     Boolean as BooleanToken, Keyword, Modifier, Number as NumberToken, Operator, Parenthesis,
     PrimitiveType, Token,
 };
+use std::borrow::Cow;
 
 #[cfg(test)]
 mod test;
 
-type ExpressionResult = Result<Expression, String>;
+type ExpressionError = Cow<'static, str>;
+type ExpressionResult = Result<Expression, ExpressionError>;
 
 pub struct Parser;
 
 impl Token {
-    fn as_symbol(&self) -> Result<String, String> {
+    fn as_symbol(&self) -> Result<String, ExpressionError> {
         match self {
             Token::Symbol(symbol) => Ok(symbol.clone()),
-            _ => Err(format!("Token is not a symbol: {:?}", self)),
+            _ => Err(Cow::from(format!("Token is not a symbol: {:?}", self))),
         }
     }
 
@@ -96,7 +98,7 @@ impl Parser {
     fn parse_first(tokens: &mut Tokens) -> ExpressionResult {
         match tokens.next() {
             Some(token) => Self::parse_first_token(token, tokens),
-            None => Err("Empty tokens".to_string()),
+            None => Err(Cow::from("Empty tokens")),
         }
     }
 
@@ -104,14 +106,14 @@ impl Parser {
         match token {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => Self::parse_section(tokens),
-                Parenthesis::Close(_) => Err("Unexpected close parenthesis".to_string()),
+                Parenthesis::Close(_) => Err(Cow::from("Unexpected close parenthesis")),
             },
             Token::Operator(operator) => match operator {
-                Operator::Variadic => Err("Unexpected variadic operator".to_string()),
-                Operator::Path => Err("Unexpected path operator".to_string()),
-                Operator::Type => Err("Unexpected type operator".to_string()),
-                Operator::SkinnyArrowRight => Err("Unexpected '->'".to_string()),
-                Operator::ThickArrowRight => Err("Unexpected '=>'".to_string()),
+                Operator::Variadic => Err(Cow::from("Unexpected variadic operator")),
+                Operator::Path => Err(Cow::from("Unexpected path operator")),
+                Operator::Type => Err(Cow::from("Unexpected type operator")),
+                Operator::SkinnyArrowRight => Err(Cow::from("Unexpected '->'")),
+                Operator::ThickArrowRight => Err(Cow::from("Unexpected '=>'")),
             },
             Token::Null => Ok(Expression::ConstantValue(ConstantValue::Null)),
             Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(
@@ -123,20 +125,24 @@ impl Parser {
             Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(
                 value.to_expression(),
             ))),
-            Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword)),
+            Token::Keyword(keyword) => Err(Cow::from(format!("Unexpected token: {:?}", keyword))),
             Token::Symbol(symbol) => Ok(Expression::Identifier(Self::parse_path_symbol(
                 symbol.clone(),
                 tokens,
             )?)),
-            Token::Modifier(modifier) => Err(format!("Unexpected token: {:?}", modifier)),
-            Token::PrimitiveType(type_token) => Err(format!("Unexpected token: {:?}", type_token)),
+            Token::Modifier(modifier) => {
+                Err(Cow::from(format!("Unexpected token: {:?}", modifier)))
+            }
+            Token::PrimitiveType(type_token) => {
+                Err(Cow::from(format!("Unexpected token: {:?}", type_token)))
+            }
         }
     }
 
     fn parse_section(tokens: &mut Tokens) -> ExpressionResult {
         match tokens.next() {
             Some(token) => Self::parse_section_token(token, tokens),
-            None => Err("Empty tokens".to_string()),
+            None => Err(Cow::from("Empty tokens")),
         }
     }
 
@@ -166,9 +172,9 @@ impl Parser {
             }
             Token::Operator(operator) => match operator {
                 Operator::ThickArrowRight => Self::parse_lambda(tokens).map(Expression::Lambda),
-                _ => Err(format!("Invalid operator: {:?}", operator)),
+                _ => Err(Cow::from(format!("Invalid operator: {:?}", operator))),
             },
-            _ => Err(format!("Invalid token: {:?}", token)),
+            _ => Err(Cow::from(format!("Invalid token: {:?}", token))),
         }
     }
 
@@ -183,7 +189,7 @@ impl Parser {
         let value = Self::parse_first(tokens)?;
         let then = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Invalid let expression".to_string());
+            return Err(Cow::from("Invalid let expression"));
         }
         Ok(Expression::Let(name, Box::new(value), Box::new(then)))
     }
@@ -193,7 +199,7 @@ impl Parser {
         let if_true_then = Self::parse_first(tokens)?;
         let if_false_then = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Invalid if expression".to_string());
+            return Err(Cow::from("Invalid if expression"));
         }
         Ok(Expression::If(IfExpression {
             condition: Box::new(condition),
@@ -211,7 +217,7 @@ impl Parser {
                 return Self::parse_with_modifiers(token, modifiers, tokens);
             }
         }
-        Err("Invalid token".to_string())
+        Err(Cow::from("Invalid token"))
     }
 
     fn parse_with_modifiers(
@@ -224,9 +230,9 @@ impl Parser {
                 Keyword::Function => Self::parse_function(modifiers, tokens),
                 Keyword::Constant => Self::parse_constant(modifiers, tokens),
                 Keyword::Module => Self::parse_module(modifiers, tokens),
-                _ => Err("Invalid token".to_string()),
+                _ => Err(Cow::from("Invalid token")),
             },
-            _ => Err("Invalid token".to_string()),
+            _ => Err(Cow::from("Invalid token")),
         }
     }
 
@@ -241,7 +247,7 @@ impl Parser {
                 Modifier::Private => visibility = Visibility::Private,
                 Modifier::Lazy => application_strategy = ApplicationStrategy::Lazy,
                 Modifier::Static => {
-                    return Err("Static is an invalid modifier for function".to_string())
+                    return Err(Cow::from("Static is an invalid modifier for function"))
                 }
             }
         }
@@ -253,12 +259,12 @@ impl Parser {
         ))
     }
 
-    fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, String> {
+    fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, ExpressionError> {
         let parameters = Self::parse_parameters(tokens)?;
         let return_type = Self::parse_return_type(tokens)?;
         let body = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Invalid lambda expression".to_string());
+            return Err(Cow::from("Invalid lambda expression"));
         }
         let mut used_identifiers = HashSet::new();
         Self::insert_used_identifiers(&body, &mut used_identifiers);
@@ -274,7 +280,7 @@ impl Parser {
         ))
     }
 
-    fn parse_return_type(tokens: &mut Tokens) -> Result<Type, String> {
+    fn parse_return_type(tokens: &mut Tokens) -> Result<Type, ExpressionError> {
         let next = tokens.peek();
         if let Some(token) = next {
             match token {
@@ -285,11 +291,11 @@ impl Parser {
                 _ => Ok(Type::Any),
             }
         } else {
-            Err("An unexpected end of tokens".to_string())
+            Err(Cow::from("An unexpected end of tokens"))
         }
     }
 
-    fn parse_type(tokens: &mut Tokens) -> Result<Type, String> {
+    fn parse_type(tokens: &mut Tokens) -> Result<Type, ExpressionError> {
         let next = tokens.next();
         if let Some(token) = next {
             match token {
@@ -300,10 +306,10 @@ impl Parser {
                     PrimitiveType::Any => Ok(Type::Any),
                 },
                 Token::Symbol(symbol) => Ok(Type::Symbol(symbol.clone())),
-                _ => Err("Invalid type token".to_string()),
+                _ => Err(Cow::from("Invalid type token")),
             }
         } else {
-            Err("End of tokens".to_string())
+            Err(Cow::from("End of tokens"))
         }
     }
 
@@ -380,14 +386,14 @@ impl Parser {
             match member {
                 Expression::Function(_, _, _, _) => functions.push(member),
                 Expression::Constant(_, _, _) => constants.push(member),
-                _ => return Err(format!("Invalid module member: {:?}", member)),
+                _ => return Err(Cow::from(format!("Invalid module member: {:?}", member))),
             }
         }
         let mut is_static = false;
         for modifier in modifiers {
             match modifier {
                 Modifier::Static => is_static = true,
-                _ => return Err("Invalid module modifier".to_string()),
+                _ => return Err(Cow::from("Invalid module modifier")),
             }
         }
         let module = Module::new(is_static, identifier, functions, constants);
@@ -398,14 +404,14 @@ impl Parser {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Invalid constant expression".to_string());
+            return Err(Cow::from("Invalid constant expression"));
         }
         let mut visibility = Visibility::Private;
         for modifier in modifiers {
             match modifier {
                 Modifier::Public => visibility = Visibility::Public,
                 Modifier::Private => visibility = Visibility::Private,
-                _ => return Err(format!("Invalid modifier: {:?}", modifier)),
+                _ => return Err(Cow::from(format!("Invalid modifier: {:?}", modifier))),
             }
         }
         Ok(Expression::Constant(
@@ -415,7 +421,7 @@ impl Parser {
         ))
     }
 
-    fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> Result<Path, String> {
+    fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> Result<Path, ExpressionError> {
         let mut path = Vec::new();
         path.push(symbol);
         let mut last_path_operator = false;
@@ -424,7 +430,7 @@ impl Parser {
                 Token::Operator(operator) => match operator {
                     Operator::Path => {
                         if last_path_operator {
-                            return Err("Unexpected path operator".to_string());
+                            return Err(Cow::from("Unexpected path operator"));
                         } else {
                             last_path_operator = true;
                             tokens.next();
@@ -453,16 +459,16 @@ impl Parser {
         }
     }
 
-    fn parse_identifier(tokens: &mut Tokens) -> Result<String, String> {
+    fn parse_identifier(tokens: &mut Tokens) -> Result<String, ExpressionError> {
         let identifier = tokens.next();
         if identifier.is_none() {
-            return Err("Missing name token".to_string());
+            return Err(Cow::from("Missing name token"));
         }
         let identifier = identifier.unwrap();
         identifier.as_symbol()
     }
 
-    fn parse_arguments(tokens: &mut Tokens) -> Result<Vec<Expression>, String> {
+    fn parse_arguments(tokens: &mut Tokens) -> Result<Vec<Expression>, ExpressionError> {
         let mut arguments = Vec::new();
         while let Some(token) = tokens.next() {
             if token.is_close_parenthesis() {
@@ -474,9 +480,9 @@ impl Parser {
         Ok(arguments)
     }
 
-    fn parse_parameters(tokens: &mut Tokens) -> Result<Vec<Parameter>, String> {
+    fn parse_parameters(tokens: &mut Tokens) -> Result<Vec<Parameter>, ExpressionError> {
         if !Self::is_section_opened(tokens) {
-            return Err("Missing parameters section".to_string());
+            return Err(Cow::from("Missing parameters section"));
         }
         let mut parameters = Vec::new();
         while let Some(token) = tokens.next() {
@@ -489,7 +495,7 @@ impl Parser {
         Ok(parameters)
     }
 
-    fn parse_parameter(token: &Token, tokens: &mut Tokens) -> Result<Parameter, String> {
+    fn parse_parameter(token: &Token, tokens: &mut Tokens) -> Result<Parameter, ExpressionError> {
         let name = token.as_symbol()?;
         let next = tokens.peek();
         if let Some(token) = next {
@@ -511,16 +517,16 @@ impl Parser {
                                 Arity::Unary
                             }
                         } else {
-                            return Err("End of tokens in parameters section".to_string());
+                            return Err(Cow::from("End of tokens in parameters section"));
                         };
                         Ok(Parameter::new(name, parameter_type, arity))
                     }
-                    _ => Err("Invalid operator".to_string()),
+                    _ => Err(Cow::from("Invalid operator")),
                 },
                 _ => Ok(Parameter::new(name, Type::Any, Arity::Unary)),
             }
         } else {
-            Err("End of tokens in parameters section".to_string())
+            Err(Cow::from("End of tokens in parameters section"))
         }
     }
 

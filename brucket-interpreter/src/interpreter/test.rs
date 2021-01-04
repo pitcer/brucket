@@ -31,7 +31,7 @@ use crate::value::{Closure, Numeric};
 
 use super::*;
 
-type TestResult = Result<(), String>;
+type TestResult = Result<(), Cow<'static, str>>;
 
 #[test]
 fn test_interpret_number() -> TestResult {
@@ -128,7 +128,7 @@ fn test_if_expression_is_evaluated_lazily() -> TestResult {
 #[test]
 fn test_environment_is_cleared() {
     let interpreter = Interpreter::default();
-    let expected = Err("Undefined variable: x".to_string());
+    let expected = Err(Cow::from("Undefined variable: x"));
     let actual = interpreter.interpret_with_base_library("(+ (let x 42 x) x)");
     assert_eq!(expected, actual);
 }

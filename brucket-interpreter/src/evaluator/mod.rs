@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
 use std::rc::Rc;
@@ -44,7 +44,8 @@ mod internal;
 #[cfg(test)]
 mod test;
 
-type ValueResult = Result<Value, String>;
+type ValueError = Cow<'static, str>;
+type ValueResult = Result<Value, ValueError>;
 
 pub struct Evaluator {
     internal_environment: InternalEnvironment,
@@ -241,7 +242,7 @@ impl Evaluator {
                 environment,
             )
         } else {
-            Err("Invalid condition type".to_string())
+            Err(Cow::from("Invalid condition type"))
         }
     }
 
@@ -293,7 +294,7 @@ impl Evaluator {
                         let value: &Value = &value;
                         Ok(value.clone())
                     } else {
-                        Err(format!("Undefined variable: {}", identifier))
+                        Err(Cow::from(format!("Undefined variable: {}", identifier)))
                     }
                 }
             }
@@ -309,10 +310,10 @@ impl Evaluator {
                             &Path::Simple(path.identifier().clone()),
                         )
                     } else {
-                        Err("".to_string())
+                        Err(Cow::from(format!("Undefined environment: {}", first_path)))
                     }
                 } else {
-                    Err("".to_string())
+                    Err(Cow::from(format!("Undefined first_path")))
                 }
             }
         }
@@ -356,10 +357,10 @@ impl Evaluator {
                 module_environment,
                 &environment,
             ),
-            _ => Err(format!(
+            _ => Err(Cow::from(format!(
                 "Invalid identifier type. Expected: Closure or Thunk, Actual: {:?}",
                 identifier
-            )),
+            ))),
         }
     }
 
@@ -371,7 +372,7 @@ impl Evaluator {
         module_environment: &ModuleEnvironment,
         environment: &Environment,
         closure: Closure,
-    ) -> Result<Value, String> {
+    ) -> ValueResult {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
         let closure_environment = closure.environment();
@@ -416,10 +417,10 @@ impl Evaluator {
         let parameters_length = parameters.len();
         let arguments_length = arguments.len();
         if !has_variadic_parameter && parameters_length != arguments_length {
-            return Err(format!(
+            return Err(Cow::from(format!(
                 "Invalid number of arguments. Expected: {}, Actual: {}",
                 parameters_length, arguments_length
-            ));
+            )));
         }
         let result = self.evaluate_environment(
             closure.body(),
@@ -472,7 +473,10 @@ impl Evaluator {
     ) -> ValueResult {
         let function = self.internal_environment.get(identifier);
         if function.is_none() {
-            return Err(format!("Undefined internal identifier: {}", identifier));
+            return Err(Cow::from(format!(
+                "Undefined internal identifier: {}",
+                identifier
+            )));
         }
         let function = function.unwrap();
         let arguments = self.evaluate_arguments(
@@ -530,7 +534,7 @@ impl Evaluator {
                 closures.push((identifier, Rc::clone(&closure), used_identifiers));
                 evaluated_closures.insert(identifier, closure);
             } else {
-                return Err("Invalid function type".to_string());
+                return Err(Cow::from("Invalid function type"));
             }
         }
         Self::fill_closures(&closures, &evaluated_closures)?;
@@ -550,7 +554,7 @@ impl Evaluator {
                 constants_environment.insert(identifier.clone(), Rc::clone(&value));
                 evaluated_constants.insert(identifier, value);
             } else {
-                return Err("Invalid constant type".to_string());
+                return Err(Cow::from("Invalid constant type"));
             }
         }
         Self::fill_closures(&closures, &evaluated_constants)?;

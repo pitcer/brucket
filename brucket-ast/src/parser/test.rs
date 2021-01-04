@@ -25,7 +25,7 @@
 use super::*;
 use crate::ast::{Boolean, IfExpression};
 
-type TestResult = Result<(), String>;
+type TestResult = Result<(), Cow<'static, str>>;
 
 #[test]
 fn test_parsed_number_token_is_constant_expression() -> TestResult {

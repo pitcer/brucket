@@ -39,11 +39,12 @@ use c_generator::syntax::{PrimitiveType, Type};
 use translator::Translatable;
 
 use crate::translator::TranslationState;
+use std::borrow::Cow;
 
 mod translator;
 mod transpiler;
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), Cow<'static, str>> {
     let mut standard_input = io::stdin();
     let syntax = read(&mut standard_input).expect("Cannot read syntax from standard input");
     let lexer = Lexer::default();

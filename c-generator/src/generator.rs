@@ -22,8 +22,10 @@
  * SOFTWARE.
  */
 
+use std::borrow::Cow;
+
 pub type GeneratorResult = Result<String, GeneratorError>;
-pub type GeneratorError = String;
+pub type GeneratorError = Cow<'static, str>;
 
 pub trait Generator {
     fn generate(&self) -> GeneratorResult;

@@ -26,7 +26,7 @@ use brucket_ast::ast::{Boolean, Parameter, Type, Visibility};
 
 use super::*;
 
-type TestResult = Result<(), String>;
+type TestResult = Result<(), ValueError>;
 
 #[test]
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
@@ -319,7 +319,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
 #[test]
 fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
     let evaluator = Evaluator::default();
-    let expected = Err("Undefined variable: z".to_string());
+    let expected = Err(Cow::from("Undefined variable: z"));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
         Box::new(Expression::ConstantValue(ConstantValue::Numeric(

@@ -31,13 +31,14 @@ use brucket_ast::parser::Parser;
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
 use crate::value::Value;
+use std::borrow::Cow;
 
 #[cfg(test)]
 mod test;
 
 pub type ModuleEnvironment = HashMap<String, Environment>;
 
-type ValueResult = Result<Value, String>;
+type ValueResult = Result<Value, Cow<'static, str>>;
 
 pub struct Interpreter {
     lexer: Lexer,
@@ -84,7 +85,9 @@ impl Interpreter {
                     module_environment.insert(name, environment);
                 }
             } else {
-                return Err("One of the given modules did not evaluate to module".to_string());
+                return Err(Cow::from(
+                    "One of the given modules did not evaluate to module",
+                ));
             }
         }
         self.interpret_with_module_environment(
@@ -118,7 +121,7 @@ impl Interpreter {
         )
     }
 
-    fn parse_syntax(&self, syntax: &str) -> Result<Expression, String> {
+    fn parse_syntax(&self, syntax: &str) -> Result<Expression, Cow<'static, str>> {
         let tokens = self.lexer.tokenize(syntax)?;
         self.parser.parse(&tokens)
     }

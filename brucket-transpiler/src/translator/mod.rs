@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+use std::borrow::Cow;
+
 use brucket_ast::ast::{
     Boolean, ConstantValue, Expression as BrucketExpression, Expression, Number, Path,
 };
@@ -34,7 +36,7 @@ use c_generator::syntax::module::{ModuleMember, ModuleMembers};
 use c_generator::syntax::{PrimitiveType, Type};
 
 pub type TranslatorResult<T> = Result<(T, ModuleMembers), TranslatorError>;
-pub type TranslatorError = String;
+pub type TranslatorError = Cow<'static, str>;
 
 pub trait Translator<F, T> {
     fn translate(&self, from: F) -> TranslatorResult<T>;
@@ -136,7 +138,7 @@ impl Translatable<CExpression> for BrucketExpression {
                         name, arguments,
                     )))
                 } else {
-                    Err("Unsupported function name in application type".to_string())
+                    Err(Cow::from("Unsupported function name in application type"))
                 }
             }
             Expression::InternalCall(identifier, arguments) => {
@@ -206,10 +208,10 @@ impl Translatable<CExpression> for BrucketExpression {
                     Arguments::default(),
                 )))
             }
-            Expression::Lambda(_) => Err("Unsupported expression".to_string()),
-            Expression::Module(_) => Err("Unsupported expression".to_string()),
-            Expression::Function(_, _, _, _) => Err("Unsupported expression".to_string()),
-            Expression::Constant(_, _, _) => Err("Unsupported expression".to_string()),
+            Expression::Lambda(_) => Err(Cow::from("Unsupported expression")),
+            Expression::Module(_) => Err(Cow::from("Unsupported expression")),
+            Expression::Function(_, _, _, _) => Err(Cow::from("Unsupported expression")),
+            Expression::Constant(_, _, _) => Err(Cow::from("Unsupported expression")),
         };
         expression.map(|expression| (expression, members))
     }

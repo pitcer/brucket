@@ -26,6 +26,7 @@ use std::collections::HashMap;
 
 use crate::evaluator::{Value, ValueResult};
 use crate::value::Numeric;
+use std::borrow::Cow;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[cfg(test)]
@@ -186,6 +187,7 @@ fn is_less_or_equal(arguments: Vec<Value>) -> ValueResult {
 
 mod pair {
     use super::*;
+    use std::borrow::Cow;
 
     pub fn new(arguments: Vec<Value>) -> ValueResult {
         let (first, second) = get_binary_function_arguments(arguments)?;
@@ -197,7 +199,7 @@ mod pair {
         if let Value::Pair(first, _) = argument {
             Ok(*first)
         } else {
-            Err("Invalid type of argument".to_string())
+            Err(Cow::from("Invalid type of argument"))
         }
     }
 
@@ -206,19 +208,21 @@ mod pair {
         if let Value::Pair(_, second) = argument {
             Ok(*second)
         } else {
-            Err("Invalid type of argument".to_string())
+            Err(Cow::from("Invalid type of argument"))
         }
     }
 }
 
-fn get_unary_function_argument(arguments: Vec<Value>) -> Result<Value, String> {
+fn get_unary_function_argument(arguments: Vec<Value>) -> Result<Value, Cow<'static, str>> {
     validate_arguments_length(&arguments, 1)?;
     let mut iterator = arguments.into_iter();
     let first = iterator.next().unwrap();
     Ok(first)
 }
 
-fn get_binary_function_arguments(arguments: Vec<Value>) -> Result<(Value, Value), String> {
+fn get_binary_function_arguments(
+    arguments: Vec<Value>,
+) -> Result<(Value, Value), Cow<'static, str>> {
     validate_arguments_length(&arguments, 2)?;
     let mut iterator = arguments.into_iter();
     let first = iterator.next().unwrap();
@@ -226,15 +230,18 @@ fn get_binary_function_arguments(arguments: Vec<Value>) -> Result<(Value, Value)
     Ok((first, second))
 }
 
-fn validate_arguments_length(arguments: &[Value], expected_length: usize) -> Result<(), String> {
+fn validate_arguments_length(
+    arguments: &[Value],
+    expected_length: usize,
+) -> Result<(), Cow<'static, str>> {
     let actual_length = arguments.len();
     if actual_length == expected_length {
         Ok(())
     } else {
-        Err(format!(
+        Err(Cow::from(format!(
             "Invalid number of arguments. Expected: {}; Actual: {}",
             expected_length, actual_length
-        ))
+        )))
     }
 }
 
