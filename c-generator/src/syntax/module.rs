@@ -38,10 +38,10 @@ impl Module {
 }
 
 impl Generator for Module {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         Ok(self
             .members
-            .iter()
+            .into_iter()
             .map(|member| member.generate())
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join("\n"))
@@ -57,7 +57,7 @@ pub enum ModuleMember {
 }
 
 impl Generator for ModuleMember {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         match self {
             ModuleMember::Macro(c_macro) => c_macro.generate(),
             ModuleMember::Function(function) => function.generate(),

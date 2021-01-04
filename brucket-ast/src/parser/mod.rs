@@ -25,7 +25,6 @@
 use std::collections::HashSet;
 use std::iter::Peekable;
 use std::option::Option::Some;
-use std::slice::Iter;
 
 use crate::ast::{
     Application, ApplicationStrategy, Arity, Boolean, ComplexPath, Constant, ConstantValue,
@@ -38,6 +37,7 @@ use crate::token::{
     PrimitiveType, Token,
 };
 use std::borrow::Cow;
+use std::vec::IntoIter;
 
 #[cfg(test)]
 mod test;
@@ -45,13 +45,20 @@ mod test;
 type ExpressionError = Cow<'static, str>;
 type ExpressionResult = Result<Expression, ExpressionError>;
 
+pub type ParseResult<T> = Result<T, ParseError>;
+pub type ParseError = Cow<'static, str>;
+
+pub trait Parse<T> {
+    fn parse(self) -> ParseResult<T>;
+}
+
 pub struct Parser;
 
 impl Token {
-    fn as_symbol(&self) -> Result<String, ExpressionError> {
+    fn into_symbol(self) -> Result<String, ExpressionError> {
         match self {
-            Token::Symbol(symbol) => Ok(symbol.clone()),
-            _ => Err(Cow::from(format!("Token is not a symbol: {:?}", self))),
+            Token::Symbol(symbol) => Ok(symbol),
+            _ => Err(format!("Token is not a symbol: {:?}", self).into()),
         }
     }
 
@@ -64,7 +71,7 @@ impl Token {
     }
 }
 
-type Tokens<'a> = Peekable<Iter<'a, Token>>;
+type Tokens = Peekable<IntoIter<Token>>;
 
 impl Default for Parser {
     fn default() -> Self {
@@ -72,27 +79,27 @@ impl Default for Parser {
     }
 }
 
-impl NumberToken {
-    fn to_expression(&self) -> Number {
+impl Parse<Number> for NumberToken {
+    fn parse(self) -> ParseResult<Number> {
         match self {
-            NumberToken::Integer(value) => Number::Integer(value.to_string()),
-            NumberToken::FloatingPoint(value) => Number::FloatingPoint(value.to_string()),
+            NumberToken::Integer(value) => Ok(Number::Integer(value)),
+            NumberToken::FloatingPoint(value) => Ok(Number::FloatingPoint(value)),
         }
     }
 }
 
-impl BooleanToken {
-    fn to_expression(&self) -> Boolean {
+impl Parse<Boolean> for BooleanToken {
+    fn parse(self) -> ParseResult<Boolean> {
         match self {
-            BooleanToken::True => Boolean::True,
-            BooleanToken::False => Boolean::False,
+            BooleanToken::True => Ok(Boolean::True),
+            BooleanToken::False => Ok(Boolean::False),
         }
     }
 }
 
 impl Parser {
-    pub fn parse(&self, tokens: &[Token]) -> ExpressionResult {
-        let mut iterator = tokens.iter().peekable();
+    pub fn parse(&self, tokens: Vec<Token>) -> ExpressionResult {
+        let mut iterator = tokens.into_iter().peekable();
         Self::parse_first(&mut iterator)
     }
 
@@ -103,7 +110,7 @@ impl Parser {
         }
     }
 
-    fn parse_first_token(token: &Token, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_first_token(token: Token, tokens: &mut Tokens) -> ExpressionResult {
         match token {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => Self::parse_section(tokens),
@@ -117,19 +124,16 @@ impl Parser {
                 Operator::ThickArrowRight => Err(Cow::from("Unexpected '=>'")),
             },
             Token::Null => Ok(Expression::ConstantValue(ConstantValue::Null)),
-            Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(
-                value.clone(),
-            ))),
+            Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(value))),
             Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(
-                value.to_expression(),
+                value.parse()?,
             ))),
             Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(
-                value.to_expression(),
+                value.parse()?,
             ))),
             Token::Keyword(keyword) => Err(Cow::from(format!("Unexpected token: {:?}", keyword))),
             Token::Symbol(symbol) => Ok(Expression::Identifier(Self::parse_path_symbol(
-                symbol.clone(),
-                tokens,
+                symbol, tokens,
             )?)),
             Token::Modifier(modifier) => {
                 Err(Cow::from(format!("Unexpected token: {:?}", modifier)))
@@ -147,7 +151,7 @@ impl Parser {
         }
     }
 
-    fn parse_section_token(token: &Token, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_section_token(token: Token, tokens: &mut Tokens) -> ExpressionResult {
         match token {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => {
@@ -167,7 +171,7 @@ impl Parser {
             },
             Token::Modifier(modifier) => Self::parse_modifiers(modifier, tokens),
             Token::Symbol(symbol) => {
-                let path = Self::parse_path_symbol(symbol.clone(), tokens)?;
+                let path = Self::parse_path_symbol(symbol, tokens)?;
                 let identifier = Expression::Identifier(path);
                 Self::parse_application(identifier, tokens)
             }
@@ -216,7 +220,7 @@ impl Parser {
         }))
     }
 
-    fn parse_modifiers(first_modifier: &Modifier, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_modifiers(first_modifier: Modifier, tokens: &mut Tokens) -> ExpressionResult {
         let mut modifiers = vec![first_modifier];
         while let Some(token) = tokens.next() {
             if let Token::Modifier(modifier) = token {
@@ -229,8 +233,8 @@ impl Parser {
     }
 
     fn parse_with_modifiers(
-        current_token: &Token,
-        modifiers: Vec<&Modifier>,
+        current_token: Token,
+        modifiers: Vec<Modifier>,
         tokens: &mut Tokens,
     ) -> ExpressionResult {
         match current_token {
@@ -244,7 +248,7 @@ impl Parser {
         }
     }
 
-    fn parse_function(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_function(modifiers: Vec<Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let lambda = Self::parse_lambda(tokens)?;
         let mut visibility = Visibility::Private;
@@ -313,7 +317,7 @@ impl Parser {
                     PrimitiveType::String => Ok(Type::String),
                     PrimitiveType::Any => Ok(Type::Any),
                 },
-                Token::Symbol(symbol) => Ok(Type::Symbol(symbol.clone())),
+                Token::Symbol(symbol) => Ok(Type::Symbol(symbol)),
                 _ => Err(Cow::from("Invalid type token")),
             }
         } else {
@@ -404,7 +408,7 @@ impl Parser {
         }))
     }
 
-    fn parse_module(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_module(modifiers: Vec<Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let mut functions = Vec::new();
         let mut constants = Vec::new();
@@ -430,7 +434,7 @@ impl Parser {
         Ok(Expression::Module(module))
     }
 
-    fn parse_constant(modifiers: Vec<&Modifier>, tokens: &mut Tokens) -> ExpressionResult {
+    fn parse_constant(modifiers: Vec<Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let value = Self::parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
@@ -495,7 +499,7 @@ impl Parser {
             return Err(Cow::from("Missing name token"));
         }
         let identifier = identifier.unwrap();
-        identifier.as_symbol()
+        identifier.into_symbol()
     }
 
     fn parse_arguments(tokens: &mut Tokens) -> Result<Vec<Expression>, ExpressionError> {
@@ -525,8 +529,8 @@ impl Parser {
         Ok(parameters)
     }
 
-    fn parse_parameter(token: &Token, tokens: &mut Tokens) -> Result<Parameter, ExpressionError> {
-        let name = token.as_symbol()?;
+    fn parse_parameter(token: Token, tokens: &mut Tokens) -> Result<Parameter, ExpressionError> {
+        let name = token.into_symbol()?;
         let next = tokens.peek();
         if let Some(token) = next {
             match token {

@@ -28,5 +28,5 @@ pub type GeneratorResult = Result<String, GeneratorError>;
 pub type GeneratorError = Cow<'static, str>;
 
 pub trait Generator {
-    fn generate(&self) -> GeneratorResult;
+    fn generate(self) -> GeneratorResult;
 }

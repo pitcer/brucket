@@ -50,16 +50,16 @@ impl Function {
 }
 
 impl Generator for Function {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         let parameters = self
             .parameters
-            .iter()
+            .into_iter()
             .map(|parameter| parameter.generate())
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join(", ");
         let body = self
             .body
-            .iter()
+            .into_iter()
             .map(|instruction| {
                 instruction
                     .generate()
@@ -94,7 +94,7 @@ impl FunctionParameter {
 }
 
 impl Generator for FunctionParameter {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         Ok(format!("{} {}", self.parameter_type.generate()?, self.name))
     }
 }

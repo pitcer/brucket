@@ -39,12 +39,8 @@ use c_generator::syntax::{PrimitiveType, Type};
 pub type TranslatorResult<T> = Result<(T, ModuleMembers), TranslatorError>;
 pub type TranslatorError = Cow<'static, str>;
 
-pub trait Translator<F, T> {
-    fn translate(&self, from: F) -> TranslatorResult<T>;
-}
-
-pub trait Translatable<T> {
-    fn translate(&self, state: TranslationState) -> TranslatorResult<T>;
+pub trait Translate<T> {
+    fn translate(self, state: TranslationState) -> TranslatorResult<T>;
 }
 
 pub struct TranslationState {
@@ -65,31 +61,29 @@ impl TranslationState {
     }
 }
 
-impl Translatable<CExpression> for ConstantValue {
-    fn translate(&self, _state: TranslationState) -> TranslatorResult<CExpression> {
+impl Translate<CExpression> for ConstantValue {
+    fn translate(self, _state: TranslationState) -> TranslatorResult<CExpression> {
         let expression = match self {
             ConstantValue::Unit => CExpression::NamedReference("UNIT".to_string()),
             ConstantValue::Null => CExpression::NamedReference("NULL".to_string()),
             ConstantValue::Numeric(numeric) => match numeric {
-                Number::Integer(value) => {
-                    CExpression::Number(NumberExpression::Integer(value.clone()))
-                }
+                Number::Integer(value) => CExpression::Number(NumberExpression::Integer(value)),
                 Number::FloatingPoint(value) => {
-                    CExpression::Number(NumberExpression::FloatingPoint(value.clone()))
+                    CExpression::Number(NumberExpression::FloatingPoint(value))
                 }
             },
             ConstantValue::Boolean(boolean) => match boolean {
                 Boolean::True => CExpression::NamedReference("TRUE".to_string()),
                 Boolean::False => CExpression::NamedReference("FALSE".to_string()),
             },
-            ConstantValue::String(string) => CExpression::String(string.to_string()),
+            ConstantValue::String(string) => CExpression::String(string),
         };
         Ok((expression, ModuleMembers::default()))
     }
 }
 
-impl Translatable<CExpression> for Path {
-    fn translate(&self, _state: TranslationState) -> TranslatorResult<CExpression> {
+impl Translate<CExpression> for Path {
+    fn translate(self, _state: TranslationState) -> TranslatorResult<CExpression> {
         let expression = match self {
             Path::Simple(path) => {
                 let path = path
@@ -110,8 +104,8 @@ impl Translatable<CExpression> for Path {
     }
 }
 
-impl Translatable<CExpression> for BrucketExpression {
-    fn translate(&self, state: TranslationState) -> TranslatorResult<CExpression> {
+impl Translate<CExpression> for BrucketExpression {
+    fn translate(self, state: TranslationState) -> TranslatorResult<CExpression> {
         let mut members = ModuleMembers::new();
         let expression = match self {
             Expression::ConstantValue(value) => {
@@ -131,7 +125,7 @@ impl Translatable<CExpression> for BrucketExpression {
                 let name = identifier.translate(state.incremented())?.0;
                 if let CExpression::NamedReference(name) = name {
                     let arguments = arguments
-                        .iter()
+                        .into_iter()
                         .map(|argument| argument.translate(state.incremented().incremented()))
                         .collect::<Result<Vec<(CExpression, ModuleMembers)>, TranslatorError>>()?;
                     let (arguments, application_members) = unfold_tuple_vector(arguments);
@@ -150,15 +144,14 @@ impl Translatable<CExpression> for BrucketExpression {
                 arguments,
             }) => {
                 let arguments = arguments
-                    .iter()
+                    .into_iter()
                     .map(|argument| argument.translate(state.incremented()))
                     .collect::<Result<Vec<(CExpression, ModuleMembers)>, TranslatorError>>()?;
                 let (arguments, application_members) = unfold_tuple_vector(arguments);
                 let mut application_members = application_members.into_iter().flatten().collect();
                 members.append(&mut application_members);
                 Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-                    identifier.to_string(),
-                    arguments,
+                    identifier, arguments,
                 )))
             }
             Expression::Let(Let { name, value, then }) => {
@@ -174,7 +167,7 @@ impl Translatable<CExpression> for BrucketExpression {
                     vec![
                         Instruction::Variable(VariableInstruction::new(
                             Type::Primitive(PrimitiveType::Int),
-                            name.to_string(),
+                            name,
                             Some(value),
                         )),
                         Instruction::Return(next),

@@ -36,7 +36,7 @@ use c_generator::syntax::function::{Function, FunctionParameter, Parameters};
 use c_generator::syntax::instruction::Instruction;
 use c_generator::syntax::module::{Module, ModuleMember};
 use c_generator::syntax::{PrimitiveType, Type};
-use translator::Translatable;
+use translator::Translate;
 
 use crate::translator::TranslationState;
 use std::borrow::Cow;
@@ -49,8 +49,8 @@ fn main() -> Result<(), Cow<'static, str>> {
     let syntax = read(&mut standard_input).expect("Cannot read syntax from standard input");
     let lexer = Lexer::default();
     let parser = Parser::default();
-    let tokens = lexer.tokenize(&syntax)?;
-    let expression = parser.parse(&tokens)?;
+    let tokens = lexer.tokenize(syntax.into())?;
+    let expression = parser.parse(tokens)?;
     let state = TranslationState::new(0, 0);
     let (expression, mut expression_members) = expression.translate(state)?;
     let include_stdio_macro = ModuleMember::Macro(Macro::Include("stdio.h".to_string()));

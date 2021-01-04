@@ -33,11 +33,11 @@ pub enum Expression {
 }
 
 impl Generator for Expression {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         match self {
             Expression::Number(number) => number.generate(),
             Expression::String(string) => Ok(format!("\"{}\"", string)),
-            Expression::NamedReference(name) => Ok(name.to_string()),
+            Expression::NamedReference(name) => Ok(name),
             Expression::FunctionCall(call) => call.generate(),
         }
     }
@@ -50,10 +50,10 @@ pub enum NumberExpression {
 }
 
 impl Generator for NumberExpression {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         match self {
-            NumberExpression::Integer(integer) => Ok(integer.to_string()),
-            NumberExpression::FloatingPoint(float) => Ok(float.to_string()),
+            NumberExpression::Integer(integer) => Ok(integer),
+            NumberExpression::FloatingPoint(float) => Ok(float),
         }
     }
 }
@@ -71,10 +71,10 @@ impl FunctionCallExpression {
 }
 
 impl Generator for FunctionCallExpression {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         let arguments = self
             .arguments
-            .iter()
+            .into_iter()
             .map(|argument| argument.generate())
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join(", ");

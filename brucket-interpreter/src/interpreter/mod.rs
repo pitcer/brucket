@@ -66,14 +66,14 @@ impl Interpreter {
 
     pub fn interpret_with_modules(
         &self,
-        endpoint_syntax: &str,
-        modules_syntax: Vec<String>,
+        endpoint_syntax: Cow<str>,
+        modules_syntax: Vec<Cow<str>>,
     ) -> ValueResult {
         let static_module_environment = Environment::new();
         let mut module_environment = ModuleEnvironment::new();
         for module_syntax in modules_syntax {
             let result = self.interpret_with_module_environment(
-                &module_syntax,
+                module_syntax,
                 &static_module_environment,
                 &module_environment,
             )?;
@@ -99,7 +99,7 @@ impl Interpreter {
 
     fn interpret_with_module_environment(
         &self,
-        syntax: &str,
+        syntax: Cow<str>,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
     ) -> ValueResult {
@@ -111,7 +111,7 @@ impl Interpreter {
         )
     }
 
-    pub fn interpret(&self, syntax: &str) -> ValueResult {
+    pub fn interpret(&self, syntax: Cow<str>) -> ValueResult {
         let module_environment = ModuleEnvironment::new();
         let static_module_environment = Environment::new();
         self.interpret_with_module_environment(
@@ -121,9 +121,9 @@ impl Interpreter {
         )
     }
 
-    fn parse_syntax(&self, syntax: &str) -> Result<Expression, Cow<'static, str>> {
+    fn parse_syntax(&self, syntax: Cow<str>) -> Result<Expression, Cow<'static, str>> {
         let tokens = self.lexer.tokenize(syntax)?;
-        self.parser.parse(&tokens)
+        self.parser.parse(tokens)
     }
 
     #[cfg(test)]
@@ -144,18 +144,18 @@ impl Interpreter {
             .collect::<Vec<_>>();
         paths.sort_by(|first, second| first.cmp(second).reverse());
         use std::io::Read;
-        let mut modules_vec = Vec::new();
+        let mut modules_vec: Vec<Cow<str>> = Vec::new();
         for path in paths {
             let mut library_file = std::fs::File::open(path).expect("Cannot open library file");
             let mut library_syntax = String::new();
             library_file
                 .read_to_string(&mut library_syntax)
                 .expect("Cannot read library file");
-            modules_vec.push(library_syntax);
+            modules_vec.push(library_syntax.into());
         }
         for module in modules {
-            modules_vec.push(module.to_string())
+            modules_vec.push(module.into())
         }
-        self.interpret_with_modules(syntax, modules_vec)
+        self.interpret_with_modules(syntax.into(), modules_vec)
     }
 }

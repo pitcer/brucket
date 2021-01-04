@@ -30,7 +30,7 @@ pub enum Macro {
 }
 
 impl Generator for Macro {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         match self {
             Macro::Include(module) => Ok(format!("#include <{}>", module)),
             Macro::Define(define_macro) => define_macro.generate(),
@@ -50,7 +50,7 @@ impl DefineMacro {
 }
 
 impl Generator for DefineMacro {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         Ok(format!("#define {} {}", self.name, self.value))
     }
 }

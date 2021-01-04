@@ -35,7 +35,7 @@ pub enum Instruction {
 }
 
 impl Generator for Instruction {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         match self {
             Instruction::Expression(expression) => Ok(format!("{};", expression.generate()?)),
             Instruction::Variable(variable_instruction) => variable_instruction.generate(),
@@ -65,8 +65,8 @@ impl VariableInstruction {
 }
 
 impl Generator for VariableInstruction {
-    fn generate(&self) -> GeneratorResult {
-        match &self.value {
+    fn generate(self) -> GeneratorResult {
+        match self.value {
             Some(value) => Ok(format!(
                 "{} {} = {};",
                 self.variable_type.generate()?,
@@ -90,8 +90,8 @@ impl IfInstruction {
 }
 
 impl Generator for IfInstruction {
-    fn generate(&self) -> GeneratorResult {
-        let body = join_instructions(&self.body)?;
+    fn generate(self) -> GeneratorResult {
+        let body = join_instructions(self.body)?;
         Ok(format!(
             "if ({}) {{\n{}}}",
             self.condition.generate()?,
@@ -117,9 +117,9 @@ impl IfElseInstruction {
 }
 
 impl Generator for IfElseInstruction {
-    fn generate(&self) -> GeneratorResult {
-        let if_body = join_instructions(&self.if_body)?;
-        let else_body = join_instructions(&self.else_body)?;
+    fn generate(self) -> GeneratorResult {
+        let if_body = join_instructions(self.if_body)?;
+        let else_body = join_instructions(self.else_body)?;
         Ok(format!(
             "if ({}) {{\n{}}} else {{\n{}}}",
             self.condition.generate()?,
@@ -131,9 +131,9 @@ impl Generator for IfElseInstruction {
 
 pub type Instructions = Vec<Instruction>;
 
-fn join_instructions(instructions: &[Instruction]) -> GeneratorResult {
+fn join_instructions(instructions: Vec<Instruction>) -> GeneratorResult {
     Ok(instructions
-        .iter()
+        .into_iter()
         .map(|instruction| {
             instruction
                 .generate()

@@ -40,10 +40,10 @@ pub enum Type {
 }
 
 impl Generator for Type {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         match self {
             Type::Primitive(primitive) => primitive.generate(),
-            Type::Custom(custom) => Ok(custom.to_string()),
+            Type::Custom(custom) => Ok(custom),
         }
     }
 }
@@ -59,7 +59,7 @@ pub enum PrimitiveType {
 }
 
 impl Generator for PrimitiveType {
-    fn generate(&self) -> GeneratorResult {
+    fn generate(self) -> GeneratorResult {
         Ok(match self {
             PrimitiveType::Int => "int",
             PrimitiveType::Long => "long int",

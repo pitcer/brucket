@@ -39,12 +39,14 @@ fn main() {
         .map(|argument| {
             let mut file =
                 File::open(&argument).unwrap_or_else(|_| panic!("Cannot open file {}", argument));
-            read(&mut file).unwrap_or_else(|_| panic!("Cannot read file {}", argument))
+            read(&mut file)
+                .unwrap_or_else(|_| panic!("Cannot read file {}", argument))
+                .into()
         })
         .collect();
     let interpreter = Interpreter::default();
     let result = interpreter
-        .interpret_with_modules(&input_syntax, modules)
+        .interpret_with_modules(input_syntax.into(), modules)
         .expect("Cannot interpret input program");
     println!("Result: {:?}", result);
 }
