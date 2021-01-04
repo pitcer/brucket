@@ -40,9 +40,10 @@ pub type TranslatorResult<T> = Result<(T, ModuleMembers), TranslatorError>;
 pub type TranslatorError = Cow<'static, str>;
 
 pub trait Translate<T> {
-    fn translate(self, state: TranslationState) -> TranslatorResult<T>;
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<T>;
 }
 
+#[derive(Debug)]
 pub struct TranslationState {
     let_count: i32,
     if_count: i32,
@@ -56,13 +57,17 @@ impl TranslationState {
         }
     }
 
-    pub fn incremented(&self) -> Self {
-        Self::new(self.let_count + 1, self.if_count + 1)
+    pub fn increment_let(&mut self) {
+        self.let_count += 1
+    }
+
+    pub fn increment_if(&mut self) {
+        self.if_count += 1
     }
 }
 
 impl Translate<CExpression> for ConstantValue {
-    fn translate(self, _state: TranslationState) -> TranslatorResult<CExpression> {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let expression = match self {
             ConstantValue::Unit => CExpression::NamedReference("UNIT".to_string()),
             ConstantValue::Null => CExpression::NamedReference("NULL".to_string()),
@@ -83,7 +88,7 @@ impl Translate<CExpression> for ConstantValue {
 }
 
 impl Translate<CExpression> for Path {
-    fn translate(self, _state: TranslationState) -> TranslatorResult<CExpression> {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let expression = match self {
             Path::Simple(path) => {
                 let path = path
@@ -105,16 +110,16 @@ impl Translate<CExpression> for Path {
 }
 
 impl Translate<CExpression> for BrucketExpression {
-    fn translate(self, state: TranslationState) -> TranslatorResult<CExpression> {
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let mut members = ModuleMembers::new();
         let expression = match self {
             Expression::ConstantValue(value) => {
-                let mut value = value.translate(state.incremented())?;
+                let mut value = value.translate(state)?;
                 members.append(&mut value.1);
                 Ok(value.0)
             }
             Expression::Identifier(path) => {
-                let mut value = path.translate(state.incremented())?;
+                let mut value = path.translate(state)?;
                 members.append(&mut value.1);
                 Ok(value.0)
             }
@@ -122,11 +127,11 @@ impl Translate<CExpression> for BrucketExpression {
                 identifier,
                 arguments,
             }) => {
-                let name = identifier.translate(state.incremented())?.0;
+                let name = identifier.translate(state)?.0;
                 if let CExpression::NamedReference(name) = name {
                     let arguments = arguments
                         .into_iter()
-                        .map(|argument| argument.translate(state.incremented().incremented()))
+                        .map(|argument| argument.translate(state))
                         .collect::<Result<Vec<(CExpression, ModuleMembers)>, TranslatorError>>()?;
                     let (arguments, application_members) = unfold_tuple_vector(arguments);
                     let mut application_members =
@@ -145,7 +150,7 @@ impl Translate<CExpression> for BrucketExpression {
             }) => {
                 let arguments = arguments
                     .into_iter()
-                    .map(|argument| argument.translate(state.incremented()))
+                    .map(|argument| argument.translate(state))
                     .collect::<Result<Vec<(CExpression, ModuleMembers)>, TranslatorError>>()?;
                 let (arguments, application_members) = unfold_tuple_vector(arguments);
                 let mut application_members = application_members.into_iter().flatten().collect();
@@ -155,11 +160,12 @@ impl Translate<CExpression> for BrucketExpression {
                 )))
             }
             Expression::Let(Let { name, value, then }) => {
-                let (value, mut value_members) = value.translate(state.incremented())?;
-                let (next, mut next_members) = then.translate(state.incremented().incremented())?;
+                let (value, mut value_members) = value.translate(state)?;
+                let (next, mut next_members) = then.translate(state)?;
                 members.append(&mut value_members);
                 members.append(&mut next_members);
                 let function_name = format!("__internal_let_{}_{}", state.let_count, name);
+                state.increment_let();
                 let function = ModuleMember::Function(CFunction::new(
                     Type::Primitive(PrimitiveType::Int),
                     function_name.clone(),
@@ -181,17 +187,14 @@ impl Translate<CExpression> for BrucketExpression {
             }
             Expression::If(if_expression) => {
                 let (condition, mut condition_members) =
-                    if_expression.condition.translate(state.incremented())?;
-                let (if_body, mut if_members) = if_expression
-                    .if_true
-                    .translate(state.incremented().incremented())?;
-                let (else_body, mut else_members) = if_expression
-                    .if_false
-                    .translate(state.incremented().incremented().incremented())?;
+                    if_expression.condition.translate(state)?;
+                let (if_body, mut if_members) = if_expression.if_true.translate(state)?;
+                let (else_body, mut else_members) = if_expression.if_false.translate(state)?;
                 members.append(&mut condition_members);
                 members.append(&mut if_members);
                 members.append(&mut else_members);
                 let function_name = format!("__internal_if_{}", state.if_count);
+                state.increment_if();
                 let function = ModuleMember::Function(CFunction::new(
                     Type::Primitive(PrimitiveType::Int),
                     function_name.clone(),

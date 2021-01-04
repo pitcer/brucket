@@ -51,8 +51,8 @@ fn main() -> Result<(), Cow<'static, str>> {
     let parser = Parser::default();
     let tokens = lexer.tokenize(syntax.into())?;
     let expression = parser.parse(tokens)?;
-    let state = TranslationState::new(0, 0);
-    let (expression, mut expression_members) = expression.translate(state)?;
+    let mut state = TranslationState::new(0, 0);
+    let (expression, mut expression_members) = expression.translate(&mut state)?;
     let include_stdio_macro = ModuleMember::Macro(Macro::Include("stdio.h".to_string()));
     let define_unit_macro = ModuleMember::Macro(Macro::Define(DefineMacro::new(
         "UNIT".to_string(),
