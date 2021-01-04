@@ -349,10 +349,10 @@ impl Parser {
             Expression::Let(Let {
                 name: _,
                 value,
-                then: body,
+                then,
             }) => {
                 Self::insert_used_identifiers(value, identifiers);
-                Self::insert_used_identifiers(body, identifiers);
+                Self::insert_used_identifiers(then, identifiers);
             }
             Expression::If(If {
                 condition,
@@ -381,9 +381,9 @@ impl Parser {
                 visibility: _,
                 application_strategy: _,
                 name: _,
-                body: lambda,
+                body,
             }) => {
-                for identifier in lambda.used_identifiers() {
+                for identifier in body.used_identifiers() {
                     identifiers.insert(identifier.clone());
                 }
             }
@@ -414,17 +414,8 @@ impl Parser {
             }
             let member = Self::parse_first_token(token, tokens)?;
             match member {
-                Expression::Function(Function {
-                    visibility: _,
-                    application_strategy: _,
-                    name: _,
-                    body: _,
-                }) => functions.push(member),
-                Expression::Constant(Constant {
-                    visibility: _,
-                    name: _,
-                    value: _,
-                }) => constants.push(member),
+                Expression::Function(_) => functions.push(member),
+                Expression::Constant(_) => constants.push(member),
                 _ => return Err(Cow::from(format!("Invalid module member: {:?}", member))),
             }
         }
@@ -453,11 +444,11 @@ impl Parser {
                 _ => return Err(Cow::from(format!("Invalid modifier: {:?}", modifier))),
             }
         }
-        Ok(Expression::Constant(Constant {
+        Ok(Expression::Constant(Constant::new(
             visibility,
-            name: identifier,
-            value: Box::from(value),
-        }))
+            identifier,
+            Box::from(value),
+        )))
     }
 
     fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> Result<Path, ExpressionError> {
