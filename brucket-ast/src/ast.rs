@@ -170,8 +170,23 @@ pub enum ConstantValue {
     Unit,
     Null,
     Numeric(u32),
-    Boolean(bool),
+    Boolean(Boolean),
     String(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Boolean {
+    True,
+    False,
+}
+
+impl Boolean {
+    pub fn to_bool(&self) -> bool {
+        match self {
+            Boolean::True => true,
+            Boolean::False => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

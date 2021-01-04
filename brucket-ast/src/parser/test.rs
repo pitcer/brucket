@@ -23,7 +23,8 @@
  */
 
 use super::*;
-use crate::ast::IfExpression;
+use crate::ast::{Boolean, IfExpression};
+use crate::token::Boolean as BooleanToken;
 
 type TestResult = Result<(), String>;
 
@@ -39,8 +40,8 @@ fn test_parsed_number_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_boolean_token_is_constant_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::ConstantValue(ConstantValue::Boolean(true));
-    let actual = parser.parse(&[Token::Boolean(true)])?;
+    let expected = Expression::ConstantValue(ConstantValue::Boolean(Boolean::True));
+    let actual = parser.parse(&[Token::Boolean(BooleanToken::True)])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -164,14 +165,16 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::If(IfExpression {
-        condition: Box::new(Expression::ConstantValue(ConstantValue::Boolean(true))),
+        condition: Box::new(Expression::ConstantValue(ConstantValue::Boolean(
+            Boolean::True,
+        ))),
         if_true: Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
         if_false: Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
     });
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::If),
-        Token::Boolean(true),
+        Token::Boolean(BooleanToken::True),
         Token::Number(42),
         Token::Number(24),
         Token::Parenthesis(Parenthesis::Close(')')),

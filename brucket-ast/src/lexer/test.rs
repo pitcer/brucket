@@ -128,7 +128,10 @@ fn test_tokenized_null_is_null_token() -> TestResult {
 #[test]
 fn test_tokenized_boolean_symbol_is_boolean_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Boolean(true), Token::Boolean(false)];
+    let expected = vec![
+        Token::Boolean(Boolean::True),
+        Token::Boolean(Boolean::False),
+    ];
     let actual = lexer.tokenize("true false")?;
     assert_eq!(expected, actual);
     Ok(())

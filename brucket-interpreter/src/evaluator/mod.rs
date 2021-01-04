@@ -101,7 +101,7 @@ impl Evaluator {
                 ConstantValue::Unit => Ok(Value::Unit),
                 ConstantValue::Null => Ok(Value::Null),
                 ConstantValue::Numeric(value) => Ok(Value::Numeric(*value as i32)),
-                ConstantValue::Boolean(value) => Ok(Value::Boolean(*value)),
+                ConstantValue::Boolean(value) => Ok(Value::Boolean(value.to_bool())),
                 ConstantValue::String(value) => Ok(Value::Textual(value.clone())),
             },
             Expression::Identifier(value) => Self::get_from_environment(

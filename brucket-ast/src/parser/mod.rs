@@ -96,7 +96,9 @@ impl Parser {
                 value.clone(),
             ))),
             Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(*value))),
-            Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(*value))),
+            Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(
+                value.to_expression(),
+            ))),
             Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword)),
             Token::Symbol(symbol) => Ok(Expression::Identifier(Self::parse_path_symbol(
                 symbol.clone(),

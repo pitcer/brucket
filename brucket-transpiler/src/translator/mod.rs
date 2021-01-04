@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::{ConstantValue, Expression as BrucketExpression, Expression, Path};
+use brucket_ast::ast::{Boolean, ConstantValue, Expression as BrucketExpression, Expression, Path};
 use c_generator::syntax::expression::{
     Arguments, Expression as CExpression, FunctionCallExpression, NumberExpression,
 };
@@ -68,13 +68,10 @@ impl Translatable<CExpression> for ConstantValue {
             ConstantValue::Numeric(numeric) => {
                 CExpression::Number(NumberExpression::Integer(numeric.to_string()))
             }
-            ConstantValue::Boolean(boolean) => {
-                if *boolean {
-                    CExpression::NamedReference("TRUE".to_string())
-                } else {
-                    CExpression::NamedReference("FALSE".to_string())
-                }
-            }
+            ConstantValue::Boolean(boolean) => match boolean {
+                Boolean::True => CExpression::NamedReference("TRUE".to_string()),
+                Boolean::False => CExpression::NamedReference("FALSE".to_string()),
+            },
             ConstantValue::String(string) => CExpression::String(string.to_string()),
         };
         Ok((expression, ModuleMembers::default()))

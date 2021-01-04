@@ -22,13 +22,15 @@
  * SOFTWARE.
  */
 
+use crate::ast::Boolean as BooleanExpression;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Parenthesis(Parenthesis),
     Operator(Operator),
     String(String),
     Number(u32),
-    Boolean(bool),
+    Boolean(Boolean),
     Null,
     Keyword(Keyword),
     Modifier(Modifier),
@@ -49,6 +51,21 @@ pub enum Operator {
     Type,
     SkinnyArrowRight,
     ThickArrowRight,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Boolean {
+    True,
+    False,
+}
+
+impl Boolean {
+    pub fn to_expression(&self) -> BooleanExpression {
+        match self {
+            Boolean::True => BooleanExpression::True,
+            Boolean::False => BooleanExpression::False,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

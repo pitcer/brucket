@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::{Parameter, Type, Visibility};
+use brucket_ast::ast::{Boolean, Parameter, Type, Visibility};
 
 use super::*;
 
@@ -41,7 +41,9 @@ fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
 fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Boolean(true);
-    let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Boolean(true)))?;
+    let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Boolean(
+        Boolean::True,
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -126,11 +128,13 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 fn test_evaluated_if_expression_has_correct_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Numeric(42);
-    let actual = evaluator.evaluate(&Expression::If(IfExpression {
-        condition: Box::new(Expression::ConstantValue(ConstantValue::Boolean(true))),
-        if_true: Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        if_false: Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
-    }))?;
+    let actual = evaluator.evaluate(&Expression::If(IfExpression::new(
+        Box::new(Expression::ConstantValue(ConstantValue::Boolean(
+            Boolean::True,
+        ))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }

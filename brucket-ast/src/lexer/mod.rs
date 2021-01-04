@@ -27,7 +27,7 @@ use std::iter::Peekable;
 use std::option::Option::Some;
 use std::str::Chars;
 
-use crate::token::{Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
+use crate::token::{Boolean, Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
 
 #[cfg(test)]
 mod test;
@@ -91,8 +91,8 @@ type TokenResult = Result<Option<Token>, String>;
 impl Default for Lexer {
     fn default() -> Self {
         let symbol_map = maplit::hashmap! {
-            "true" => Token::Boolean(true),
-            "false" => Token::Boolean(false),
+            "true" => Token::Boolean(Boolean::True),
+            "false" => Token::Boolean(Boolean::False),
             "null" => Token::Null,
             "let" => Token::Keyword(Keyword::Let),
             "if" => Token::Keyword(Keyword::If),
