@@ -28,40 +28,55 @@ type TestResult = Result<(), String>;
 
 #[test]
 fn test_add_with_two_arguments_returns_their_sum() -> TestResult {
-    let expected = Value::Numeric(42);
-    let actual = add(vec![Value::Numeric(40), Value::Numeric(2)])?;
+    let expected = Value::Numeric(Numeric::Integer(42));
+    let actual = add(vec![
+        Value::Numeric(Numeric::Integer(40)),
+        Value::Numeric(Numeric::Integer(2)),
+    ])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_subtract_with_two_arguments_returns_their_difference() -> TestResult {
-    let expected = Value::Numeric(40);
-    let actual = subtract(vec![Value::Numeric(42), Value::Numeric(2)])?;
+    let expected = Value::Numeric(Numeric::Integer(40));
+    let actual = subtract(vec![
+        Value::Numeric(Numeric::Integer(42)),
+        Value::Numeric(Numeric::Integer(2)),
+    ])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_multiply_with_two_arguments_returns_their_product() -> TestResult {
-    let expected = Value::Numeric(42);
-    let actual = multiply(vec![Value::Numeric(21), Value::Numeric(2)])?;
+    let expected = Value::Numeric(Numeric::Integer(42));
+    let actual = multiply(vec![
+        Value::Numeric(Numeric::Integer(21)),
+        Value::Numeric(Numeric::Integer(2)),
+    ])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_divide_with_two_arguments_returns_their_quotient() -> TestResult {
-    let expected = Value::Numeric(42);
-    let actual = divide(vec![Value::Numeric(84), Value::Numeric(2)])?;
+    let expected = Value::Numeric(Numeric::Integer(42));
+    let actual = divide(vec![
+        Value::Numeric(Numeric::Integer(84)),
+        Value::Numeric(Numeric::Integer(2)),
+    ])?;
     assert_eq!(expected, actual);
     Ok(())
 }
 
 #[test]
 fn test_remainder_with_two_arguments_returns_their_remainder() -> TestResult {
-    let expected = Value::Numeric(3);
-    let actual = remainder(vec![Value::Numeric(45), Value::Numeric(42)])?;
+    let expected = Value::Numeric(Numeric::Integer(3));
+    let actual = remainder(vec![
+        Value::Numeric(Numeric::Integer(45)),
+        Value::Numeric(Numeric::Integer(42)),
+    ])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -70,11 +85,17 @@ fn test_remainder_with_two_arguments_returns_their_remainder() -> TestResult {
 fn test_is_equal() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_equal(vec![Value::Numeric(42), Value::Numeric(24)])?
+        is_equal(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(24))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        is_equal(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     Ok(())
 }
@@ -83,11 +104,17 @@ fn test_is_equal() -> TestResult {
 fn test_is_greater() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_greater(vec![Value::Numeric(24), Value::Numeric(42)])?
+        is_greater(vec![
+            Value::Numeric(Numeric::Integer(24)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_greater(vec![Value::Numeric(42), Value::Numeric(24)])?
+        is_greater(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(24))
+        ])?
     );
     Ok(())
 }
@@ -96,15 +123,24 @@ fn test_is_greater() -> TestResult {
 fn test_is_greater_or_equal() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_greater_or_equal(vec![Value::Numeric(24), Value::Numeric(42)])?
+        is_greater_or_equal(vec![
+            Value::Numeric(Numeric::Integer(24)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_greater_or_equal(vec![Value::Numeric(42), Value::Numeric(24)])?
+        is_greater_or_equal(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(24))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_greater_or_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        is_greater_or_equal(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     Ok(())
 }
@@ -113,11 +149,17 @@ fn test_is_greater_or_equal() -> TestResult {
 fn test_is_less() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_less(vec![Value::Numeric(42), Value::Numeric(24)])?
+        is_less(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(24))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_less(vec![Value::Numeric(24), Value::Numeric(42)])?
+        is_less(vec![
+            Value::Numeric(Numeric::Integer(24)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     Ok(())
 }
@@ -126,15 +168,24 @@ fn test_is_less() -> TestResult {
 fn test_is_less_or_equal() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_less_or_equal(vec![Value::Numeric(42), Value::Numeric(24)])?
+        is_less_or_equal(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(24))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_less_or_equal(vec![Value::Numeric(24), Value::Numeric(42)])?
+        is_less_or_equal(vec![
+            Value::Numeric(Numeric::Integer(24)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_less_or_equal(vec![Value::Numeric(42), Value::Numeric(42)])?
+        is_less_or_equal(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(42))
+        ])?
     );
     Ok(())
 }
@@ -142,8 +193,14 @@ fn test_is_less_or_equal() -> TestResult {
 #[test]
 fn test_pair_new() -> TestResult {
     assert_eq!(
-        Value::Pair(Box::new(Value::Numeric(42)), Box::new(Value::Numeric(24))),
-        pair::new(vec![Value::Numeric(42), Value::Numeric(24)])?
+        Value::Pair(
+            Box::new(Value::Numeric(Numeric::Integer(42))),
+            Box::new(Value::Numeric(Numeric::Integer(24)))
+        ),
+        pair::new(vec![
+            Value::Numeric(Numeric::Integer(42)),
+            Value::Numeric(Numeric::Integer(24))
+        ])?
     );
     Ok(())
 }
@@ -151,10 +208,10 @@ fn test_pair_new() -> TestResult {
 #[test]
 fn test_pair_first() -> TestResult {
     assert_eq!(
-        Value::Numeric(42),
+        Value::Numeric(Numeric::Integer(42)),
         pair::first(vec![Value::Pair(
-            Box::new(Value::Numeric(42)),
-            Box::new(Value::Numeric(24))
+            Box::new(Value::Numeric(Numeric::Integer(42))),
+            Box::new(Value::Numeric(Numeric::Integer(24)))
         )])?
     );
     Ok(())
@@ -163,10 +220,10 @@ fn test_pair_first() -> TestResult {
 #[test]
 fn test_pair_second() -> TestResult {
     assert_eq!(
-        Value::Numeric(24),
+        Value::Numeric(Numeric::Integer(24)),
         pair::second(vec![Value::Pair(
-            Box::new(Value::Numeric(42)),
-            Box::new(Value::Numeric(24))
+            Box::new(Value::Numeric(Numeric::Integer(42))),
+            Box::new(Value::Numeric(Numeric::Integer(24)))
         )])?
     );
     Ok(())

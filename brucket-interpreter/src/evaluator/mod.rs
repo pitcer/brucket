@@ -29,13 +29,14 @@ use std::rc::Rc;
 use std::slice::Iter;
 
 use brucket_ast::ast::{
-    ApplicationStrategy, Arity, ConstantValue, Expression, IfExpression, Lambda, Module, Path,
+    ApplicationStrategy, Arity, ConstantValue, Expression, IfExpression, Lambda, Module, Number,
+    Path,
 };
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;
 use crate::interpreter::ModuleEnvironment;
-use crate::value::{Closure, Value};
+use crate::value::{Closure, Numeric, Value};
 
 #[macro_use]
 pub mod environment;
@@ -100,7 +101,21 @@ impl Evaluator {
             Expression::ConstantValue(value) => match value {
                 ConstantValue::Unit => Ok(Value::Unit),
                 ConstantValue::Null => Ok(Value::Null),
-                ConstantValue::Numeric(value) => Ok(Value::Numeric(*value as i32)),
+                ConstantValue::Numeric(value) => {
+                    let value = match value {
+                        Number::Integer(value) => Numeric::Integer(
+                            value
+                                .parse::<i32>()
+                                .map_err(|_| "Error while parsing to i32".to_string())?,
+                        ),
+                        Number::FloatingPoint(value) => Numeric::FloatingPoint(
+                            value
+                                .parse::<f64>()
+                                .map_err(|_| "Error while parsing to f64".to_string())?,
+                        ),
+                    };
+                    Ok(Value::Numeric(value))
+                }
                 ConstantValue::Boolean(value) => Ok(Value::Boolean(value.to_bool())),
                 ConstantValue::String(value) => Ok(Value::Textual(value.clone())),
             },

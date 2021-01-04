@@ -25,6 +25,8 @@
 use std::collections::HashMap;
 
 use crate::evaluator::{Value, ValueResult};
+use crate::value::Numeric;
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[cfg(test)]
 mod test;
@@ -81,38 +83,71 @@ impl InternalEnvironment {
     }
 }
 
+macro_rules! implement_arithmetic_operation {
+    ($type:ty, $operation:ident) => {
+        impl $type for Numeric {
+            type Output = Self;
+
+            fn $operation(self, rhs: Numeric) -> Self::Output {
+                match self {
+                    Numeric::Integer(first) => match rhs {
+                        Numeric::Integer(second) => Numeric::Integer(first.$operation(second)),
+                        Numeric::FloatingPoint(second) => {
+                            Numeric::FloatingPoint((first as f64).$operation(second))
+                        }
+                    },
+                    Numeric::FloatingPoint(first) => match rhs {
+                        Numeric::Integer(second) => {
+                            Numeric::FloatingPoint(first.$operation(second as f64))
+                        }
+                        Numeric::FloatingPoint(second) => {
+                            Numeric::FloatingPoint(first.$operation(second))
+                        }
+                    },
+                }
+            }
+        }
+    };
+}
+
+implement_arithmetic_operation!(Add, add);
+implement_arithmetic_operation!(Sub, sub);
+implement_arithmetic_operation!(Mul, mul);
+implement_arithmetic_operation!(Div, div);
+implement_arithmetic_operation!(Rem, rem);
+
 fn add(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Numeric(first + second))
 }
 
 fn subtract(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Numeric(first - second))
 }
 
 fn multiply(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Numeric(first * second))
 }
 
 fn divide(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Numeric(first / second))
 }
 
 fn remainder(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Numeric(first % second))
 }
 
@@ -123,29 +158,29 @@ fn is_equal(arguments: Vec<Value>) -> ValueResult {
 
 fn is_greater(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Boolean(first > second))
 }
 
 fn is_greater_or_equal(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Boolean(first >= second))
 }
 
 fn is_less(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Boolean(first < second))
 }
 
 fn is_less_or_equal(arguments: Vec<Value>) -> ValueResult {
     let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.as_number()?;
-    let second = second.as_number()?;
+    let first = first.into_numeric()?;
+    let second = second.into_numeric()?;
     Ok(Value::Boolean(first <= second))
 }
 
@@ -204,9 +239,9 @@ fn validate_arguments_length(arguments: &[Value], expected_length: usize) -> Res
 }
 
 impl Value {
-    fn as_number(&self) -> Result<i32, &'static str> {
+    fn into_numeric(self) -> Result<Numeric, &'static str> {
         match self {
-            Value::Numeric(value) => Ok(*value),
+            Value::Numeric(value) => Ok(value),
             _ => Err("Invalid argument type"),
         }
     }

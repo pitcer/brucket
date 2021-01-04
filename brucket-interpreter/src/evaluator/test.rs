@@ -31,8 +31,10 @@ type TestResult = Result<(), String>;
 #[test]
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42);
-    let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Numeric(42)))?;
+    let expected = Value::Numeric(Numeric::Integer(42));
+    let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Numeric(
+        Number::Integer("42".to_string()),
+    )))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -80,10 +82,12 @@ fn test_evaluated_null_expression_is_null_value() -> TestResult {
 #[test]
 fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42);
+    let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
     ))?;
     assert_eq!(expected, actual);
@@ -93,13 +97,17 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
 #[test]
 fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(40);
+    let expected = Value::Numeric(Numeric::Integer(40));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(40))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("40".to_string()),
+        ))),
         Box::new(Expression::Let(
             "y".to_string(),
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("2".to_string()),
+            ))),
             Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         )),
     ))?;
@@ -110,13 +118,17 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
 #[test]
 fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(2);
+    let expected = Value::Numeric(Numeric::Integer(2));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(40))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("40".to_string()),
+        ))),
         Box::new(Expression::Let(
             "x".to_string(),
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(2))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("2".to_string()),
+            ))),
             Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
         )),
     ))?;
@@ -127,13 +139,17 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 #[test]
 fn test_evaluated_if_expression_has_correct_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42);
+    let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::If(IfExpression::new(
         Box::new(Expression::ConstantValue(ConstantValue::Boolean(
             Boolean::True,
         ))),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("24".to_string()),
+        ))),
     )))?;
     assert_eq!(expected, actual);
     Ok(())
@@ -145,11 +161,13 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let expected = Value::Closure(Closure::new(
         Vec::new(),
         Box::from(Expression::Identifier(Path::Simple("x".to_string()))),
-        environment!("x" => Value::Numeric(42)),
+        environment!("x" => Value::Numeric(Numeric::Integer(42))),
     ));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Lambda(Lambda::new(
             Vec::new(),
             Type::Any,
@@ -171,7 +189,9 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
     ));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Lambda(Lambda::new(
             vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
             Type::Any,
@@ -197,7 +217,9 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
     ));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Lambda(Lambda::new(
             vec![
                 Parameter::new("y".to_string(), Type::Any, Arity::Unary),
@@ -216,10 +238,12 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
 #[test]
 fn test_evaluated_application_on_lambda_expression_without_parameters_is_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(42);
+    let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(Lambda::new(
                 Vec::new(),
@@ -237,10 +261,12 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
 #[test]
 fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(24);
+    let expected = Value::Numeric(Numeric::Integer(24));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(Lambda::new(
                 vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
@@ -248,7 +274,9 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
                 Box::new(Expression::Identifier(Path::Simple("y".to_string()))),
                 HashSet::new(),
             ))),
-            vec![Expression::ConstantValue(ConstantValue::Numeric(24))],
+            vec![Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("24".to_string()),
+            ))],
         )),
     ))?;
     assert_eq!(expected, actual);
@@ -258,10 +286,12 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
 #[test]
 fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() -> TestResult {
     let evaluator = Evaluator::default();
-    let expected = Value::Numeric(24);
+    let expected = Value::Numeric(Numeric::Integer(24));
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Application(
             Box::new(Expression::Lambda(Lambda::new(
                 vec![
@@ -274,9 +304,11 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
                 HashSet::new(),
             ))),
             vec![
-                Expression::ConstantValue(ConstantValue::Numeric(24)),
-                Expression::ConstantValue(ConstantValue::Numeric(4)),
-                Expression::ConstantValue(ConstantValue::Numeric(2)),
+                Expression::ConstantValue(ConstantValue::Numeric(Number::Integer(
+                    "24".to_string(),
+                ))),
+                Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("4".to_string()))),
+                Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("2".to_string()))),
             ],
         )),
     ))?;
@@ -290,7 +322,9 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
     let expected = Err("Undefined variable: z".to_string());
     let actual = evaluator.evaluate(&Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Let(
             "y".to_string(),
             Box::new(Expression::Lambda(Lambda::new(
@@ -301,10 +335,14 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
             ))),
             Box::new(Expression::Let(
                 "z".to_string(),
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("24".to_string()),
+                ))),
                 Box::new(Expression::Application(
                     Box::new(Expression::Identifier(Path::Simple("y".to_string()))),
-                    vec![Expression::ConstantValue(ConstantValue::Numeric(12))],
+                    vec![Expression::ConstantValue(ConstantValue::Numeric(
+                        Number::Integer("12".to_string()),
+                    ))],
                 )),
             )),
         )),
@@ -323,7 +361,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string())))),
                     Environment::new(),
             ))
         },
@@ -338,7 +376,9 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
             Lambda::new(
                 Vec::new(),
                 Type::Any,
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))),
                 HashSet::new(),
             ),
         )],
@@ -355,7 +395,9 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
         ApplicationStrategy::Eager,
         Closure::new(
             vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-            Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::from(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             Environment::new(),
         ),
     );
@@ -366,7 +408,9 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
         Lambda::new(
             vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
             Type::Any,
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             HashSet::new(),
         ),
     ))?;
@@ -404,11 +448,11 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
 fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Pair(
-        Box::new(Value::Numeric(3)),
+        Box::new(Value::Numeric(Numeric::Integer(3))),
         Box::new(Value::Pair(
-            Box::new(Value::Numeric(4)),
+            Box::new(Value::Numeric(Numeric::Integer(4))),
             Box::new(Value::Pair(
-                Box::new(Value::Numeric(5)),
+                Box::new(Value::Numeric(Numeric::Integer(5))),
                 Box::new(Value::Null),
             )),
         )),
@@ -425,11 +469,11 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
             HashSet::new(),
         ))),
         vec![
-            Expression::ConstantValue(ConstantValue::Numeric(1)),
-            Expression::ConstantValue(ConstantValue::Numeric(2)),
-            Expression::ConstantValue(ConstantValue::Numeric(3)),
-            Expression::ConstantValue(ConstantValue::Numeric(4)),
-            Expression::ConstantValue(ConstantValue::Numeric(5)),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("1".to_string()))),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("2".to_string()))),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("3".to_string()))),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("4".to_string()))),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("5".to_string()))),
         ],
     ))?;
     assert_eq!(expected, actual);
@@ -447,10 +491,10 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string())))),
                     Environment::new(),
             )),
-            "baar" => Value::Numeric(42)
+            "baar" => Value::Numeric(Numeric::Integer(42))
         },
     );
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
@@ -464,7 +508,9 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 Lambda::new(
                     Vec::new(),
                     Type::Any,
-                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                        Number::Integer("42".to_string()),
+                    ))),
                     HashSet::new(),
                 ),
             ),
@@ -475,7 +521,9 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 Lambda::new(
                     Vec::new(),
                     Type::Any,
-                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                        Number::Integer("42".to_string()),
+                    ))),
                     HashSet::new(),
                 ),
             ),
@@ -484,12 +532,16 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
             Expression::Constant(
                 Visibility::Public,
                 "baar".to_string(),
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))),
             ),
             Expression::Constant(
                 Visibility::Private,
                 "barr".to_string(),
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))),
             ),
         ],
     )))?;
@@ -504,7 +556,9 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
         ApplicationStrategy::Lazy,
         Closure::new(
             Vec::new(),
-            Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::from(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             Environment::new(),
         ),
     );
@@ -515,7 +569,9 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
         Lambda::new(
             Vec::new(),
             Type::Any,
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             HashSet::new(),
         ),
     ))?;
@@ -527,7 +583,9 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
 fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value() -> TestResult {
     let evaluator = Evaluator::default();
     let expected = Value::Thunk(
-        Box::from(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::from(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Environment::new(),
     );
     let actual = evaluator.evaluate(&Expression::Application(
@@ -542,7 +600,9 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
                 HashSet::new(),
             ),
         )),
-        vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
+        vec![Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))],
     ))?;
     assert_eq!(expected, actual);
     Ok(())

@@ -24,15 +24,15 @@
 
 use super::*;
 use crate::ast::{Boolean, IfExpression};
-use crate::token::Boolean as BooleanToken;
 
 type TestResult = Result<(), String>;
 
 #[test]
 fn test_parsed_number_token_is_constant_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::ConstantValue(ConstantValue::Numeric(42));
-    let actual = parser.parse(&[Token::Number(42)])?;
+    let expected =
+        Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string())));
+    let actual = parser.parse(&[Token::Number(NumberToken::Integer("42".to_string()))])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -106,12 +106,14 @@ fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult 
     let parser = Parser::default();
     let expected = Expression::Application(
         Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
-        vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
+        vec![Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))],
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -124,17 +126,17 @@ fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> T
     let expected = Expression::Application(
         Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
         vec![
-            Expression::ConstantValue(ConstantValue::Numeric(42)),
-            Expression::ConstantValue(ConstantValue::Numeric(24)),
-            Expression::ConstantValue(ConstantValue::Numeric(0)),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string()))),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("24".to_string()))),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("0".to_string()))),
         ],
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
-        Token::Number(42),
-        Token::Number(24),
-        Token::Number(0),
+        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Number(NumberToken::Integer("24".to_string())),
+        Token::Number(NumberToken::Integer("0".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -146,14 +148,16 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Let(
         "x".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
         Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
         Token::Symbol("x".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Symbol("x".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -164,19 +168,23 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 #[test]
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::If(IfExpression {
-        condition: Box::new(Expression::ConstantValue(ConstantValue::Boolean(
+    let expected = Expression::If(IfExpression::new(
+        Box::new(Expression::ConstantValue(ConstantValue::Boolean(
             Boolean::True,
         ))),
-        if_true: Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
-        if_false: Box::new(Expression::ConstantValue(ConstantValue::Numeric(24))),
-    });
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("24".to_string()),
+        ))),
+    ));
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::If),
         Token::Boolean(BooleanToken::True),
-        Token::Number(42),
-        Token::Number(24),
+        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Number(NumberToken::Integer("24".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -261,7 +269,7 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
         "foo".to_string(),
         vec![
             Expression::Identifier(Path::Simple("x".to_string())),
-            Expression::ConstantValue(ConstantValue::Numeric(42)),
+            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string()))),
             Expression::Identifier(Path::Simple("y".to_string())),
         ],
     );
@@ -270,7 +278,7 @@ fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
         Token::Keyword(Keyword::Internal),
         Token::Symbol("foo".to_string()),
         Token::Symbol("x".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Symbol("y".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -291,14 +299,18 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
             Lambda::new(
                 Vec::new(),
                 Type::Any,
-                Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+                Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))),
                 HashSet::new(),
             ),
         )],
         vec![Expression::Constant(
             Visibility::Private,
             "y".to_string(),
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
         )],
     ));
     let actual = parser.parse(&[
@@ -310,12 +322,12 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         Token::Symbol("x".to_string()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Constant),
         Token::Symbol("y".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -339,7 +351,9 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
             Type::Any,
             Box::new(Expression::Application(
                 Box::new(Expression::Identifier(Path::Simple("bar".to_string()))),
-                vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
+                vec![Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))],
             )),
             maplit::hashset!("bar".to_string()),
         ),
@@ -355,7 +369,7 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
         Token::Parenthesis(Parenthesis::Close(']')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("bar".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -369,13 +383,15 @@ fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
     let expected = Expression::Constant(
         Visibility::Private,
         "foo".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Constant),
         Token::Symbol("foo".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -415,7 +431,9 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
         Lambda::new(
             Vec::new(),
             Type::Any,
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             HashSet::new(),
         ),
     );
@@ -426,7 +444,7 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
         Token::Symbol("foo".to_string()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -439,14 +457,16 @@ fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
     let expected = Expression::Constant(
         Visibility::Public,
         "foo".to_string(),
-        Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
     );
     let actual = parser.parse(&[
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
         Token::Keyword(Keyword::Constant),
         Token::Symbol("foo".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -463,7 +483,9 @@ fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
         Lambda::new(
             Vec::new(),
             Type::Any,
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             HashSet::new(),
         ),
     );
@@ -474,7 +496,7 @@ fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
         Token::Symbol("foo".to_string()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -491,7 +513,9 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
         Lambda::new(
             Vec::new(),
             Type::Any,
-            Box::new(Expression::ConstantValue(ConstantValue::Numeric(42))),
+            Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+                Number::Integer("42".to_string()),
+            ))),
             HashSet::new(),
         ),
     );
@@ -503,7 +527,7 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
         Token::Symbol("foo".to_string()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -596,7 +620,9 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
             Type::Boolean,
             Box::new(Expression::Application(
                 Box::new(Expression::Identifier(Path::Simple("bar".to_string()))),
-                vec![Expression::ConstantValue(ConstantValue::Numeric(42))],
+                vec![Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))],
             )),
             maplit::hashset!("bar".to_string()),
         ),
@@ -621,7 +647,7 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
         Token::PrimitiveType(PrimitiveType::Boolean),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("bar".to_string()),
-        Token::Number(42),
+        Token::Number(NumberToken::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;

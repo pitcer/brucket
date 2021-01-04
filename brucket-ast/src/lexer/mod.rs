@@ -27,7 +27,9 @@ use std::iter::Peekable;
 use std::option::Option::Some;
 use std::str::Chars;
 
-use crate::token::{Boolean, Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
+use crate::token::{
+    Boolean, Keyword, Modifier, Number, Operator, Parenthesis, PrimitiveType, Token,
+};
 
 #[cfg(test)]
 mod test;
@@ -44,6 +46,8 @@ trait LexerCharacter {
     fn is_closing_parenthesis(&self) -> bool;
 
     fn is_section_break(&self) -> bool;
+
+    fn is_number_break(&self) -> bool;
 
     fn is_quote(&self) -> bool;
 
@@ -66,10 +70,11 @@ impl LexerCharacter for char {
     }
 
     fn is_section_break(&self) -> bool {
-        self.is_ascii_whitespace()
-            || self.is_opening_parenthesis()
-            || self.is_closing_parenthesis()
-            || matches!(self, '.' | ':')
+        self.is_number_break() || matches!(self, '.' | ':')
+    }
+
+    fn is_number_break(&self) -> bool {
+        self.is_ascii_whitespace() || self.is_opening_parenthesis() || self.is_closing_parenthesis()
     }
 
     fn is_quote(&self) -> bool {
@@ -151,7 +156,7 @@ impl Lexer {
                 Ok(Some(Token::String(string)))
             }
             number if number.is_number() => {
-                let number = Self::tokenize_number(current, characters)?;
+                let number = Self::tokenize_number(current, characters);
                 Ok(Some(Token::Number(number)))
             }
             whitespace if whitespace.is_ascii_whitespace() => Ok(None),
@@ -175,7 +180,7 @@ impl Lexer {
         }
     }
 
-    fn tokenize_dots(characters: &mut Characters) -> Result<Option<Token>, String> {
+    fn tokenize_dots(characters: &mut Characters) -> TokenResult {
         let second = characters.next();
         let third = characters.next();
         if second.is_some() && second.unwrap() == '.' && third.is_some() && third.unwrap() == '.' {
@@ -185,7 +190,7 @@ impl Lexer {
         }
     }
 
-    fn tokenize_colon(characters: &mut Characters) -> Result<Option<Token>, String> {
+    fn tokenize_colon(characters: &mut Characters) -> TokenResult {
         let second = characters.peek();
         if let Some(second) = second {
             if let ':' = second {
@@ -212,20 +217,25 @@ impl Lexer {
         result
     }
 
-    fn tokenize_number(first: char, characters: &mut Characters) -> Result<u32, String> {
-        let mut result = first.to_digit(10).unwrap();
+    fn tokenize_number(first: char, characters: &mut Characters) -> Number {
+        let mut number = String::new();
+        let mut floating_point = false;
+        number.push(first);
         while let Some(current) = characters.peek() {
-            if current.is_section_break() {
+            if current.is_number_break() {
                 break;
             }
-            if current.is_number() {
-                result = result * 10 + current.to_digit(10).unwrap();
-            } else {
-                return Err("Invalid number character".to_string());
+            if *current == '.' {
+                floating_point = true;
             }
+            number.push(*current);
             characters.next();
         }
-        Ok(result)
+        if floating_point {
+            Number::FloatingPoint(number)
+        } else {
+            Number::Integer(number)
+        }
     }
 
     fn tokenize_symbol(first: char, characters: &mut Characters) -> String {

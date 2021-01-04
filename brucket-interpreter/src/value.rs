@@ -30,7 +30,7 @@ use crate::evaluator::environment::Environment;
 pub enum Value {
     Unit,
     Null,
-    Numeric(i32),
+    Numeric(Numeric),
     Textual(String),
     Boolean(bool),
     Pair(Box<Value>, Box<Value>),
@@ -38,6 +38,12 @@ pub enum Value {
     FunctionClosure(ApplicationStrategy, Closure),
     Thunk(Box<Expression>, Environment),
     Module(bool, String, Environment),
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
+pub enum Numeric {
+    Integer(i32),
+    FloatingPoint(f64),
 }
 
 #[derive(Debug, PartialEq, Clone)]

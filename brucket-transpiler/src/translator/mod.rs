@@ -22,7 +22,9 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::{Boolean, ConstantValue, Expression as BrucketExpression, Expression, Path};
+use brucket_ast::ast::{
+    Boolean, ConstantValue, Expression as BrucketExpression, Expression, Number, Path,
+};
 use c_generator::syntax::expression::{
     Arguments, Expression as CExpression, FunctionCallExpression, NumberExpression,
 };
@@ -65,9 +67,14 @@ impl Translatable<CExpression> for ConstantValue {
         let expression = match self {
             ConstantValue::Unit => CExpression::NamedReference("UNIT".to_string()),
             ConstantValue::Null => CExpression::NamedReference("NULL".to_string()),
-            ConstantValue::Numeric(numeric) => {
-                CExpression::Number(NumberExpression::Integer(numeric.to_string()))
-            }
+            ConstantValue::Numeric(numeric) => match numeric {
+                Number::Integer(value) => {
+                    CExpression::Number(NumberExpression::Integer(value.clone()))
+                }
+                Number::FloatingPoint(value) => {
+                    CExpression::Number(NumberExpression::FloatingPoint(value.clone()))
+                }
+            },
             ConstantValue::Boolean(boolean) => match boolean {
                 Boolean::True => CExpression::NamedReference("TRUE".to_string()),
                 Boolean::False => CExpression::NamedReference("FALSE".to_string()),

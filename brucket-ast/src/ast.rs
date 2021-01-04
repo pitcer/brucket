@@ -169,9 +169,15 @@ impl Module {
 pub enum ConstantValue {
     Unit,
     Null,
-    Numeric(u32),
+    Numeric(Number),
     Boolean(Boolean),
     String(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Number {
+    Integer(String),
+    FloatingPoint(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]

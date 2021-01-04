@@ -28,10 +28,14 @@ use std::option::Option::Some;
 use std::slice::Iter;
 
 use crate::ast::{
-    ApplicationStrategy, Arity, ComplexPath, ConstantValue, Expression, IfExpression, Lambda,
-    Module, Parameter, Path, Type, Visibility,
+    ApplicationStrategy, Arity, Boolean, ComplexPath, ConstantValue, Expression, IfExpression,
+    Lambda, Module, Number, Parameter, Path, Type, Visibility,
 };
-use crate::token::{Keyword, Modifier, Operator, Parenthesis, PrimitiveType, Token};
+
+use crate::token::{
+    Boolean as BooleanToken, Keyword, Modifier, Number as NumberToken, Operator, Parenthesis,
+    PrimitiveType, Token,
+};
 
 #[cfg(test)]
 mod test;
@@ -65,6 +69,24 @@ impl Default for Parser {
     }
 }
 
+impl NumberToken {
+    fn to_expression(&self) -> Number {
+        match self {
+            NumberToken::Integer(value) => Number::Integer(value.to_string()),
+            NumberToken::FloatingPoint(value) => Number::FloatingPoint(value.to_string()),
+        }
+    }
+}
+
+impl BooleanToken {
+    fn to_expression(&self) -> Boolean {
+        match self {
+            BooleanToken::True => Boolean::True,
+            BooleanToken::False => Boolean::False,
+        }
+    }
+}
+
 impl Parser {
     pub fn parse(&self, tokens: &[Token]) -> ExpressionResult {
         let mut iterator = tokens.iter().peekable();
@@ -95,7 +117,9 @@ impl Parser {
             Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(
                 value.clone(),
             ))),
-            Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(*value))),
+            Token::Number(value) => Ok(Expression::ConstantValue(ConstantValue::Numeric(
+                value.to_expression(),
+            ))),
             Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(
                 value.to_expression(),
             ))),

@@ -83,7 +83,7 @@ fn test_tokenized_string_is_string_token() -> TestResult {
 #[test]
 fn test_tokenized_single_character_number_is_number_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Number(7)];
+    let expected = vec![Token::Number(Number::Integer("7".to_string()))];
     let actual = lexer.tokenize("7")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -92,7 +92,7 @@ fn test_tokenized_single_character_number_is_number_token() -> TestResult {
 #[test]
 fn test_tokenized_multi_character_number_is_number_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Number(4224)];
+    let expected = vec![Token::Number(Number::Integer("4224".to_string()))];
     let actual = lexer.tokenize("4224")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -260,11 +260,11 @@ fn test_statement_is_tokenized_correctly() -> TestResult {
     let expected = vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("multiply".to_string()),
-        Token::Number(123),
+        Token::Number(Number::Integer("123".to_string())),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("+".to_string()),
-        Token::Number(321),
-        Token::Number(1),
+        Token::Number(Number::Integer("321".to_string())),
+        Token::Number(Number::Integer("1".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::String("foobar".to_string()),
         Token::Parenthesis(Parenthesis::Close(')')),
@@ -279,7 +279,7 @@ fn test_closing_parenthesis_after_number_is_handled_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Number(42),
+        Token::Number(Number::Integer("42".to_string())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ];
     let actual = lexer.tokenize("(42)")?;
@@ -303,9 +303,19 @@ fn test_closing_parenthesis_after_symbol_is_handled_correctly() -> TestResult {
 #[test]
 fn test_tokenize_number() -> TestResult {
     let mut characters = "224)".chars().peekable();
-    let number = Lexer::tokenize_number('4', &mut characters)?;
+    let number = Lexer::tokenize_number('4', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
-    assert_eq!(4224, number);
+    assert_eq!(Number::Integer("4224".to_string()), number);
+    assert_eq!(')', parenthesis);
+    Ok(())
+}
+
+#[test]
+fn test_tokenize_floating_point_number() -> TestResult {
+    let mut characters = "2.24)".chars().peekable();
+    let number = Lexer::tokenize_number('4', &mut characters);
+    let parenthesis = characters.next().expect("Missing closing parenthesis");
+    assert_eq!(Number::FloatingPoint("42.24".to_string()), number);
     assert_eq!(')', parenthesis);
     Ok(())
 }
