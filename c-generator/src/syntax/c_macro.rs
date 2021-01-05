@@ -24,6 +24,7 @@
 
 use crate::generator::{Generator, GeneratorResult};
 
+#[derive(Debug)]
 pub enum Macro {
     Include(String),
     Define(DefineMacro),
@@ -38,6 +39,7 @@ impl Generator for Macro {
     }
 }
 
+#[derive(Debug)]
 pub struct DefineMacro {
     name: String,
     value: String,

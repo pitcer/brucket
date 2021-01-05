@@ -24,7 +24,7 @@
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
 use crate::syntax::c_macro::Macro;
-use crate::syntax::function::Function;
+use crate::syntax::function::{FunctionDeclaration, FunctionDefinition};
 use crate::syntax::instruction::VariableInstruction;
 
 pub struct Module {
@@ -50,9 +50,11 @@ impl Generator for Module {
 
 pub type ModuleMembers = Vec<ModuleMember>;
 
+#[derive(Debug)]
 pub enum ModuleMember {
     Macro(Macro),
-    Function(Function),
+    FunctionDeclaration(FunctionDeclaration),
+    FunctionDefinition(FunctionDefinition),
     StaticVariable(VariableInstruction),
 }
 
@@ -60,7 +62,10 @@ impl Generator for ModuleMember {
     fn generate(self) -> GeneratorResult {
         match self {
             ModuleMember::Macro(c_macro) => c_macro.generate(),
-            ModuleMember::Function(function) => function.generate(),
+            ModuleMember::FunctionDeclaration(function_declaration) => {
+                function_declaration.generate()
+            }
+            ModuleMember::FunctionDefinition(function_definition) => function_definition.generate(),
             ModuleMember::StaticVariable(variable) => {
                 Ok(format!("static {}", variable.generate()?))
             }
@@ -70,8 +75,8 @@ impl Generator for ModuleMember {
 
 #[cfg(test)]
 mod test {
-    use crate::syntax::expression::Expression;
-    use crate::syntax::function::Parameters;
+    use crate::syntax::expression::CExpression;
+    use crate::syntax::function::{FunctionHeader, Parameters};
     use crate::syntax::instruction::Instructions;
     use crate::syntax::{PrimitiveType, TestResult, Type};
 
@@ -91,12 +96,14 @@ int foobar() {
                 ModuleMember::StaticVariable(VariableInstruction::new(
                     Type::Primitive(PrimitiveType::Int),
                     "FOOBAR".to_string(),
-                    Some(Expression::NamedReference("test".to_string()))
+                    Some(CExpression::NamedReference("test".to_string()))
                 )),
-                ModuleMember::Function(Function::new(
-                    Type::Primitive(PrimitiveType::Int),
-                    "foobar".to_string(),
-                    Parameters::default(),
+                ModuleMember::FunctionDefinition(FunctionDefinition::new(
+                    FunctionHeader::new(
+                        Type::Primitive(PrimitiveType::Int),
+                        "foobar".to_string(),
+                        Parameters::default()
+                    ),
                     Instructions::default()
                 ))
             ])
@@ -115,10 +122,12 @@ int foobar() {
             r#"int foobar() {
 
 }"#,
-            ModuleMember::Function(Function::new(
-                Type::Primitive(PrimitiveType::Int),
-                "foobar".to_string(),
-                Parameters::default(),
+            ModuleMember::FunctionDefinition(FunctionDefinition::new(
+                FunctionHeader::new(
+                    Type::Primitive(PrimitiveType::Int),
+                    "foobar".to_string(),
+                    Parameters::default()
+                ),
                 Instructions::default()
             ))
             .generate()?
@@ -128,7 +137,7 @@ int foobar() {
             ModuleMember::StaticVariable(VariableInstruction::new(
                 Type::Primitive(PrimitiveType::Int),
                 "FOOBAR".to_string(),
-                Some(Expression::NamedReference("test".to_string()))
+                Some(CExpression::NamedReference("test".to_string()))
             ))
             .generate()?
         );

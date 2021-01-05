@@ -26,37 +26,40 @@ use crate::generator::{Generator, GeneratorError, GeneratorResult};
 use crate::syntax::instruction::Instructions;
 use crate::syntax::Type;
 
-pub struct Function {
-    return_type: Type,
-    name: String,
-    parameters: Parameters,
-    body: Instructions,
+#[derive(Debug)]
+pub struct FunctionDeclaration {
+    header: FunctionHeader,
 }
 
-impl Function {
-    pub fn new(
-        return_type: Type,
-        name: String,
-        parameters: Parameters,
-        body: Instructions,
-    ) -> Self {
-        Self {
-            return_type,
-            name,
-            parameters,
-            body,
-        }
+impl FunctionDeclaration {
+    pub fn new(header: FunctionHeader) -> Self {
+        Self { header }
     }
 }
 
-impl Generator for Function {
+impl Generator for FunctionDeclaration {
     fn generate(self) -> GeneratorResult {
-        let parameters = self
-            .parameters
-            .into_iter()
-            .map(|parameter| parameter.generate())
-            .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join(", ");
+        let mut header = self.header.generate()?;
+        header.push(';');
+        Ok(header)
+    }
+}
+
+#[derive(Debug)]
+pub struct FunctionDefinition {
+    header: FunctionHeader,
+    body: Instructions,
+}
+
+impl FunctionDefinition {
+    pub fn new(header: FunctionHeader, body: Instructions) -> Self {
+        Self { header, body }
+    }
+}
+
+impl Generator for FunctionDefinition {
+    fn generate(self) -> GeneratorResult {
+        let header = self.header.generate()?;
         let body = self
             .body
             .into_iter()
@@ -67,18 +70,47 @@ impl Generator for Function {
             })
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join("\n");
+        Ok(format!("{} {{\n{}\n}}", header, body))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FunctionHeader {
+    return_type: Type,
+    name: String,
+    parameters: Parameters,
+}
+
+impl FunctionHeader {
+    pub fn new(return_type: Type, name: String, parameters: Parameters) -> Self {
+        Self {
+            return_type,
+            name,
+            parameters,
+        }
+    }
+}
+
+impl Generator for FunctionHeader {
+    fn generate(self) -> GeneratorResult {
+        let parameters = self
+            .parameters
+            .into_iter()
+            .map(|parameter| parameter.generate())
+            .collect::<Result<Vec<String>, GeneratorError>>()?
+            .join(", ");
         Ok(format!(
-            "{} {}({}) {{\n{}\n}}",
+            "{} {}({})",
             self.return_type.generate()?,
             self.name,
-            parameters,
-            body
+            parameters
         ))
     }
 }
 
 pub type Parameters = Vec<FunctionParameter>;
 
+#[derive(Debug, Clone)]
 pub struct FunctionParameter {
     parameter_type: Type,
     name: String,
@@ -101,7 +133,7 @@ impl Generator for FunctionParameter {
 
 #[cfg(test)]
 mod test {
-    use crate::syntax::expression::Expression;
+    use crate::syntax::expression::CExpression;
     use crate::syntax::instruction::Instruction;
     use crate::syntax::{PrimitiveType, TestResult};
 
@@ -118,15 +150,51 @@ mod test {
     }
 
     #[test]
-    fn test_function_is_converted_to_c_syntax_correctly() -> TestResult {
+    fn test_function_header_is_converted_to_c_syntax_correctly() -> TestResult {
+        assert_eq!(
+            "int foobar(int foo, int bar)",
+            FunctionHeader::new(
+                Type::Primitive(PrimitiveType::Int),
+                "foobar".to_string(),
+                vec![
+                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "foo".to_string()),
+                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "bar".to_string())
+                ],
+            )
+            .generate()?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_function_declaration_is_converted_to_c_syntax_correctly() -> TestResult {
+        assert_eq!(
+            "int foobar(int foo, int bar);",
+            FunctionDeclaration::new(FunctionHeader::new(
+                Type::Primitive(PrimitiveType::Int),
+                "foobar".to_string(),
+                vec![
+                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "foo".to_string()),
+                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "bar".to_string())
+                ],
+            ))
+            .generate()?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_function_definition_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             r#"int foobar() {
 
 }"#,
-            Function::new(
-                Type::Primitive(PrimitiveType::Int),
-                "foobar".to_string(),
-                Parameters::default(),
+            FunctionDefinition::new(
+                FunctionHeader::new(
+                    Type::Primitive(PrimitiveType::Int),
+                    "foobar".to_string(),
+                    Parameters::default()
+                ),
                 Instructions::default()
             )
             .generate()?
@@ -135,11 +203,13 @@ mod test {
             r#"int foobar() {
     return bar;
 }"#,
-            Function::new(
-                Type::Primitive(PrimitiveType::Int),
-                "foobar".to_string(),
-                Parameters::default(),
-                vec![Instruction::Return(Expression::NamedReference(
+            FunctionDefinition::new(
+                FunctionHeader::new(
+                    Type::Primitive(PrimitiveType::Int),
+                    "foobar".to_string(),
+                    Parameters::default()
+                ),
+                vec![Instruction::Return(CExpression::NamedReference(
                     "bar".to_string()
                 ))]
             )
@@ -150,16 +220,18 @@ mod test {
     foo;
     return bar;
 }"#,
-            Function::new(
-                Type::Primitive(PrimitiveType::Int),
-                "foobar".to_string(),
-                vec![FunctionParameter::new(
+            FunctionDefinition::new(
+                FunctionHeader::new(
                     Type::Primitive(PrimitiveType::Int),
-                    "foo".to_string()
-                )],
+                    "foobar".to_string(),
+                    vec![FunctionParameter::new(
+                        Type::Primitive(PrimitiveType::Int),
+                        "foo".to_string()
+                    )]
+                ),
                 vec![
-                    Instruction::Expression(Expression::NamedReference("foo".to_string())),
-                    Instruction::Return(Expression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
+                    Instruction::Return(CExpression::NamedReference("bar".to_string()))
                 ]
             )
             .generate()?
@@ -169,16 +241,24 @@ mod test {
     foo;
     return bar;
 }"#,
-            Function::new(
-                Type::Primitive(PrimitiveType::Int),
-                "foobar".to_string(),
+            FunctionDefinition::new(
+                FunctionHeader::new(
+                    Type::Primitive(PrimitiveType::Int),
+                    "foobar".to_string(),
+                    vec![
+                        FunctionParameter::new(
+                            Type::Primitive(PrimitiveType::Int),
+                            "foo".to_string()
+                        ),
+                        FunctionParameter::new(
+                            Type::Primitive(PrimitiveType::Int),
+                            "bar".to_string()
+                        )
+                    ]
+                ),
                 vec![
-                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "foo".to_string()),
-                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "bar".to_string())
-                ],
-                vec![
-                    Instruction::Expression(Expression::NamedReference("foo".to_string())),
-                    Instruction::Return(Expression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
+                    Instruction::Return(CExpression::NamedReference("bar".to_string()))
                 ]
             )
             .generate()?

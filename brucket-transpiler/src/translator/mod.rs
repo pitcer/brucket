@@ -25,45 +25,26 @@
 use std::borrow::Cow;
 
 use brucket_ast::ast::{
-    Application, Boolean, Constant, ConstantValue, Expression as BrucketExpression, Expression,
-    Function, InternalCall, Let, Number, Path,
+    Application, Boolean, Constant, ConstantValue, Expression, Function, If, InternalCall, Lambda,
+    Let, Module, Number, Path,
 };
 use c_generator::syntax::expression::{
-    Arguments, Expression as CExpression, FunctionCallExpression, NumberExpression,
+    Arguments, CExpression, FunctionCallExpression, NumberExpression,
 };
-use c_generator::syntax::function::{Function as CFunction, Parameters};
+use c_generator::syntax::function::{FunctionHeader, FunctionParameter, Parameters};
 use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableInstruction};
-use c_generator::syntax::module::{ModuleMember, ModuleMembers};
 use c_generator::syntax::{PrimitiveType, Type};
 
-pub type TranslatorResult<T> = Result<(T, ModuleMembers), TranslatorError>;
+use crate::translator::state::{TranslationState, Variable};
+use std::collections::HashSet;
+
+pub mod state;
+
+pub type TranslatorResult<T> = Result<T, TranslatorError>;
 pub type TranslatorError = Cow<'static, str>;
 
 pub trait Translate<T> {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<T>;
-}
-
-#[derive(Debug)]
-pub struct TranslationState {
-    let_count: i32,
-    if_count: i32,
-}
-
-impl TranslationState {
-    pub fn new(let_count: i32, if_count: i32) -> Self {
-        Self {
-            let_count,
-            if_count,
-        }
-    }
-
-    pub fn increment_let(&mut self) {
-        self.let_count += 1
-    }
-
-    pub fn increment_if(&mut self) {
-        self.if_count += 1
-    }
 }
 
 impl Translate<CExpression> for ConstantValue {
@@ -83,7 +64,7 @@ impl Translate<CExpression> for ConstantValue {
             },
             ConstantValue::String(string) => CExpression::String(string),
         };
-        Ok((expression, ModuleMembers::default()))
+        Ok(expression)
     }
 }
 
@@ -105,138 +86,168 @@ impl Translate<CExpression> for Path {
                 complex_path.identifier()
             )),
         };
-        Ok((expression, ModuleMembers::default()))
+        Ok(expression)
     }
 }
 
-impl Translate<CExpression> for BrucketExpression {
+impl Translate<CExpression> for Application {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let mut members = ModuleMembers::new();
-        let expression = match self {
-            Expression::ConstantValue(value) => {
-                let mut value = value.translate(state)?;
-                members.append(&mut value.1);
-                Ok(value.0)
-            }
-            Expression::Identifier(path) => {
-                let mut value = path.translate(state)?;
-                members.append(&mut value.1);
-                Ok(value.0)
-            }
-            Expression::Application(Application {
-                identifier,
-                arguments,
-            }) => {
-                let name = identifier.translate(state)?.0;
-                if let CExpression::NamedReference(name) = name {
-                    let arguments = arguments
-                        .into_iter()
-                        .map(|argument| argument.translate(state))
-                        .collect::<Result<Vec<(CExpression, ModuleMembers)>, TranslatorError>>()?;
-                    let (arguments, application_members) = unfold_tuple_vector(arguments);
-                    let mut application_members =
-                        application_members.into_iter().flatten().collect();
-                    members.append(&mut application_members);
-                    Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-                        name, arguments,
-                    )))
-                } else {
-                    Err(Cow::from("Unsupported function name in application type"))
-                }
-            }
-            Expression::InternalCall(InternalCall {
-                identifier,
-                arguments,
-            }) => {
-                let arguments = arguments
-                    .into_iter()
-                    .map(|argument| argument.translate(state))
-                    .collect::<Result<Vec<(CExpression, ModuleMembers)>, TranslatorError>>()?;
-                let (arguments, application_members) = unfold_tuple_vector(arguments);
-                let mut application_members = application_members.into_iter().flatten().collect();
-                members.append(&mut application_members);
-                Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-                    identifier, arguments,
-                )))
-            }
-            Expression::Let(Let { name, value, then }) => {
-                let (value, mut value_members) = value.translate(state)?;
-                let (next, mut next_members) = then.translate(state)?;
-                members.append(&mut value_members);
-                members.append(&mut next_members);
-                let function_name = format!("__internal_let_{}_{}", state.let_count, name);
-                state.increment_let();
-                let function = ModuleMember::Function(CFunction::new(
-                    Type::Primitive(PrimitiveType::Int),
-                    function_name.clone(),
-                    Parameters::default(),
-                    vec![
-                        Instruction::Variable(VariableInstruction::new(
-                            Type::Primitive(PrimitiveType::Int),
-                            name,
-                            Some(value),
-                        )),
-                        Instruction::Return(next),
-                    ],
-                ));
-                members.push(function);
-                Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-                    function_name,
-                    Arguments::default(),
-                )))
-            }
-            Expression::If(if_expression) => {
-                let (condition, mut condition_members) =
-                    if_expression.condition.translate(state)?;
-                let (if_body, mut if_members) = if_expression.if_true.translate(state)?;
-                let (else_body, mut else_members) = if_expression.if_false.translate(state)?;
-                members.append(&mut condition_members);
-                members.append(&mut if_members);
-                members.append(&mut else_members);
-                let function_name = format!("__internal_if_{}", state.if_count);
-                state.increment_if();
-                let function = ModuleMember::Function(CFunction::new(
-                    Type::Primitive(PrimitiveType::Int),
-                    function_name.clone(),
-                    Parameters::default(),
-                    vec![Instruction::IfElse(IfElseInstruction::new(
-                        condition,
-                        vec![Instruction::Return(if_body)],
-                        vec![Instruction::Return(else_body)],
-                    ))],
-                ));
-                members.push(function);
-                Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-                    function_name,
-                    Arguments::default(),
-                )))
-            }
-            Expression::Lambda(_) => Err(Cow::from("Unsupported expression")),
-            Expression::Module(_) => Err(Cow::from("Unsupported expression")),
-            Expression::Function(Function {
-                visibility: _,
-                application_strategy: _,
-                name: _,
-                body: _,
-            }) => Err(Cow::from("Unsupported expression")),
-            Expression::Constant(Constant {
-                visibility: _,
-                name: _,
-                value: _,
-            }) => Err(Cow::from("Unsupported expression")),
-        };
-        expression.map(|expression| (expression, members))
+        let name = self.identifier.translate(state)?;
+        if let CExpression::NamedReference(name) = name {
+            let arguments = self
+                .arguments
+                .into_iter()
+                .map(|argument| argument.translate(state))
+                .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
+            Ok(CExpression::FunctionCall(FunctionCallExpression::new(
+                name, arguments,
+            )))
+        } else {
+            Err(Cow::from(
+                "Unsupported function identifier in application type",
+            ))
+        }
     }
 }
 
-fn unfold_tuple_vector<T1, T2>(vector: Vec<(T1, T2)>) -> (Vec<T1>, Vec<T2>) {
-    let length = vector.len();
-    vector.into_iter().fold(
-        (Vec::with_capacity(length), Vec::with_capacity(length)),
-        |mut accumulator, element| {
-            accumulator.0.push(element.0);
-            accumulator.1.push(element.1);
-            (accumulator.0, accumulator.1)
-        },
-    )
+impl Translate<CExpression> for InternalCall {
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        let arguments = self
+            .arguments
+            .into_iter()
+            .map(|argument| argument.translate(state))
+            .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
+        Ok(CExpression::FunctionCall(FunctionCallExpression::new(
+            self.identifier,
+            arguments,
+        )))
+    }
+}
+
+impl Translate<CExpression> for Let {
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        let value = self.value.translate(state)?;
+        let variable = Variable::new(self.name.clone(), Type::Primitive(PrimitiveType::Int));
+        state.push_variable(variable);
+        let next = self.then.translate(state)?;
+        state.pop_variable();
+        let let_count = state.let_count();
+        let function_name = format!("__internal_let_{}_{}", let_count, self.name);
+        state.increment_let();
+        let deduplicated_variables = state.variables().iter().collect::<HashSet<_>>();
+        let arguments = deduplicated_variables
+            .iter()
+            .map(|variable| CExpression::NamedReference(variable.name().to_string()))
+            .collect::<Arguments>();
+        let parameters = deduplicated_variables
+            .iter()
+            .map(|variable| {
+                FunctionParameter::new(
+                    variable.variable_type().clone(),
+                    variable.name().to_string(),
+                )
+            })
+            .collect::<Parameters>();
+        state.add_function(
+            FunctionHeader::new(
+                Type::Primitive(PrimitiveType::Int),
+                function_name.clone(),
+                parameters,
+            ),
+            vec![
+                Instruction::Variable(VariableInstruction::new(
+                    Type::Primitive(PrimitiveType::Int),
+                    self.name,
+                    Some(value),
+                )),
+                Instruction::Return(next),
+            ],
+        );
+        Ok(CExpression::FunctionCall(FunctionCallExpression::new(
+            function_name,
+            arguments,
+        )))
+    }
+}
+
+impl Translate<CExpression> for If {
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        let condition = self.condition.translate(state)?;
+        let if_body = self.if_true.translate(state)?;
+        let else_body = self.if_false.translate(state)?;
+        let if_count = state.if_count();
+        let function_name = format!("__internal_if_{}", if_count);
+        state.increment_if();
+        let deduplicated_variables = state.variables().iter().collect::<HashSet<_>>();
+        let arguments = deduplicated_variables
+            .iter()
+            .map(|variable| CExpression::NamedReference(variable.name().to_string()))
+            .collect::<Arguments>();
+        let parameters = deduplicated_variables
+            .iter()
+            .map(|variable| {
+                FunctionParameter::new(
+                    variable.variable_type().clone(),
+                    variable.name().to_string(),
+                )
+            })
+            .collect::<Parameters>();
+        state.add_function(
+            FunctionHeader::new(
+                Type::Primitive(PrimitiveType::Int),
+                function_name.clone(),
+                parameters,
+            ),
+            vec![Instruction::IfElse(IfElseInstruction::new(
+                condition,
+                vec![Instruction::Return(if_body)],
+                vec![Instruction::Return(else_body)],
+            ))],
+        );
+        Ok(CExpression::FunctionCall(FunctionCallExpression::new(
+            function_name,
+            arguments,
+        )))
+    }
+}
+
+impl Translate<CExpression> for Lambda {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        unimplemented!("Lambda#translate()")
+    }
+}
+
+impl Translate<CExpression> for Module {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        unimplemented!("Module#translate()")
+    }
+}
+
+impl Translate<CExpression> for Function {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        unimplemented!("Function#translate()")
+    }
+}
+
+impl Translate<CExpression> for Constant {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        unimplemented!("Constant#translate()")
+    }
+}
+
+impl Translate<CExpression> for Expression {
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        match self {
+            Expression::ConstantValue(value) => value.translate(state),
+            Expression::Identifier(path) => path.translate(state),
+            Expression::Application(application) => application.translate(state),
+            Expression::InternalCall(internal_call) => internal_call.translate(state),
+            Expression::Let(let_expression) => let_expression.translate(state),
+            Expression::If(if_expression) => if_expression.translate(state),
+            Expression::Lambda(lambda) => lambda.translate(state),
+            Expression::Module(module) => module.translate(state),
+            Expression::Function(function) => function.translate(state),
+            Expression::Constant(constant) => constant.translate(state),
+        }
+    }
 }

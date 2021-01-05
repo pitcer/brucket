@@ -33,7 +33,7 @@ pub mod module;
 #[cfg(test)]
 pub type TestResult = Result<(), String>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     Primitive(PrimitiveType),
     Custom(String),
@@ -48,7 +48,7 @@ impl Generator for Type {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PrimitiveType {
     Int,
     Long,

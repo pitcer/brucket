@@ -24,26 +24,26 @@
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
 
-#[derive(Clone, Debug)]
-pub enum Expression {
+#[derive(Debug, Clone)]
+pub enum CExpression {
     Number(NumberExpression),
     String(String),
     NamedReference(String),
     FunctionCall(FunctionCallExpression),
 }
 
-impl Generator for Expression {
+impl Generator for CExpression {
     fn generate(self) -> GeneratorResult {
         match self {
-            Expression::Number(number) => number.generate(),
-            Expression::String(string) => Ok(format!("\"{}\"", string)),
-            Expression::NamedReference(name) => Ok(name),
-            Expression::FunctionCall(call) => call.generate(),
+            CExpression::Number(number) => number.generate(),
+            CExpression::String(string) => Ok(format!("\"{}\"", string)),
+            CExpression::NamedReference(name) => Ok(name),
+            CExpression::FunctionCall(call) => call.generate(),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub enum NumberExpression {
     Integer(String),
     FloatingPoint(String),
@@ -58,7 +58,7 @@ impl Generator for NumberExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionCallExpression {
     name: String,
     arguments: Arguments,
@@ -82,7 +82,7 @@ impl Generator for FunctionCallExpression {
     }
 }
 
-pub type Arguments = Vec<Expression>;
+pub type Arguments = Vec<CExpression>;
 
 #[cfg(test)]
 mod test {
@@ -113,7 +113,7 @@ mod test {
             "foobar(foo)",
             FunctionCallExpression::new(
                 "foobar".to_string(),
-                vec![Expression::NamedReference("foo".to_string())]
+                vec![CExpression::NamedReference("foo".to_string())]
             )
             .generate()?
         );
@@ -122,8 +122,8 @@ mod test {
             FunctionCallExpression::new(
                 "foobar".to_string(),
                 vec![
-                    Expression::NamedReference("foo".to_string()),
-                    Expression::NamedReference("bar".to_string())
+                    CExpression::NamedReference("foo".to_string()),
+                    CExpression::NamedReference("bar".to_string())
                 ]
             )
             .generate()?
@@ -133,9 +133,9 @@ mod test {
             FunctionCallExpression::new(
                 "foobar".to_string(),
                 vec![
-                    Expression::NamedReference("foo".to_string()),
-                    Expression::NamedReference("bar".to_string()),
-                    Expression::NamedReference("foobar".to_string())
+                    CExpression::NamedReference("foo".to_string()),
+                    CExpression::NamedReference("bar".to_string()),
+                    CExpression::NamedReference("foobar".to_string())
                 ]
             )
             .generate()?
@@ -147,29 +147,29 @@ mod test {
     fn test_expressions_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "42",
-            Expression::Number(NumberExpression::Integer("42".to_string())).generate()?
+            CExpression::Number(NumberExpression::Integer("42".to_string())).generate()?
         );
         assert_eq!(
             "42.42",
-            Expression::Number(NumberExpression::FloatingPoint("42.42".to_string())).generate()?
+            CExpression::Number(NumberExpression::FloatingPoint("42.42".to_string())).generate()?
         );
         assert_eq!(
             "foobar",
-            Expression::NamedReference("foobar".to_string()).generate()?
+            CExpression::NamedReference("foobar".to_string()).generate()?
         );
-        assert_eq!("\"\"", Expression::String("".to_string()).generate()?);
+        assert_eq!("\"\"", CExpression::String("".to_string()).generate()?);
         assert_eq!(
             "\"foobar\"",
-            Expression::String("foobar".to_string()).generate()?
+            CExpression::String("foobar".to_string()).generate()?
         );
         assert_eq!(
             "foobar(foo, bar, foobar)",
-            Expression::FunctionCall(FunctionCallExpression::new(
+            CExpression::FunctionCall(FunctionCallExpression::new(
                 "foobar".to_string(),
                 vec![
-                    Expression::NamedReference("foo".to_string()),
-                    Expression::NamedReference("bar".to_string()),
-                    Expression::NamedReference("foobar".to_string())
+                    CExpression::NamedReference("foo".to_string()),
+                    CExpression::NamedReference("bar".to_string()),
+                    CExpression::NamedReference("foobar".to_string())
                 ]
             ))
             .generate()?

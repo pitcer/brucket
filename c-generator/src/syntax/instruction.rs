@@ -23,15 +23,16 @@
  */
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
-use crate::syntax::expression::Expression;
+use crate::syntax::expression::CExpression;
 use crate::syntax::Type;
 
+#[derive(Debug)]
 pub enum Instruction {
-    Expression(Expression),
+    Expression(CExpression),
     Variable(VariableInstruction),
     If(IfInstruction),
     IfElse(IfElseInstruction),
-    Return(Expression),
+    Return(CExpression),
 }
 
 impl Generator for Instruction {
@@ -48,14 +49,15 @@ impl Generator for Instruction {
     }
 }
 
+#[derive(Debug)]
 pub struct VariableInstruction {
     variable_type: Type,
     name: String,
-    value: Option<Expression>,
+    value: Option<CExpression>,
 }
 
 impl VariableInstruction {
-    pub fn new(variable_type: Type, name: String, value: Option<Expression>) -> Self {
+    pub fn new(variable_type: Type, name: String, value: Option<CExpression>) -> Self {
         Self {
             variable_type,
             name,
@@ -78,13 +80,14 @@ impl Generator for VariableInstruction {
     }
 }
 
+#[derive(Debug)]
 pub struct IfInstruction {
-    condition: Expression,
+    condition: CExpression,
     body: Instructions,
 }
 
 impl IfInstruction {
-    pub fn new(condition: Expression, body: Instructions) -> Self {
+    pub fn new(condition: CExpression, body: Instructions) -> Self {
         Self { condition, body }
     }
 }
@@ -100,14 +103,15 @@ impl Generator for IfInstruction {
     }
 }
 
+#[derive(Debug)]
 pub struct IfElseInstruction {
-    condition: Expression,
+    condition: CExpression,
     if_body: Instructions,
     else_body: Instructions,
 }
 
 impl IfElseInstruction {
-    pub fn new(condition: Expression, if_body: Instructions, else_body: Instructions) -> Self {
+    pub fn new(condition: CExpression, if_body: Instructions, else_body: Instructions) -> Self {
         Self {
             condition,
             if_body,
@@ -165,7 +169,7 @@ mod test {
             VariableInstruction::new(
                 Type::Primitive(PrimitiveType::Int),
                 "foo".to_string(),
-                Some(Expression::NamedReference("bar".to_string()))
+                Some(CExpression::NamedReference("bar".to_string()))
             )
             .generate()?
         );
@@ -180,10 +184,10 @@ mod test {
     bar;
 }"#,
             IfInstruction::new(
-                Expression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_string()),
                 vec![
-                    Instruction::Expression(Expression::NamedReference("foo".to_string())),
-                    Instruction::Expression(Expression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
                 ]
             )
             .generate()?
@@ -202,14 +206,14 @@ mod test {
     foo;
 }"#,
             IfElseInstruction::new(
-                Expression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_string()),
                 vec![
-                    Instruction::Expression(Expression::NamedReference("foo".to_string())),
-                    Instruction::Expression(Expression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
                 ],
                 vec![
-                    Instruction::Expression(Expression::NamedReference("bar".to_string())),
-                    Instruction::Expression(Expression::NamedReference("foo".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("bar".to_string())),
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string()))
                 ],
             )
             .generate()?
@@ -221,18 +225,19 @@ mod test {
     fn test_instruction_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "foobar;",
-            Instruction::Expression(Expression::NamedReference("foobar".to_string())).generate()?
+            Instruction::Expression(CExpression::NamedReference("foobar".to_string()))
+                .generate()?
         );
         assert_eq!(
             "return foobar;",
-            Instruction::Return(Expression::NamedReference("foobar".to_string())).generate()?
+            Instruction::Return(CExpression::NamedReference("foobar".to_string())).generate()?
         );
         assert_eq!(
             "int foo = bar;",
             Instruction::Variable(VariableInstruction::new(
                 Type::Primitive(PrimitiveType::Int),
                 "foo".to_string(),
-                Some(Expression::NamedReference("bar".to_string()))
+                Some(CExpression::NamedReference("bar".to_string()))
             ))
             .generate()?
         );
@@ -243,10 +248,10 @@ mod test {
     bar;
 }"#,
             Instruction::If(IfInstruction::new(
-                Expression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_string()),
                 vec![
-                    Instruction::Expression(Expression::NamedReference("foo".to_string())),
-                    Instruction::Expression(Expression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
                 ]
             ))
             .generate()?
@@ -260,14 +265,14 @@ mod test {
     foo;
 }"#,
             Instruction::IfElse(IfElseInstruction::new(
-                Expression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_string()),
                 vec![
-                    Instruction::Expression(Expression::NamedReference("foo".to_string())),
-                    Instruction::Expression(Expression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
                 ],
                 vec![
-                    Instruction::Expression(Expression::NamedReference("bar".to_string())),
-                    Instruction::Expression(Expression::NamedReference("foo".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("bar".to_string())),
+                    Instruction::Expression(CExpression::NamedReference("foo".to_string()))
                 ],
             ))
             .generate()?
