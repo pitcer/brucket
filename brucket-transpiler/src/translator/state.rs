@@ -82,6 +82,10 @@ impl TranslationState {
         self.variables.pop();
     }
 
+    pub fn contains_variable(&self, variable: &Variable) -> bool {
+        self.variables.contains(variable)
+    }
+
     pub fn increment_let(&mut self) {
         self.let_count += 1
     }

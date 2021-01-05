@@ -36,7 +36,6 @@ use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableI
 use c_generator::syntax::{PrimitiveType, Type};
 
 use crate::translator::state::{TranslationState, Variable};
-use std::collections::HashSet;
 
 pub mod state;
 
@@ -128,18 +127,24 @@ impl Translate<CExpression> for Let {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let value = self.value.translate(state)?;
         let variable = Variable::new(self.name.clone(), Type::Primitive(PrimitiveType::Int));
-        state.push_variable(variable);
-        let next = self.then.translate(state)?;
-        state.pop_variable();
+        let next = if !state.contains_variable(&variable) {
+            state.push_variable(variable);
+            let next = self.then.translate(state)?;
+            state.pop_variable();
+            next
+        } else {
+            self.then.translate(state)?
+        };
         let let_count = state.let_count();
         let function_name = format!("__internal_let_{}_{}", let_count, self.name);
         state.increment_let();
-        let deduplicated_variables = state.variables().iter().collect::<HashSet<_>>();
-        let arguments = deduplicated_variables
+        let arguments = state
+            .variables()
             .iter()
             .map(|variable| CExpression::NamedReference(variable.name().to_string()))
             .collect::<Arguments>();
-        let parameters = deduplicated_variables
+        let parameters = state
+            .variables()
             .iter()
             .map(|variable| {
                 FunctionParameter::new(
@@ -178,12 +183,13 @@ impl Translate<CExpression> for If {
         let if_count = state.if_count();
         let function_name = format!("__internal_if_{}", if_count);
         state.increment_if();
-        let deduplicated_variables = state.variables().iter().collect::<HashSet<_>>();
-        let arguments = deduplicated_variables
+        let arguments = state
+            .variables()
             .iter()
             .map(|variable| CExpression::NamedReference(variable.name().to_string()))
             .collect::<Arguments>();
-        let parameters = deduplicated_variables
+        let parameters = state
+            .variables()
             .iter()
             .map(|variable| {
                 FunctionParameter::new(
