@@ -24,9 +24,9 @@
 
 use std::borrow::Cow;
 
-use brucket_ast::ast::{
-    Application, Boolean, Constant, ConstantValue, Expression, Function, If, InternalCall, Lambda,
-    Let, Module, Number, Path,
+use brucket_ast::analyzer::ast::{
+    Application, ApplicationIdentifier, Boolean, Constant, ConstantValue, Expression, Function, If,
+    Lambda, Let, Module, Number, Path,
 };
 use c_generator::syntax::expression::{
     Arguments, CExpression, FunctionCallExpression, NumberExpression,
@@ -36,6 +36,7 @@ use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableI
 use c_generator::syntax::{PrimitiveType, Type};
 
 use crate::translator::state::{TranslationState, Variable};
+use brucket_ast::analyzer::type_analyzer::Typed;
 
 pub mod state;
 
@@ -67,66 +68,67 @@ impl Translate<CExpression> for ConstantValue {
     }
 }
 
-impl Translate<CExpression> for Path {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let expression = match self {
-            Path::Simple(path) => {
-                let path = path
-                    .replace("+", "__internal_plus")
-                    .replace("-", "__internal_minus")
-                    .replace("*", "__internal_times")
-                    .replace("/", "__internal_divide")
-                    .replace("%", "__internal_remainder");
-                CExpression::NamedReference(path)
-            }
-            Path::Complex(complex_path) => CExpression::NamedReference(format!(
+impl Translate<String> for Path {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<String> {
+        match self {
+            Path::Simple(path) => Ok(path
+                .replace("+", "__internal_plus")
+                .replace("-", "__internal_minus")
+                .replace("*", "__internal_times")
+                .replace("/", "__internal_divide")
+                .replace("%", "__internal_remainder")),
+            Path::Complex(complex_path) => Ok(format!(
                 "{}_{}",
                 complex_path.path().join("_"),
                 complex_path.identifier()
             )),
-        };
-        Ok(expression)
+        }
+    }
+}
+
+impl Translate<String> for ApplicationIdentifier {
+    fn translate(self, state: &mut TranslationState) -> TranslatorResult<String> {
+        match self {
+            ApplicationIdentifier::Identifier(path) => path.translate(state),
+            ApplicationIdentifier::Lambda(lambda) => lambda.translate(state),
+        }
     }
 }
 
 impl Translate<CExpression> for Application {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let name = self.identifier.translate(state)?;
-        if let CExpression::NamedReference(name) = name {
-            let arguments = self
-                .arguments
-                .into_iter()
-                .map(|argument| argument.translate(state))
-                .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
-            Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-                name, arguments,
-            )))
-        } else {
-            Err(Cow::from(
-                "Unsupported function identifier in application type",
-            ))
-        }
-    }
-}
-
-impl Translate<CExpression> for InternalCall {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let arguments = self
             .arguments
             .into_iter()
             .map(|argument| argument.translate(state))
             .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
         Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-            self.identifier,
-            arguments,
+            name, arguments,
         )))
+    }
+}
+
+fn to_c_type(t: brucket_ast::analyzer::type_analyzer::Type) -> Type {
+    match t {
+        brucket_ast::analyzer::type_analyzer::Type::Unknown => panic!("unknown type"),
+        brucket_ast::analyzer::type_analyzer::Type::Unit => Type::Primitive(PrimitiveType::Int),
+        brucket_ast::analyzer::type_analyzer::Type::Boolean => Type::Primitive(PrimitiveType::Int),
+        brucket_ast::analyzer::type_analyzer::Type::Integer => Type::Primitive(PrimitiveType::Int),
+        brucket_ast::analyzer::type_analyzer::Type::Float => Type::Primitive(PrimitiveType::Double),
+        brucket_ast::analyzer::type_analyzer::Type::String => Type::Custom("char*".to_owned()),
+        brucket_ast::analyzer::type_analyzer::Type::Lambda(_lambda) => {
+            unimplemented!()
+        }
     }
 }
 
 impl Translate<CExpression> for Let {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
+        let then_type = self.get_type(&mut state.env)?;
+        let value_type = &self.value.get_type(&mut state.env)?;
         let value = self.value.translate(state)?;
-        let variable = Variable::new(self.name.clone(), Type::Primitive(PrimitiveType::Int));
+        let variable = Variable::new(self.name.clone(), to_c_type(value_type.clone()));
         let next = if !state.contains_variable(&variable) {
             state.push_variable(variable);
             let next = self.then.translate(state)?;
@@ -154,14 +156,10 @@ impl Translate<CExpression> for Let {
             })
             .collect::<Parameters>();
         state.add_function(
-            FunctionHeader::new(
-                Type::Primitive(PrimitiveType::Int),
-                function_name.clone(),
-                parameters,
-            ),
+            FunctionHeader::new(to_c_type(then_type), function_name.clone(), parameters),
             vec![
                 Instruction::Variable(VariableInstruction::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    to_c_type(value_type.clone()),
                     self.name,
                     Some(value),
                 )),
@@ -217,8 +215,8 @@ impl Translate<CExpression> for If {
     }
 }
 
-impl Translate<CExpression> for Lambda {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
+impl Translate<String> for Lambda {
+    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<String> {
         unimplemented!("Lambda#translate()")
     }
 }
@@ -245,14 +243,15 @@ impl Translate<CExpression> for Expression {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         match self {
             Expression::ConstantValue(value) => value.translate(state),
-            Expression::Identifier(path) => path.translate(state),
+            Expression::Identifier(path) => Ok(CExpression::NamedReference(path.translate(state)?)),
             Expression::Application(application) => application.translate(state),
-            Expression::InternalCall(internal_call) => internal_call.translate(state),
+            // Expression::InternalCall(internal_call) => internal_call.translate(state),
             Expression::Let(let_expression) => let_expression.translate(state),
             Expression::If(if_expression) => if_expression.translate(state),
-            Expression::Lambda(lambda) => lambda.translate(state),
+            Expression::Lambda(lambda) => Ok(CExpression::NamedReference(lambda.translate(state)?)),
             Expression::Module(module) => module.translate(state),
             Expression::Function(function) => function.translate(state),
+            Expression::InternalFunction(_internal_function) => unimplemented!(),
             Expression::Constant(constant) => constant.translate(state),
         }
     }

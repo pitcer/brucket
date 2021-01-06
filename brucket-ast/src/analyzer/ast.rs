@@ -24,19 +24,39 @@
 
 use std::collections::HashSet;
 
-// TODO: replace with a crate::analyzer::ast::Expression
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     ConstantValue(ConstantValue),
     Identifier(Path),
     Application(Application),
-    InternalCall(InternalCall),
     Let(Let),
     If(If),
     Lambda(Lambda),
     Module(Module),
     Function(Function),
+    InternalFunction(InternalFunction),
     Constant(Constant),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct InternalFunction {
+    pub visibility: Visibility,
+    pub application_strategy: ApplicationStrategy,
+    pub name: String,
+}
+
+impl InternalFunction {
+    pub fn new(
+        visibility: Visibility,
+        application_strategy: ApplicationStrategy,
+        name: String,
+    ) -> Self {
+        Self {
+            visibility,
+            application_strategy,
+            name,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -116,12 +136,12 @@ impl Constant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Application {
-    pub identifier: Box<Expression>,
+    pub identifier: ApplicationIdentifier,
     pub arguments: Vec<Expression>,
 }
 
 impl Application {
-    pub fn new(identifier: Box<Expression>, arguments: Vec<Expression>) -> Self {
+    pub fn new(identifier: ApplicationIdentifier, arguments: Vec<Expression>) -> Self {
         Self {
             identifier,
             arguments,
@@ -130,27 +150,18 @@ impl Application {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct InternalCall {
-    pub identifier: String,
-    pub arguments: Vec<Expression>,
+pub enum ApplicationIdentifier {
+    Identifier(Path),
+    Lambda(Lambda),
 }
 
-impl InternalCall {
-    pub fn new(identifier: String, arguments: Vec<Expression>) -> Self {
-        Self {
-            identifier,
-            arguments,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Path {
     Simple(String),
     Complex(ComplexPath),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ComplexPath {
     pub identifier: String,
     pub path: Vec<String>,
@@ -172,10 +183,10 @@ impl ComplexPath {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lambda {
-    parameters: Vec<Parameter>,
-    return_type: Type,
-    body: Box<Expression>,
-    used_identifiers: HashSet<String>,
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
+    pub body: Box<Expression>,
+    pub used_identifiers: HashSet<String>,
 }
 
 impl Lambda {

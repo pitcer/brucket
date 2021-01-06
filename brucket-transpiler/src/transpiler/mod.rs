@@ -36,6 +36,7 @@ use c_generator::syntax::{PrimitiveType, Type};
 
 use crate::translator::state::TranslationState;
 use crate::translator::Translate;
+use brucket_ast::analyzer::Analyzer;
 use std::borrow::Cow;
 
 pub struct Transpiler;
@@ -50,8 +51,10 @@ impl Transpiler {
     pub fn transpile(&self, syntax: Cow<str>) -> GeneratorResult {
         let lexer = Lexer::default();
         let parser = Parser::default();
+        let analyzer = Analyzer;
         let tokens = lexer.tokenize(syntax)?;
         let expression = parser.parse(tokens)?;
+        let expression = analyzer.analyze(expression);
         let mut state = TranslationState::default();
         let expression = expression.translate(&mut state)?;
         let expression_members = state.into_members();

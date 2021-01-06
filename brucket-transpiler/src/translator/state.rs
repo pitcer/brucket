@@ -22,10 +22,12 @@
  * SOFTWARE.
  */
 
+use brucket_ast::analyzer::type_analyzer::Environment;
 use c_generator::syntax::function::{FunctionDeclaration, FunctionDefinition, FunctionHeader};
 use c_generator::syntax::instruction::Instructions;
 use c_generator::syntax::module::{ModuleMember, ModuleMembers};
 use c_generator::syntax::Type;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct TranslationState {
@@ -34,6 +36,7 @@ pub struct TranslationState {
     variables: Vec<Variable>,
     declarations: ModuleMembers,
     members: ModuleMembers,
+    pub env: Environment,
 }
 
 impl Default for TranslationState {
@@ -44,6 +47,9 @@ impl Default for TranslationState {
             Vec::default(),
             ModuleMembers::default(),
             ModuleMembers::default(),
+            Environment {
+                variables: HashMap::default(),
+            },
         )
     }
 }
@@ -55,6 +61,7 @@ impl TranslationState {
         variables: Vec<Variable>,
         declarations: ModuleMembers,
         members: ModuleMembers,
+        env: Environment,
     ) -> Self {
         Self {
             let_count,
@@ -62,6 +69,7 @@ impl TranslationState {
             variables,
             declarations,
             members,
+            env,
         }
     }
 
