@@ -278,16 +278,15 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_lambda(lambda: &Lambda, environment: &Environment) -> Closure {
+    fn evaluate_lambda(lambda: &Lambda<Expression>, environment: &Environment) -> Closure {
         let environment = Self::get_optimized_lambda_environment(lambda, environment);
-        Closure::new(
-            lambda.parameters().clone(),
-            Box::from(lambda.body().clone()),
-            environment,
-        )
+        Closure::new(lambda.parameters.clone(), lambda.body.clone(), environment)
     }
 
-    fn get_optimized_lambda_environment(lambda: &Lambda, environment: &Environment) -> Environment {
+    fn get_optimized_lambda_environment<T>(
+        lambda: &Lambda<T>,
+        environment: &Environment,
+    ) -> Environment {
         let identifiers = lambda.used_identifiers();
         let new_env: Environment = identifiers
             .iter()
@@ -565,7 +564,7 @@ impl Evaluator {
 
     fn evaluate_module(
         &mut self,
-        module: &Module,
+        module: &Module<Expression>,
         static_module_environment: &Environment,
         global_module_environment: &ModuleEnvironment,
         environment: &Environment,

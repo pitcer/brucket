@@ -287,7 +287,7 @@ impl Parser {
         }
     }
 
-    fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, ExpressionError> {
+    fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda<Expression>, ExpressionError> {
         let parameters = Self::parse_parameters(tokens)?;
         let return_type = Self::parse_return_type(tokens)?;
         let body = Self::parse_first(tokens)?;

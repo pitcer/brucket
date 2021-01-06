@@ -25,8 +25,7 @@
 use std::borrow::Cow;
 
 use brucket_ast::ast::{
-    Application, Boolean, Constant, ConstantValue, Expression, Function, If, Lambda, Let, Module,
-    Number, Path,
+    Application, Boolean, Constant, ConstantValue, Function, If, Lambda, Let, Module, Number, Path,
 };
 use c_generator::syntax::expression::{
     Arguments, CExpression, FunctionCallExpression, NumberExpression,
@@ -36,7 +35,7 @@ use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableI
 use c_generator::syntax::{PrimitiveType, Type};
 
 use crate::translator::state::{TranslationState, Variable};
-use brucket_ast::analyzer::type_analyzer::Typed;
+use brucket_ast::analyzer::type_analyzer::typed_ast::{TypedExpression, TypedExpressionType};
 
 pub mod state;
 
@@ -86,7 +85,7 @@ impl Translate<String> for Path {
     }
 }
 
-impl Translate<CExpression> for Application {
+impl Translate<CExpression> for Application<TypedExpression> {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let name = self.identifier.translate(state)?;
         if let CExpression::NamedReference(name) = name {
@@ -119,10 +118,10 @@ fn to_c_type(brucket_type: brucket_ast::ast::Type) -> Type {
     }
 }
 
-impl Translate<CExpression> for Let {
+impl Translate<CExpression> for Let<TypedExpression> {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let then_type = self.get_type(&mut state.env)?;
-        let value_type = &self.value.get_type(&mut state.env)?;
+        let then_type = self.then.evaluated_type.clone();
+        let value_type = self.value.evaluated_type.clone();
         let value = self.value.translate(state)?;
         let variable = Variable::new(self.name.clone(), to_c_type(value_type.clone()));
         let next = if !state.contains_variable(&variable) {
@@ -155,7 +154,7 @@ impl Translate<CExpression> for Let {
             FunctionHeader::new(to_c_type(then_type), function_name.clone(), parameters),
             vec![
                 Instruction::Variable(VariableInstruction::new(
-                    to_c_type(value_type.clone()),
+                    to_c_type(value_type),
                     self.name,
                     Some(value),
                 )),
@@ -169,7 +168,7 @@ impl Translate<CExpression> for Let {
     }
 }
 
-impl Translate<CExpression> for If {
+impl Translate<CExpression> for If<TypedExpression> {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let condition = self.condition.translate(state)?;
         let if_body = self.if_true.translate(state)?;
@@ -211,43 +210,47 @@ impl Translate<CExpression> for If {
     }
 }
 
-impl Translate<String> for Lambda {
+impl Translate<String> for Lambda<TypedExpression> {
     fn translate(self, _state: &mut TranslationState) -> TranslatorResult<String> {
         unimplemented!("Lambda#translate()")
     }
 }
 
-impl Translate<CExpression> for Module {
+impl Translate<CExpression> for Module<TypedExpression> {
     fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
         unimplemented!("Module#translate()")
     }
 }
 
-impl Translate<CExpression> for Function {
+impl Translate<CExpression> for Function<TypedExpression> {
     fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
         unimplemented!("Function#translate()")
     }
 }
 
-impl Translate<CExpression> for Constant {
+impl Translate<CExpression> for Constant<TypedExpression> {
     fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
         unimplemented!("Constant#translate()")
     }
 }
 
-impl Translate<CExpression> for Expression {
+impl Translate<CExpression> for TypedExpression {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        match self {
-            Expression::ConstantValue(value) => value.translate(state),
-            Expression::Identifier(path) => Ok(CExpression::NamedReference(path.translate(state)?)),
-            Expression::Application(application) => application.translate(state),
-            Expression::Let(let_expression) => let_expression.translate(state),
-            Expression::If(if_expression) => if_expression.translate(state),
-            Expression::Lambda(lambda) => Ok(CExpression::NamedReference(lambda.translate(state)?)),
-            Expression::Module(module) => module.translate(state),
-            Expression::Function(function) => function.translate(state),
-            Expression::InternalFunction(_internal_function) => unimplemented!(),
-            Expression::Constant(constant) => constant.translate(state),
+        match self.expression {
+            TypedExpressionType::ConstantValue(value) => value.translate(state),
+            TypedExpressionType::Identifier(path) => {
+                Ok(CExpression::NamedReference(path.translate(state)?))
+            }
+            TypedExpressionType::Application(application) => application.translate(state),
+            TypedExpressionType::Let(let_expression) => let_expression.translate(state),
+            TypedExpressionType::If(if_expression) => if_expression.translate(state),
+            TypedExpressionType::Lambda(lambda) => {
+                Ok(CExpression::NamedReference(lambda.translate(state)?))
+            }
+            TypedExpressionType::Module(module) => module.translate(state),
+            TypedExpressionType::Function(function) => function.translate(state),
+            TypedExpressionType::InternalFunction(_internal_function) => unimplemented!(),
+            TypedExpressionType::Constant(constant) => constant.translate(state),
         }
     }
 }

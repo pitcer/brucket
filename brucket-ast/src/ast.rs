@@ -23,47 +23,44 @@
  */
 
 use std::collections::HashSet;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     ConstantValue(ConstantValue),
     Identifier(Path),
-    Application(Application),
-    Let(Let),
-    If(If),
-    Lambda(Lambda),
-    Module(Module),
-    Function(Function),
+    Application(Application<Expression>),
+    Let(Let<Expression>),
+    If(If<Expression>),
+    Lambda(Lambda<Expression>),
+    Module(Module<Expression>),
+    Function(Function<Expression>),
     InternalFunction(InternalFunction),
-    Constant(Constant),
+    Constant(Constant<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Let {
+pub struct Let<T> {
     pub name: String,
-    pub value: Box<Expression>,
-    pub then: Box<Expression>,
+    pub value: Box<T>,
+    pub then: Box<T>,
 }
 
-impl Let {
-    pub fn new(name: String, value: Box<Expression>, then: Box<Expression>) -> Self {
+impl<T> Let<T> {
+    pub fn new(name: String, value: Box<T>, then: Box<T>) -> Self {
         Self { name, value, then }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct If {
-    pub condition: Box<Expression>,
-    pub if_true: Box<Expression>,
-    pub if_false: Box<Expression>,
+pub struct If<T> {
+    pub condition: Box<T>,
+    pub if_true: Box<T>,
+    pub if_false: Box<T>,
 }
 
-impl If {
-    pub fn new(
-        condition: Box<Expression>,
-        if_true: Box<Expression>,
-        if_false: Box<Expression>,
-    ) -> Self {
+impl<T> If<T> {
+    pub fn new(condition: Box<T>, if_true: Box<T>, if_false: Box<T>) -> Self {
         Self {
             condition,
             if_true,
@@ -73,19 +70,19 @@ impl If {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Function {
+pub struct Function<T> {
     pub visibility: Visibility,
     pub application_strategy: ApplicationStrategy,
     pub name: String,
-    pub body: Lambda,
+    pub body: Lambda<T>,
 }
 
-impl Function {
+impl<T> Function<T> {
     pub fn new(
         visibility: Visibility,
         application_strategy: ApplicationStrategy,
         name: String,
-        body: Lambda,
+        body: Lambda<T>,
     ) -> Self {
         Self {
             visibility,
@@ -124,14 +121,14 @@ impl InternalFunction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Constant {
+pub struct Constant<T> {
     pub visibility: Visibility,
     pub name: String,
-    pub value: Box<Expression>,
+    pub value: Box<T>,
 }
 
-impl Constant {
-    pub fn new(visibility: Visibility, name: String, value: Box<Expression>) -> Self {
+impl<T> Constant<T> {
+    pub fn new(visibility: Visibility, name: String, value: Box<T>) -> Self {
         Self {
             visibility,
             name,
@@ -141,13 +138,13 @@ impl Constant {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Application {
-    pub identifier: Box<Expression>,
-    pub arguments: Vec<Expression>,
+pub struct Application<T> {
+    pub identifier: Box<T>,
+    pub arguments: Vec<T>,
 }
 
-impl Application {
-    pub fn new(identifier: Box<Expression>, arguments: Vec<Expression>) -> Self {
+impl<T> Application<T> {
+    pub fn new(identifier: Box<T>, arguments: Vec<T>) -> Self {
         Self {
             identifier,
             arguments,
@@ -161,10 +158,25 @@ pub enum Path {
     Complex(ComplexPath),
 }
 
+impl Display for Path {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Path::Simple(name) => write!(f, "{}", name),
+            Path::Complex(path) => std::fmt::Display::fmt(path, f),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ComplexPath {
     pub identifier: String,
     pub path: Vec<String>,
+}
+
+impl Display for ComplexPath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}::{}", self.path.join("::"), self.identifier)
+    }
 }
 
 impl ComplexPath {
@@ -182,18 +194,18 @@ impl ComplexPath {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Lambda {
-    parameters: Vec<Parameter>,
-    return_type: Type,
-    body: Box<Expression>,
-    used_identifiers: HashSet<String>,
+pub struct Lambda<T> {
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
+    pub body: Box<T>,
+    pub used_identifiers: HashSet<String>,
 }
 
-impl Lambda {
+impl<T> Lambda<T> {
     pub fn new(
         parameters: Vec<Parameter>,
         return_type: Type,
-        body: Box<Expression>,
+        body: Box<T>,
         used_identifiers: HashSet<String>,
     ) -> Self {
         Self {
@@ -212,31 +224,27 @@ impl Lambda {
         &self.return_type
     }
 
-    pub fn body(&self) -> &Expression {
-        &self.body
-    }
-
     pub fn used_identifiers(&self) -> &HashSet<String> {
         &self.used_identifiers
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Module {
+pub struct Module<T> {
     is_static: bool,
     identifier: String,
-    functions: Vec<Function>,
+    functions: Vec<Function<T>>,
     internal_functions: Vec<InternalFunction>,
-    constants: Vec<Constant>,
+    constants: Vec<Constant<T>>,
 }
 
-impl Module {
+impl<T> Module<T> {
     pub fn new(
         is_static: bool,
         identifier: String,
-        functions: Vec<Function>,
+        functions: Vec<Function<T>>,
         internal_functions: Vec<InternalFunction>,
-        constants: Vec<Constant>,
+        constants: Vec<Constant<T>>,
     ) -> Self {
         Self {
             is_static,
@@ -255,7 +263,7 @@ impl Module {
         &self.identifier
     }
 
-    pub fn functions(&self) -> &Vec<Function> {
+    pub fn functions(&self) -> &Vec<Function<T>> {
         &self.functions
     }
 
@@ -263,7 +271,7 @@ impl Module {
         &self.internal_functions
     }
 
-    pub fn constants(&self) -> &Vec<Constant> {
+    pub fn constants(&self) -> &Vec<Constant<T>> {
         &self.constants
     }
 }
@@ -315,6 +323,33 @@ pub enum Type {
     String,
     Lambda(LambdaType),
     Symbol(String),
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Any => write!(f, "any"),
+            Type::Unit => write!(f, "unit"),
+            Type::Boolean => write!(f, "boolean"),
+            Type::Integer => write!(f, "integer"),
+            Type::Float => write!(f, "float"),
+            Type::String => write!(f, "string"),
+            Type::Lambda(lambda) => std::fmt::Display::fmt(lambda, f),
+            Type::Symbol(symbol) => write!(f, "{}", symbol),
+        }
+    }
+}
+
+impl Display for LambdaType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let parameters = self
+            .parameters_types
+            .iter()
+            .map(|parameter| parameter.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        write!(f, "({} -> {})", parameters, self.return_type)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
