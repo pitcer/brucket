@@ -30,17 +30,17 @@ use std::slice::Iter;
 
 use brucket_ast::ast::{
     Application, ApplicationStrategy, Arity, Constant, ConstantValue, Expression, Function, If,
-    InternalCall, Lambda, Let, Module, Number, Path,
+    InternalFunction, Lambda, Let, Module, Number, Path,
 };
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;
 use crate::interpreter::ModuleEnvironment;
-use crate::value::{Closure, Numeric, Value};
+use crate::value::{Closure, InternalFunctionClosure, Numeric, Value};
 
 #[macro_use]
 pub mod environment;
-mod internal;
+pub mod internal;
 #[cfg(test)]
 mod test;
 
@@ -66,7 +66,7 @@ impl Evaluator {
     }
 
     #[cfg(test)]
-    fn evaluate(&self, expression: &Expression) -> ValueResult {
+    fn evaluate(&mut self, expression: &Expression) -> ValueResult {
         let module_environment = ModuleEnvironment::default();
         let static_module_environment = Environment::new();
         self.evaluate_with_module_environment(
@@ -77,7 +77,7 @@ impl Evaluator {
     }
 
     pub fn evaluate_with_module_environment(
-        &self,
+        &mut self,
         expression: &Expression,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
@@ -92,7 +92,7 @@ impl Evaluator {
     }
 
     fn evaluate_environment(
-        &self,
+        &mut self,
         expression: &Expression,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
@@ -130,16 +130,6 @@ impl Evaluator {
                 identifier,
                 arguments,
             }) => self.evaluate_application(
-                identifier,
-                arguments,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
-            Expression::InternalCall(InternalCall {
-                identifier,
-                arguments,
-            }) => self.evaluate_internal_call(
                 identifier,
                 arguments,
                 static_module_environment,
@@ -184,6 +174,9 @@ impl Evaluator {
                 application_strategy.clone(),
                 Self::evaluate_lambda(lambda, environment),
             )),
+            Expression::InternalFunction(internal_function) => {
+                self.evaluate_internal_function(environment, internal_function)
+            }
             Expression::Constant(Constant {
                 visibility: _,
                 name: _,
@@ -197,8 +190,32 @@ impl Evaluator {
         }
     }
 
+    fn evaluate_internal_function(
+        &mut self,
+        environment: &Environment,
+        internal_function: &InternalFunction,
+    ) -> ValueResult {
+        let env = Environment::default();
+        env.insert_all_weak(environment);
+        let function = self
+            .internal_environment
+            .get(&internal_function.name)
+            .ok_or(format!(
+                "Undefined internal identifier: {}",
+                internal_function.name
+            ))?;
+        Ok(Value::InternalFunctionClosure(
+            InternalFunctionClosure::new(
+                internal_function.application_strategy.clone(),
+                internal_function.parameters.clone(),
+                *function,
+                env,
+            ),
+        ))
+    }
+
     fn evaluate_let(
-        &self,
+        &mut self,
         identifier: &str,
         value: &Expression,
         then: &Expression,
@@ -234,7 +251,7 @@ impl Evaluator {
     }
 
     fn evaluate_if(
-        &self,
+        &mut self,
         condition: &Expression,
         if_true_then: &Expression,
         if_false_then: &Expression,
@@ -335,7 +352,7 @@ impl Evaluator {
     }
 
     fn evaluate_application(
-        &self,
+        &mut self,
         identifier: &Expression,
         arguments: &[Expression],
         static_module_environment: &Environment,
@@ -366,6 +383,13 @@ impl Evaluator {
                     environment,
                     closure,
                 ),
+            Value::InternalFunctionClosure(closure) => self.evaluate_internal_closure_application(
+                arguments,
+                static_module_environment,
+                module_environment,
+                environment,
+                closure,
+            ),
             Value::Thunk(body, environment) => self.evaluate_environment(
                 &body,
                 static_module_environment,
@@ -380,7 +404,7 @@ impl Evaluator {
     }
 
     fn evaluate_closure_application(
-        &self,
+        &mut self,
         application_strategy: ApplicationStrategy,
         arguments: &[Expression],
         static_module_environment: &Environment,
@@ -450,8 +474,69 @@ impl Evaluator {
         result
     }
 
+    fn evaluate_internal_closure_application(
+        &mut self,
+        arguments: &[Expression],
+        static_module_environment: &Environment,
+        module_environment: &ModuleEnvironment,
+        environment: &Environment,
+        closure: InternalFunctionClosure,
+    ) -> ValueResult {
+        let mut arguments_iterator = arguments.iter();
+        let mut has_variadic_parameter = false;
+        let mut closure_environment = HashMap::new();
+        for parameter in &closure.parameters {
+            let name = parameter.name();
+            let arity = parameter.arity();
+            match arity {
+                Arity::Unary => {
+                    let argument = arguments_iterator
+                        .next()
+                        .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
+                    let argument = if closure.application_strategy.is_eager() {
+                        self.evaluate_environment(
+                            argument,
+                            static_module_environment,
+                            module_environment,
+                            environment,
+                        )
+                    } else {
+                        Ok(Value::Thunk(
+                            Box::new(argument.clone()),
+                            environment.clone(),
+                        ))
+                    }?;
+                    closure_environment.insert(name.clone(), argument);
+                }
+                Arity::Variadic => {
+                    let list = self.create_pair_list(
+                        closure.application_strategy,
+                        arguments_iterator,
+                        static_module_environment,
+                        module_environment,
+                        environment,
+                    )?;
+                    closure_environment.insert(name.clone(), list);
+                    has_variadic_parameter = true;
+                    break;
+                }
+            }
+        }
+        let parameters = closure.parameters;
+        let parameters_length = parameters.len();
+        let arguments_length = arguments.len();
+        if !has_variadic_parameter && parameters_length != arguments_length {
+            return Err(Cow::from(format!(
+                "Invalid number of arguments. Expected: {}, Actual: {}",
+                parameters_length, arguments_length
+            )));
+        }
+        let function = closure.function;
+        function(closure_environment)
+    }
+
     fn create_pair_list(
-        &self,
+        &mut self,
         application_strategy: ApplicationStrategy,
         arguments: Iter<Expression>,
         static_module_environment: &Environment,
@@ -478,53 +563,8 @@ impl Evaluator {
         Ok(result)
     }
 
-    fn evaluate_internal_call(
-        &self,
-        identifier: &str,
-        arguments: &[Expression],
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
-        environment: &Environment,
-    ) -> ValueResult {
-        let function = self.internal_environment.get(identifier);
-        if function.is_none() {
-            return Err(Cow::from(format!(
-                "Undefined internal identifier: {}",
-                identifier
-            )));
-        }
-        let function = function.unwrap();
-        let arguments = self.evaluate_arguments(
-            arguments,
-            static_module_environment,
-            module_environment,
-            environment,
-        )?;
-        function(arguments)
-    }
-
-    fn evaluate_arguments(
-        &self,
-        arguments: &[Expression],
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
-        environment: &Environment,
-    ) -> Result<Vec<Value>, String> {
-        let mut result = Vec::new();
-        for argument in arguments {
-            let argument = self.evaluate_environment(
-                argument,
-                static_module_environment,
-                module_environment,
-                environment,
-            )?;
-            result.push(argument);
-        }
-        Ok(result)
-    }
-
     fn evaluate_module(
-        &self,
+        &mut self,
         module: &Module,
         static_module_environment: &Environment,
         global_module_environment: &ModuleEnvironment,
@@ -535,51 +575,52 @@ impl Evaluator {
         let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();
         for function in module.functions() {
-            if let Expression::Function(Function {
-                visibility,
-                application_strategy,
-                name: identifier,
-                body: lambda,
-            }) = &function
-            {
-                let closure = Self::evaluate_lambda(lambda, environment);
-                let closure = Value::FunctionClosure(application_strategy.clone(), closure);
-                let closure = Rc::new(closure);
-                if visibility.is_public() {
-                    module_environment.insert(identifier.clone(), Rc::clone(&closure));
-                }
-                constants_environment.insert(identifier.clone(), Rc::clone(&closure));
-                let used_identifiers = lambda.used_identifiers();
-                closures.push((identifier, Rc::clone(&closure), used_identifiers));
-                evaluated_closures.insert(identifier, closure);
-            } else {
-                return Err(Cow::from("Invalid function type"));
+            let visibility = &function.visibility;
+            let application_strategy = &function.application_strategy;
+            let identifier = &function.name;
+            let lambda = &function.body;
+            let closure = Self::evaluate_lambda(lambda, environment);
+            let closure = Value::FunctionClosure(application_strategy.clone(), closure);
+            let closure = Rc::new(closure);
+            if visibility.is_public() {
+                module_environment.insert(identifier.clone(), Rc::clone(&closure));
             }
+            constants_environment.insert(identifier.clone(), Rc::clone(&closure));
+            let used_identifiers = lambda.used_identifiers();
+            closures.push((identifier, Rc::clone(&closure), used_identifiers));
+            evaluated_closures.insert(identifier, closure);
         }
         Self::fill_closures(&closures, &evaluated_closures)?;
+        let mut evaluated_internal_functions = HashMap::new();
+        for internal_function in module.internal_functions() {
+            let visibility = &internal_function.visibility;
+            let identifier = &internal_function.name;
+            let closure = self.evaluate_internal_function(environment, internal_function)?;
+            let closure = Rc::new(closure);
+            if visibility.is_public() {
+                module_environment.insert(identifier.clone(), Rc::clone(&closure));
+            }
+            constants_environment.insert(identifier.clone(), Rc::clone(&closure));
+            evaluated_internal_functions.insert(identifier, closure);
+        }
+        Self::fill_closures(&closures, &evaluated_internal_functions)?;
         let mut evaluated_constants = HashMap::new();
         for constant in module.constants() {
-            if let Expression::Constant(Constant {
-                visibility,
-                name: identifier,
+            let visibility = &constant.visibility;
+            let identifier = &constant.name;
+            let value = &constant.value;
+            let value = self.evaluate_environment(
                 value,
-            }) = constant
-            {
-                let value = self.evaluate_environment(
-                    value,
-                    static_module_environment,
-                    global_module_environment,
-                    &constants_environment,
-                )?;
-                let value = Rc::new(value);
-                if visibility.is_public() {
-                    module_environment.insert(identifier.clone(), Rc::clone(&value));
-                }
-                constants_environment.insert(identifier.clone(), Rc::clone(&value));
-                evaluated_constants.insert(identifier, value);
-            } else {
-                return Err(Cow::from("Invalid constant type"));
+                static_module_environment,
+                global_module_environment,
+                &constants_environment,
+            )?;
+            let value = Rc::new(value);
+            if visibility.is_public() {
+                module_environment.insert(identifier.clone(), Rc::clone(&value));
             }
+            constants_environment.insert(identifier.clone(), Rc::clone(&value));
+            evaluated_constants.insert(identifier, value);
         }
         Self::fill_closures(&closures, &evaluated_constants)?;
         let identifier = module.identifier();

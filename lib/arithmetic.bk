@@ -4,9 +4,9 @@
 
   (pub fun add [arguments...]
     (iterate_arithmetic
-      0 arguments
-      (=> [first second]
-        (internal add first second))))
+      0 arguments add_internal))
+
+  (internal fun add_internal [first second])
 
   (pub const - subtract)
 
@@ -19,19 +19,19 @@
 
   (fun subtract_list [argument remaining]
     (if (is_null remaining)
-      (internal subtract 0 argument)
+      (subtract_internal 0 argument)
       (iterate_arithmetic
-        argument remaining
-        (=> [first second]
-          (internal subtract first second)))))
+        argument remaining subtract_internal)))
+
+  (internal fun subtract_internal [first second])
 
   (pub const * multiply)
 
   (pub fun multiply [arguments...]
     (iterate_arithmetic
-      1 arguments
-      (=> [first second]
-        (internal multiply first second))))
+      1 arguments multiply_internal))
+
+  (internal fun multiply_internal [first second])
 
   (pub const / divide)
 
@@ -44,11 +44,11 @@
 
   (fun divide_list [argument remaining]
     (if (is_null remaining)
-      (internal divide 1 argument)
+      (divide_internal 1 argument)
       (iterate_arithmetic
-        argument remaining
-        (=> [first second]
-          (internal divide first second)))))
+        argument remaining divide_internal)))
+
+  (internal fun divide_internal [first second])
 
   (fun iterate_arithmetic [accumulator arguments operation]
     (if (is_null arguments)
@@ -63,4 +63,6 @@
   (pub const % remainder)
 
   (pub fun remainder [first second]
-    (internal remainder first second)))
+    (remainder_internal first second))
+
+  (internal fun remainder_internal [first second]))

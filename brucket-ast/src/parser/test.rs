@@ -263,36 +263,12 @@ fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 }
 
 #[test]
-fn test_parsed_internal_tokens_are_internal_call_expression() -> TestResult {
-    let parser = Parser::default();
-    let expected = Expression::InternalCall(InternalCall {
-        identifier: "foo".to_string(),
-        arguments: vec![
-            Expression::Identifier(Path::Simple("x".to_string())),
-            Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string()))),
-            Expression::Identifier(Path::Simple("y".to_string())),
-        ],
-    });
-    let actual = parser.parse(vec![
-        Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Keyword(Keyword::Internal),
-        Token::Symbol("foo".to_string()),
-        Token::Symbol("x".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
-        Token::Symbol("y".to_string()),
-        Token::Parenthesis(Parenthesis::Close(')')),
-    ])?;
-    assert_eq!(expected, actual);
-    Ok(())
-}
-
-#[test]
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
     let expected = Expression::Module(Module::new(
         false,
         "foo".to_string(),
-        vec![Expression::Function(Function {
+        vec![Function {
             visibility: Visibility::Private,
             application_strategy: ApplicationStrategy::Eager,
             name: "x".to_string(),
@@ -304,14 +280,21 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
                 ))),
                 HashSet::new(),
             ),
-        })],
-        vec![Expression::Constant(Constant {
+        }],
+        vec![InternalFunction::new(
+            Visibility::Private,
+            ApplicationStrategy::Eager,
+            "z".to_string(),
+            Vec::new(),
+            Type::Any,
+        )],
+        vec![Constant {
             visibility: Visibility::Private,
             name: "y".to_string(),
             value: Box::new(Expression::ConstantValue(ConstantValue::Numeric(
                 Number::Integer("42".to_string()),
             ))),
-        })],
+        }],
     ));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -323,6 +306,13 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
         Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Parenthesis(Parenthesis::Close(')')),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Modifier(Modifier::Internal),
+        Token::Keyword(Keyword::Function),
+        Token::Symbol("z".to_string()),
+        Token::Parenthesis(Parenthesis::Open('[')),
+        Token::Parenthesis(Parenthesis::Close(']')),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Constant),
@@ -535,6 +525,51 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
 }
 
 #[test]
+fn test_parsed_internal_function_tokens_are_internal_function() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::InternalFunction(InternalFunction::new(
+        Visibility::Public,
+        ApplicationStrategy::Lazy,
+        "foobar".to_string(),
+        vec![
+            Parameter::new("x".to_string(), Type::Any, Arity::Unary),
+            Parameter::new(
+                "y".to_string(),
+                Type::Symbol("Bar".to_string()),
+                Arity::Unary,
+            ),
+            Parameter::new("z".to_string(), Type::Integer, Arity::Variadic),
+        ],
+        Type::Boolean,
+    ));
+    let actual = parser.parse(vec![
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Modifier(Modifier::Public),
+        Token::Modifier(Modifier::Internal),
+        Token::Modifier(Modifier::Lazy),
+        Token::Keyword(Keyword::Function),
+        Token::Symbol("foobar".to_string()),
+        Token::Parenthesis(Parenthesis::Open('[')),
+        Token::Symbol("x".to_string()),
+        Token::Operator(Operator::Type),
+        Token::PrimitiveType(PrimitiveType::Any),
+        Token::Symbol("y".to_string()),
+        Token::Operator(Operator::Type),
+        Token::Symbol("Bar".to_string()),
+        Token::Symbol("z".to_string()),
+        Token::Operator(Operator::Type),
+        Token::PrimitiveType(PrimitiveType::Integer),
+        Token::Operator(Operator::Variadic),
+        Token::Parenthesis(Parenthesis::Close(']')),
+        Token::Operator(Operator::SkinnyArrowRight),
+        Token::PrimitiveType(PrimitiveType::Boolean),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
 fn test_parsed_application_simple_path_identifier_tokens_are_application_expression() -> TestResult
 {
     let parser = Parser::default();
@@ -588,7 +623,13 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
 #[test]
 fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Module(Module::new(true, "foo".to_string(), Vec::new(), Vec::new()));
+    let expected = Expression::Module(Module::new(
+        true,
+        "foo".to_string(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+    ));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Static),

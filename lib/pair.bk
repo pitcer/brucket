@@ -1,14 +1,20 @@
 (module pair
 
   (pub fun new [first second]
-    (internal pair_new first second))
+    (pair_new_internal first second))
+
+  (internal fun pair_new_internal [first second])
 
   (pub const car first)
 
   (pub fun first [pair]
-    (internal pair_first pair))
+    (pair_first_internal pair))
+
+  (internal fun pair_first_internal [pair])
 
   (pub const cdr second)
 
   (pub fun second [pair]
-    (internal pair_second pair)))
+    (pair_second_internal pair))
+
+  (internal fun pair_second_internal [pair]))

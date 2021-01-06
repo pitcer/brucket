@@ -183,9 +183,9 @@ fn test_tokenized_thick_right_arrow_symbol_is_thick_arrow_right_operator() -> Te
 }
 
 #[test]
-fn test_tokenized_internal_keyword_is_internal_token() -> TestResult {
+fn test_tokenized_internal_modifier_is_internal_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Keyword(Keyword::Internal)];
+    let expected = vec![Token::Modifier(Modifier::Internal)];
     let actual = lexer.tokenize("internal".into())?;
     assert_eq!(expected, actual);
     Ok(())

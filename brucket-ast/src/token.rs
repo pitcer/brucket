@@ -68,7 +68,6 @@ pub enum Keyword {
     Let,
     If,
     Lambda,
-    Internal,
     Module,
     Function,
     Constant,
@@ -80,6 +79,7 @@ pub enum Modifier {
     Private,
     Lazy,
     Static,
+    Internal,
 }
 
 #[derive(Debug, PartialEq, Clone)]

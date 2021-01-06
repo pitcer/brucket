@@ -30,7 +30,7 @@ type TestResult = Result<(), ValueError>;
 
 #[test]
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Numeric(
         Number::Integer("42".to_string()),
@@ -41,7 +41,7 @@ fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
 
 #[test]
 fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Boolean(true);
     let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Boolean(
         Boolean::True,
@@ -52,7 +52,7 @@ fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
 
 #[test]
 fn test_evaluated_string_expression_is_textual_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Textual("foobar".to_string());
     let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::String(
         "foobar".to_string(),
@@ -63,7 +63,7 @@ fn test_evaluated_string_expression_is_textual_value() -> TestResult {
 
 #[test]
 fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Unit;
     let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Unit))?;
     assert_eq!(expected, actual);
@@ -72,7 +72,7 @@ fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
 
 #[test]
 fn test_evaluated_null_expression_is_null_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Null;
     let actual = evaluator.evaluate(&Expression::ConstantValue(ConstantValue::Null))?;
     assert_eq!(expected, actual);
@@ -81,7 +81,7 @@ fn test_evaluated_null_expression_is_null_value() -> TestResult {
 
 #[test]
 fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::Let(Let {
         name: "x".to_string(),
@@ -96,7 +96,7 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
 
 #[test]
 fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(40));
     let actual = evaluator.evaluate(&Expression::Let(Let::new(
         "x".to_string(),
@@ -117,7 +117,7 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
 
 #[test]
 fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(2));
     let actual = evaluator.evaluate(&Expression::Let(Let::new(
         "x".to_string(),
@@ -138,7 +138,7 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 
 #[test]
 fn test_evaluated_if_expression_has_correct_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::If(If::new(
         Box::new(Expression::ConstantValue(ConstantValue::Boolean(
@@ -157,7 +157,7 @@ fn test_evaluated_if_expression_has_correct_value() -> TestResult {
 
 #[test]
 fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         Vec::new(),
         Box::from(Expression::Identifier(Path::Simple("x".to_string()))),
@@ -181,7 +181,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
 
 #[test]
 fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
         Box::from(Expression::Identifier(Path::Simple("y".to_string()))),
@@ -205,7 +205,7 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
 
 #[test]
 fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         vec![
             Parameter::new("y".to_string(), Type::Any, Arity::Unary),
@@ -237,7 +237,7 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
 
 #[test]
 fn test_evaluated_application_on_lambda_expression_without_parameters_is_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate(&Expression::Let(Let {
         name: "x".to_string(),
@@ -260,7 +260,7 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
 
 #[test]
 fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(24));
     let actual = evaluator.evaluate(&Expression::Let(Let {
         name: "x".to_string(),
@@ -285,7 +285,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
 
 #[test]
 fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(24));
     let actual = evaluator.evaluate(&Expression::Let(Let {
         name: "x".to_string(),
@@ -318,7 +318,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
 
 #[test]
 fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Err(Cow::from("Undefined variable: z"));
     let actual = evaluator.evaluate(&Expression::Let(Let::new(
         "x".to_string(),
@@ -352,7 +352,7 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
 
 #[test]
 fn test_evaluated_module_expression_is_module_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Module(
         false,
         "foo".to_string(),
@@ -369,7 +369,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
         false,
         "foo".to_string(),
-        vec![Expression::Function(Function {
+        vec![Function {
             visibility: Visibility::Public,
             application_strategy: ApplicationStrategy::Eager,
             name: "bar".to_string(),
@@ -381,7 +381,8 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 ))),
                 HashSet::new(),
             ),
-        })],
+        }],
+        Vec::new(),
         Vec::new(),
     )))?;
     assert_eq!(expected, actual);
@@ -390,7 +391,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
 
 #[test]
 fn test_evaluated_function_expression_is_closure_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
@@ -420,7 +421,7 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
 
 #[test]
 fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         vec![
             Parameter::new("x".to_string(), Type::Any, Arity::Unary),
@@ -446,7 +447,7 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
 
 #[test]
 fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Pair(
         Box::new(Value::Numeric(Numeric::Integer(3))),
         Box::new(Value::Pair(
@@ -482,7 +483,7 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
 
 #[test]
 fn test_private_members_are_not_included_in_module_environment() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Module(
         false,
         "foo".to_string(),
@@ -501,7 +502,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
         false,
         "foo".to_string(),
         vec![
-            Expression::Function(Function {
+            Function {
                 visibility: Visibility::Public,
                 application_strategy: ApplicationStrategy::Eager,
                 name: "bar".to_string(),
@@ -513,8 +514,8 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                     ))),
                     HashSet::new(),
                 ),
-            }),
-            Expression::Function(Function {
+            },
+            Function {
                 visibility: Visibility::Private,
                 application_strategy: ApplicationStrategy::Eager,
                 name: "fooo".to_string(),
@@ -526,23 +527,24 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                     ))),
                     HashSet::new(),
                 ),
-            }),
+            },
         ],
+        vec![],
         vec![
-            Expression::Constant(Constant {
+            Constant {
                 visibility: Visibility::Public,
                 name: "baar".to_string(),
                 value: Box::new(Expression::ConstantValue(ConstantValue::Numeric(
                     Number::Integer("42".to_string()),
                 ))),
-            }),
-            Expression::Constant(Constant {
+            },
+            Constant {
                 visibility: Visibility::Private,
                 name: "barr".to_string(),
                 value: Box::new(Expression::ConstantValue(ConstantValue::Numeric(
                     Number::Integer("42".to_string()),
                 ))),
-            }),
+            },
         ],
     )))?;
     assert_eq!(expected, actual);
@@ -551,7 +553,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
 
 #[test]
 fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Lazy,
         Closure::new(
@@ -581,7 +583,7 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
 
 #[test]
 fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Thunk(
         Box::from(Expression::ConstantValue(ConstantValue::Numeric(
             Number::Integer("42".to_string()),
@@ -610,11 +612,12 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
 
 #[test]
 fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
-    let evaluator = Evaluator::default();
+    let mut evaluator = Evaluator::default();
     let expected = Value::Module(true, "foo".to_string(), Environment::new());
     let actual = evaluator.evaluate(&Expression::Module(Module::new(
         true,
         "foo".to_string(),
+        Vec::new(),
         Vec::new(),
         Vec::new(),
     )))?;

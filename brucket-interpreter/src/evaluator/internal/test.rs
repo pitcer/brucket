@@ -29,9 +29,9 @@ type TestResult = Result<(), String>;
 #[test]
 fn test_add_with_two_arguments_returns_their_sum() -> TestResult {
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = add(vec![
-        Value::Numeric(Numeric::Integer(40)),
-        Value::Numeric(Numeric::Integer(2)),
+    let actual = add(maplit::hashmap![
+        "first".to_owned() => Value::Numeric(Numeric::Integer(40)),
+        "second".to_owned() => Value::Numeric(Numeric::Integer(2)),
     ])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -40,9 +40,9 @@ fn test_add_with_two_arguments_returns_their_sum() -> TestResult {
 #[test]
 fn test_subtract_with_two_arguments_returns_their_difference() -> TestResult {
     let expected = Value::Numeric(Numeric::Integer(40));
-    let actual = subtract(vec![
-        Value::Numeric(Numeric::Integer(42)),
-        Value::Numeric(Numeric::Integer(2)),
+    let actual = subtract(maplit::hashmap![
+        "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+        "second".to_owned() => Value::Numeric(Numeric::Integer(2)),
     ])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -51,9 +51,9 @@ fn test_subtract_with_two_arguments_returns_their_difference() -> TestResult {
 #[test]
 fn test_multiply_with_two_arguments_returns_their_product() -> TestResult {
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = multiply(vec![
-        Value::Numeric(Numeric::Integer(21)),
-        Value::Numeric(Numeric::Integer(2)),
+    let actual = multiply(maplit::hashmap![
+        "first".to_owned() => Value::Numeric(Numeric::Integer(21)),
+        "second".to_owned() => Value::Numeric(Numeric::Integer(2)),
     ])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -62,9 +62,9 @@ fn test_multiply_with_two_arguments_returns_their_product() -> TestResult {
 #[test]
 fn test_divide_with_two_arguments_returns_their_quotient() -> TestResult {
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = divide(vec![
-        Value::Numeric(Numeric::Integer(84)),
-        Value::Numeric(Numeric::Integer(2)),
+    let actual = divide(maplit::hashmap![
+        "first".to_owned() => Value::Numeric(Numeric::Integer(84)),
+        "second".to_owned() => Value::Numeric(Numeric::Integer(2)),
     ])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -73,9 +73,9 @@ fn test_divide_with_two_arguments_returns_their_quotient() -> TestResult {
 #[test]
 fn test_remainder_with_two_arguments_returns_their_remainder() -> TestResult {
     let expected = Value::Numeric(Numeric::Integer(3));
-    let actual = remainder(vec![
-        Value::Numeric(Numeric::Integer(45)),
-        Value::Numeric(Numeric::Integer(42)),
+    let actual = remainder(maplit::hashmap![
+        "first".to_owned() => Value::Numeric(Numeric::Integer(45)),
+        "second".to_owned() => Value::Numeric(Numeric::Integer(42)),
     ])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -85,16 +85,16 @@ fn test_remainder_with_two_arguments_returns_their_remainder() -> TestResult {
 fn test_is_equal() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_equal(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(24))
+        is_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(24))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_equal(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(42))
+        is_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     Ok(())
@@ -104,16 +104,16 @@ fn test_is_equal() -> TestResult {
 fn test_is_greater() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_greater(vec![
-            Value::Numeric(Numeric::Integer(24)),
-            Value::Numeric(Numeric::Integer(42))
+        is_greater(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(24)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_greater(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(24))
+        is_greater(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(24))
         ])?
     );
     Ok(())
@@ -123,23 +123,23 @@ fn test_is_greater() -> TestResult {
 fn test_is_greater_or_equal() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_greater_or_equal(vec![
-            Value::Numeric(Numeric::Integer(24)),
-            Value::Numeric(Numeric::Integer(42))
+        is_greater_or_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(24)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_greater_or_equal(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(24))
+        is_greater_or_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(24))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_greater_or_equal(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(42))
+        is_greater_or_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     Ok(())
@@ -149,16 +149,16 @@ fn test_is_greater_or_equal() -> TestResult {
 fn test_is_less() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_less(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(24))
+        is_less(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(24))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_less(vec![
-            Value::Numeric(Numeric::Integer(24)),
-            Value::Numeric(Numeric::Integer(42))
+        is_less(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(24)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     Ok(())
@@ -168,23 +168,23 @@ fn test_is_less() -> TestResult {
 fn test_is_less_or_equal() -> TestResult {
     assert_eq!(
         Value::Boolean(false),
-        is_less_or_equal(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(24))
+        is_less_or_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(24))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_less_or_equal(vec![
-            Value::Numeric(Numeric::Integer(24)),
-            Value::Numeric(Numeric::Integer(42))
+        is_less_or_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(24)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     assert_eq!(
         Value::Boolean(true),
-        is_less_or_equal(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(42))
+        is_less_or_equal(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(42))
         ])?
     );
     Ok(())
@@ -197,9 +197,9 @@ fn test_pair_new() -> TestResult {
             Box::new(Value::Numeric(Numeric::Integer(42))),
             Box::new(Value::Numeric(Numeric::Integer(24)))
         ),
-        pair::new(vec![
-            Value::Numeric(Numeric::Integer(42)),
-            Value::Numeric(Numeric::Integer(24))
+        pair::new(maplit::hashmap![
+            "first".to_owned() => Value::Numeric(Numeric::Integer(42)),
+            "second".to_owned() => Value::Numeric(Numeric::Integer(24))
         ])?
     );
     Ok(())
@@ -209,7 +209,8 @@ fn test_pair_new() -> TestResult {
 fn test_pair_first() -> TestResult {
     assert_eq!(
         Value::Numeric(Numeric::Integer(42)),
-        pair::first(vec![Value::Pair(
+        pair::first(maplit::hashmap![
+        "pair".to_owned() => Value::Pair(
             Box::new(Value::Numeric(Numeric::Integer(42))),
             Box::new(Value::Numeric(Numeric::Integer(24)))
         )])?
@@ -221,7 +222,8 @@ fn test_pair_first() -> TestResult {
 fn test_pair_second() -> TestResult {
     assert_eq!(
         Value::Numeric(Numeric::Integer(24)),
-        pair::second(vec![Value::Pair(
+        pair::second(maplit::hashmap![
+        "pair".to_owned() => Value::Pair(
             Box::new(Value::Numeric(Numeric::Integer(42))),
             Box::new(Value::Numeric(Numeric::Integer(24)))
         )])?

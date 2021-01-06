@@ -28,7 +28,7 @@ use std::option::Option::Some;
 
 use crate::ast::{
     Application, ApplicationStrategy, Arity, Boolean, ComplexPath, Constant, ConstantValue,
-    Expression, Function, If, InternalCall, Lambda, Let, Module, Number, Parameter, Path, Type,
+    Expression, Function, If, InternalFunction, Lambda, Let, Module, Number, Parameter, Path, Type,
     Visibility,
 };
 
@@ -164,7 +164,6 @@ impl Parser {
                 Keyword::Let => Self::parse_let(tokens),
                 Keyword::If => Self::parse_if(tokens),
                 Keyword::Lambda => Self::parse_lambda(tokens).map(Expression::Lambda),
-                Keyword::Internal => Self::parse_internal(tokens),
                 Keyword::Module => Self::parse_module(Vec::new(), tokens),
                 Keyword::Function => Self::parse_function(Vec::new(), tokens),
                 Keyword::Constant => Self::parse_constant(Vec::new(), tokens),
@@ -250,25 +249,42 @@ impl Parser {
 
     fn parse_function(modifiers: Vec<Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
-        let lambda = Self::parse_lambda(tokens)?;
         let mut visibility = Visibility::Private;
         let mut application_strategy = ApplicationStrategy::Eager;
+        let mut internal = false;
         for modifier in modifiers {
             match modifier {
                 Modifier::Public => visibility = Visibility::Public,
                 Modifier::Private => visibility = Visibility::Private,
                 Modifier::Lazy => application_strategy = ApplicationStrategy::Lazy,
+                Modifier::Internal => internal = true,
                 Modifier::Static => {
                     return Err(Cow::from("Static is an invalid modifier for function"))
                 }
             }
         }
-        Ok(Expression::Function(Function {
-            visibility,
-            application_strategy,
-            name: identifier,
-            body: lambda,
-        }))
+        if internal {
+            let parameters = Self::parse_parameters(tokens)?;
+            let return_type = Self::parse_return_type(tokens)?;
+            if !Self::is_section_closed(tokens) {
+                return Err(Cow::from("Invalid internal function expression"));
+            }
+            Ok(Expression::InternalFunction(InternalFunction::new(
+                visibility,
+                application_strategy,
+                identifier,
+                parameters,
+                return_type,
+            )))
+        } else {
+            let lambda = Self::parse_lambda(tokens)?;
+            Ok(Expression::Function(Function {
+                visibility,
+                application_strategy,
+                name: identifier,
+                body: lambda,
+            }))
+        }
     }
 
     fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda, ExpressionError> {
@@ -342,14 +358,6 @@ impl Parser {
                     Self::insert_used_identifiers(argument, identifiers);
                 }
             }
-            Expression::InternalCall(InternalCall {
-                identifier: _,
-                arguments,
-            }) => {
-                for argument in arguments {
-                    Self::insert_used_identifiers(argument, identifiers);
-                }
-            }
             Expression::Let(Let {
                 name: _,
                 value,
@@ -374,10 +382,12 @@ impl Parser {
             }
             Expression::Module(module) => {
                 for function in module.functions() {
-                    Self::insert_used_identifiers(function, identifiers);
+                    for identifier in function.body.used_identifiers() {
+                        identifiers.insert(identifier.clone());
+                    }
                 }
                 for constant in module.constants() {
-                    Self::insert_used_identifiers(constant, identifiers);
+                    Self::insert_used_identifiers(&constant.value, identifiers);
                 }
             }
             Expression::ConstantValue(_) => (),
@@ -391,6 +401,7 @@ impl Parser {
                     identifiers.insert(identifier.clone());
                 }
             }
+            Expression::InternalFunction(_) => (),
             Expression::Constant(Constant {
                 visibility: _,
                 name: _,
@@ -399,18 +410,10 @@ impl Parser {
         };
     }
 
-    fn parse_internal(tokens: &mut Tokens) -> ExpressionResult {
-        let identifier = Self::parse_identifier(tokens)?;
-        let arguments = Self::parse_arguments(tokens)?;
-        Ok(Expression::InternalCall(InternalCall {
-            identifier,
-            arguments,
-        }))
-    }
-
     fn parse_module(modifiers: Vec<Modifier>, tokens: &mut Tokens) -> ExpressionResult {
         let identifier = Self::parse_identifier(tokens)?;
         let mut functions = Vec::new();
+        let mut internal_functions = Vec::new();
         let mut constants = Vec::new();
         while let Some(token) = tokens.next() {
             if token.is_close_parenthesis() {
@@ -418,8 +421,9 @@ impl Parser {
             }
             let member = Self::parse_first_token(token, tokens)?;
             match member {
-                Expression::Function(_) => functions.push(member),
-                Expression::Constant(_) => constants.push(member),
+                Expression::Function(function) => functions.push(function),
+                Expression::InternalFunction(function) => internal_functions.push(function),
+                Expression::Constant(constant) => constants.push(constant),
                 _ => return Err(Cow::from(format!("Invalid module member: {:?}", member))),
             }
         }
@@ -430,7 +434,13 @@ impl Parser {
                 _ => return Err(Cow::from("Invalid module modifier")),
             }
         }
-        let module = Module::new(is_static, identifier, functions, constants);
+        let module = Module::new(
+            is_static,
+            identifier,
+            functions,
+            internal_functions,
+            constants,
+        );
         Ok(Expression::Module(module))
     }
 

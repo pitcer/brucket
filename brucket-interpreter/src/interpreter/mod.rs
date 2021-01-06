@@ -65,7 +65,7 @@ impl Interpreter {
     }
 
     pub fn interpret_with_modules(
-        &self,
+        &mut self,
         endpoint_syntax: Cow<str>,
         modules_syntax: Vec<Cow<str>>,
     ) -> ValueResult {
@@ -98,7 +98,7 @@ impl Interpreter {
     }
 
     fn interpret_with_module_environment(
-        &self,
+        &mut self,
         syntax: Cow<str>,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
@@ -111,7 +111,7 @@ impl Interpreter {
         )
     }
 
-    pub fn interpret(&self, syntax: Cow<str>) -> ValueResult {
+    pub fn interpret(&mut self, syntax: Cow<str>) -> ValueResult {
         let module_environment = ModuleEnvironment::new();
         let static_module_environment = Environment::new();
         self.interpret_with_module_environment(
@@ -127,13 +127,13 @@ impl Interpreter {
     }
 
     #[cfg(test)]
-    pub fn interpret_with_base_library(&self, syntax: &str) -> ValueResult {
+    pub fn interpret_with_base_library(&mut self, syntax: &str) -> ValueResult {
         self.interpret_with_base_library_and_modules(syntax, Vec::default())
     }
 
     #[cfg(test)]
     pub fn interpret_with_base_library_and_modules(
-        &self,
+        &mut self,
         syntax: &str,
         modules: Vec<&str>,
     ) -> ValueResult {

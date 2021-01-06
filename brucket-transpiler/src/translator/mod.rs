@@ -24,9 +24,9 @@
 
 use std::borrow::Cow;
 
-use brucket_ast::analyzer::ast::{
-    Application, ApplicationIdentifier, Boolean, Constant, ConstantValue, Expression, Function, If,
-    Lambda, Let, Module, Number, Path,
+use brucket_ast::ast::{
+    Application, Boolean, Constant, ConstantValue, Expression, Function, If, Lambda, Let, Module,
+    Number, Path,
 };
 use c_generator::syntax::expression::{
     Arguments, CExpression, FunctionCallExpression, NumberExpression,
@@ -86,26 +86,23 @@ impl Translate<String> for Path {
     }
 }
 
-impl Translate<String> for ApplicationIdentifier {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<String> {
-        match self {
-            ApplicationIdentifier::Identifier(path) => path.translate(state),
-            ApplicationIdentifier::Lambda(lambda) => lambda.translate(state),
-        }
-    }
-}
-
 impl Translate<CExpression> for Application {
     fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
         let name = self.identifier.translate(state)?;
-        let arguments = self
-            .arguments
-            .into_iter()
-            .map(|argument| argument.translate(state))
-            .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
-        Ok(CExpression::FunctionCall(FunctionCallExpression::new(
-            name, arguments,
-        )))
+        if let CExpression::NamedReference(name) = name {
+            let arguments = self
+                .arguments
+                .into_iter()
+                .map(|argument| argument.translate(state))
+                .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
+            Ok(CExpression::FunctionCall(FunctionCallExpression::new(
+                name, arguments,
+            )))
+        } else {
+            Err(Cow::from(
+                "Unsupported function identifier in application type",
+            ))
+        }
     }
 }
 
@@ -245,7 +242,6 @@ impl Translate<CExpression> for Expression {
             Expression::ConstantValue(value) => value.translate(state),
             Expression::Identifier(path) => Ok(CExpression::NamedReference(path.translate(state)?)),
             Expression::Application(application) => application.translate(state),
-            // Expression::InternalCall(internal_call) => internal_call.translate(state),
             Expression::Let(let_expression) => let_expression.translate(state),
             Expression::If(if_expression) => if_expression.translate(state),
             Expression::Lambda(lambda) => Ok(CExpression::NamedReference(lambda.translate(state)?)),

@@ -44,7 +44,7 @@ fn main() {
                 .into()
         })
         .collect();
-    let interpreter = Interpreter::default();
+    let mut interpreter = Interpreter::default();
     let result = interpreter
         .interpret_with_modules(input_syntax.into(), modules)
         .expect("Cannot interpret input program");

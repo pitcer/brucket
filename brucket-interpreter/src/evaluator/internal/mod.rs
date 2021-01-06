@@ -26,14 +26,14 @@ use std::collections::HashMap;
 
 use crate::evaluator::{Value, ValueResult};
 use crate::value::Numeric;
-use std::borrow::Cow;
+
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[cfg(test)]
 mod test;
 
 macro_rules! internal_environment_map {
-    ($($identifier:expr => $function:expr),*) => {
+    ($($identifier:literal => $function:expr),*) => {
         {
             let mut map = InternalEnvironmentMap::new();
             $(
@@ -45,8 +45,8 @@ macro_rules! internal_environment_map {
     };
 }
 
-type InternalFunction = fn(Vec<Value>) -> ValueResult;
-type InternalEnvironmentMap = HashMap<&'static str, InternalFunction>;
+pub type InternalFunction = fn(HashMap<String, Value>) -> ValueResult;
+pub type InternalEnvironmentMap = HashMap<&'static str, InternalFunction>;
 
 pub struct InternalEnvironment {
     map: InternalEnvironmentMap,
@@ -55,20 +55,19 @@ pub struct InternalEnvironment {
 impl Default for InternalEnvironment {
     fn default() -> Self {
         let map = internal_environment_map! {
-            "add" => add,
-            "subtract" => subtract,
-            "multiply" => multiply,
-            "divide" => divide,
-            "remainder" => remainder,
-            "is_equal" => is_equal,
-            "is_greater" => is_greater,
-            "is_greater_or_equal" => is_greater_or_equal,
-            "is_less" => is_less,
-            "is_less_or_equal" => is_less_or_equal,
-            "pair_new" => pair::new,
-            "pair_first" => pair::first,
-            "pair_second" => pair::second
-
+            "add_internal" => add,
+            "subtract_internal" => subtract,
+            "multiply_internal" => multiply,
+            "divide_internal" => divide,
+            "remainder_internal" => remainder,
+            "is_equal_internal" => is_equal,
+            "is_greater_internal" => is_greater,
+            "is_greater_or_equal_internal" => is_greater_or_equal,
+            "is_less_internal" => is_less,
+            "is_less_or_equal_internal" => is_less_or_equal,
+            "pair_new_internal" => pair::new,
+            "pair_first_internal" => pair::first,
+            "pair_second_internal" => pair::second
         };
         Self::new(map)
     }
@@ -79,7 +78,7 @@ impl InternalEnvironment {
         Self { map }
     }
 
-    pub fn get(&self, identifier: &str) -> Option<&InternalFunction> {
+    pub fn get(&mut self, identifier: &str) -> Option<&InternalFunction> {
         self.map.get(identifier)
     }
 }
@@ -117,71 +116,121 @@ implement_arithmetic_operation!(Mul, mul);
 implement_arithmetic_operation!(Div, div);
 implement_arithmetic_operation!(Rem, rem);
 
-fn add(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn add(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[add] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[add] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Numeric(first + second))
 }
 
-fn subtract(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn subtract(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[subtract] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[subtract] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Numeric(first - second))
 }
 
-fn multiply(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn multiply(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[multiply] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[multiply] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Numeric(first * second))
 }
 
-fn divide(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn divide(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[divide] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[divide] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Numeric(first / second))
 }
 
-fn remainder(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn remainder(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[remainder] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[remainder] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Numeric(first % second))
 }
 
-fn is_equal(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
+fn is_equal(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[is_equal] Unknown variable: first")?;
+    let second = environment
+        .remove("second")
+        .ok_or("[is_equal] Unknown variable: second")?;
     Ok(Value::Boolean(first == second))
 }
 
-fn is_greater(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn is_greater(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[is_greater] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[is_greater] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Boolean(first > second))
 }
 
-fn is_greater_or_equal(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn is_greater_or_equal(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[is_greater_or_equal] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[is_greater_or_equal] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Boolean(first >= second))
 }
 
-fn is_less(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn is_less(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[is_less] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[is_less] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Boolean(first < second))
 }
 
-fn is_less_or_equal(arguments: Vec<Value>) -> ValueResult {
-    let (first, second) = get_binary_function_arguments(arguments)?;
-    let first = first.into_numeric()?;
-    let second = second.into_numeric()?;
+fn is_less_or_equal(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[is_less_or_equal] Unknown variable: first")?
+        .into_numeric()?;
+    let second = environment
+        .remove("second")
+        .ok_or("[is_less_or_equal] Unknown variable: second")?
+        .into_numeric()?;
     Ok(Value::Boolean(first <= second))
 }
 
@@ -189,59 +238,36 @@ mod pair {
     use super::*;
     use std::borrow::Cow;
 
-    pub fn new(arguments: Vec<Value>) -> ValueResult {
-        let (first, second) = get_binary_function_arguments(arguments)?;
+    pub fn new(mut environment: HashMap<String, Value>) -> ValueResult {
+        let first = environment
+            .remove("first")
+            .ok_or("[pair_new] Unknown variable: first")?;
+        let second = environment
+            .remove("second")
+            .ok_or("[pair_new] Unknown variable: second")?;
         Ok(Value::Pair(Box::new(first), Box::new(second)))
     }
 
-    pub fn first(arguments: Vec<Value>) -> ValueResult {
-        let argument = get_unary_function_argument(arguments)?;
-        if let Value::Pair(first, _) = argument {
+    pub fn first(mut environment: HashMap<String, Value>) -> ValueResult {
+        let pair = environment
+            .remove("pair")
+            .ok_or("[pair_first] Unknown variable: pair")?;
+        if let Value::Pair(first, _) = pair {
             Ok(*first)
         } else {
-            Err(Cow::from("Invalid type of argument"))
+            Err(Cow::from("Invalid type of argument, expected: Pair"))
         }
     }
 
-    pub fn second(arguments: Vec<Value>) -> ValueResult {
-        let argument = get_unary_function_argument(arguments)?;
-        if let Value::Pair(_, second) = argument {
+    pub fn second(mut environment: HashMap<String, Value>) -> ValueResult {
+        let pair = environment
+            .remove("pair")
+            .ok_or("[pair_second] Unknown variable: pair")?;
+        if let Value::Pair(_, second) = pair {
             Ok(*second)
         } else {
-            Err(Cow::from("Invalid type of argument"))
+            Err(Cow::from("Invalid type of argument, expected: Pair"))
         }
-    }
-}
-
-fn get_unary_function_argument(arguments: Vec<Value>) -> Result<Value, Cow<'static, str>> {
-    validate_arguments_length(&arguments, 1)?;
-    let mut iterator = arguments.into_iter();
-    let first = iterator.next().unwrap();
-    Ok(first)
-}
-
-fn get_binary_function_arguments(
-    arguments: Vec<Value>,
-) -> Result<(Value, Value), Cow<'static, str>> {
-    validate_arguments_length(&arguments, 2)?;
-    let mut iterator = arguments.into_iter();
-    let first = iterator.next().unwrap();
-    let second = iterator.next().unwrap();
-    Ok((first, second))
-}
-
-fn validate_arguments_length(
-    arguments: &[Value],
-    expected_length: usize,
-) -> Result<(), Cow<'static, str>> {
-    let actual_length = arguments.len();
-    if actual_length == expected_length {
-        Ok(())
-    } else {
-        Err(Cow::from(format!(
-            "Invalid number of arguments. Expected: {}; Actual: {}",
-            expected_length, actual_length
-        )))
     }
 }
 

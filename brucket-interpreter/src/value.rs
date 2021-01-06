@@ -25,6 +25,7 @@
 use brucket_ast::ast::{ApplicationStrategy, Expression, Parameter};
 
 use crate::evaluator::environment::Environment;
+use crate::evaluator::internal::InternalFunction;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -36,6 +37,7 @@ pub enum Value {
     Pair(Box<Value>, Box<Value>),
     Closure(Closure),
     FunctionClosure(ApplicationStrategy, Closure),
+    InternalFunctionClosure(InternalFunctionClosure),
     Thunk(Box<Expression>, Environment),
     Module(bool, String, Environment),
 }
@@ -44,6 +46,30 @@ pub enum Value {
 pub enum Numeric {
     Integer(i32),
     FloatingPoint(f64),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct InternalFunctionClosure {
+    pub application_strategy: ApplicationStrategy,
+    pub parameters: Vec<Parameter>,
+    pub function: InternalFunction,
+    pub environment: Environment,
+}
+
+impl InternalFunctionClosure {
+    pub fn new(
+        application_strategy: ApplicationStrategy,
+        parameters: Vec<Parameter>,
+        function: InternalFunction,
+        environment: Environment,
+    ) -> Self {
+        Self {
+            application_strategy,
+            parameters,
+            function,
+            environment,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

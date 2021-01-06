@@ -24,18 +24,17 @@
 
 use std::collections::HashSet;
 
-// TODO: replace with a crate::analyzer::ast::Expression
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     ConstantValue(ConstantValue),
     Identifier(Path),
     Application(Application),
-    InternalCall(InternalCall),
     Let(Let),
     If(If),
     Lambda(Lambda),
     Module(Module),
     Function(Function),
+    InternalFunction(InternalFunction),
     Constant(Constant),
 }
 
@@ -98,6 +97,33 @@ impl Function {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct InternalFunction {
+    pub visibility: Visibility,
+    pub application_strategy: ApplicationStrategy,
+    pub name: String,
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
+}
+
+impl InternalFunction {
+    pub fn new(
+        visibility: Visibility,
+        application_strategy: ApplicationStrategy,
+        name: String,
+        parameters: Vec<Parameter>,
+        return_type: Type,
+    ) -> Self {
+        Self {
+            visibility,
+            application_strategy,
+            name,
+            parameters,
+            return_type,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Constant {
     pub visibility: Visibility,
     pub name: String,
@@ -129,28 +155,13 @@ impl Application {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct InternalCall {
-    pub identifier: String,
-    pub arguments: Vec<Expression>,
-}
-
-impl InternalCall {
-    pub fn new(identifier: String, arguments: Vec<Expression>) -> Self {
-        Self {
-            identifier,
-            arguments,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Path {
     Simple(String),
     Complex(ComplexPath),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ComplexPath {
     pub identifier: String,
     pub path: Vec<String>,
@@ -214,21 +225,24 @@ impl Lambda {
 pub struct Module {
     is_static: bool,
     identifier: String,
-    functions: Vec<Expression>,
-    constants: Vec<Expression>,
+    functions: Vec<Function>,
+    internal_functions: Vec<InternalFunction>,
+    constants: Vec<Constant>,
 }
 
 impl Module {
     pub fn new(
         is_static: bool,
         identifier: String,
-        functions: Vec<Expression>,
-        constants: Vec<Expression>,
+        functions: Vec<Function>,
+        internal_functions: Vec<InternalFunction>,
+        constants: Vec<Constant>,
     ) -> Self {
         Self {
             is_static,
             identifier,
             functions,
+            internal_functions,
             constants,
         }
     }
@@ -241,11 +255,15 @@ impl Module {
         &self.identifier
     }
 
-    pub fn functions(&self) -> &Vec<Expression> {
+    pub fn functions(&self) -> &Vec<Function> {
         &self.functions
     }
 
-    pub fn constants(&self) -> &Vec<Expression> {
+    pub fn internal_functions(&self) -> &Vec<InternalFunction> {
+        &self.internal_functions
+    }
+
+    pub fn constants(&self) -> &Vec<Constant> {
         &self.constants
     }
 }

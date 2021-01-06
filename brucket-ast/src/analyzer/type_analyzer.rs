@@ -22,9 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::analyzer::ast::{
-    Application, ApplicationIdentifier, ConstantValue, Expression, If, Lambda, Let, Number, Path,
-};
+use crate::ast::{Application, ConstantValue, Expression, If, Lambda, Let, Number, Path};
 use std::borrow::Cow;
 use std::collections::HashMap;
 
@@ -39,14 +37,14 @@ pub enum Type {
     Lambda(LambdaType),
 }
 
-impl From<&crate::analyzer::ast::Type> for Type {
-    fn from(ast_type: &crate::analyzer::ast::Type) -> Self {
+impl From<&crate::ast::Type> for Type {
+    fn from(ast_type: &crate::ast::Type) -> Self {
         match ast_type {
-            crate::analyzer::ast::Type::Boolean => Type::Boolean,
-            crate::analyzer::ast::Type::Integer => Type::Integer,
-            crate::analyzer::ast::Type::String => Type::String,
-            crate::analyzer::ast::Type::Any => Type::Unknown,
-            crate::analyzer::ast::Type::Symbol(_) => unimplemented!(),
+            crate::ast::Type::Boolean => Type::Boolean,
+            crate::ast::Type::Integer => Type::Integer,
+            crate::ast::Type::String => Type::String,
+            crate::ast::Type::Any => Type::Unknown,
+            crate::ast::Type::Symbol(_) => unimplemented!(),
         }
     }
 }
@@ -108,10 +106,7 @@ impl Typed for Path {
 
 impl Typed for Application {
     fn get_type(&self, environment: &mut Environment) -> TypedResult {
-        match &self.identifier {
-            ApplicationIdentifier::Identifier(path) => path.get_type(environment),
-            ApplicationIdentifier::Lambda(lambda) => lambda.get_type(environment),
-        }
+        self.identifier.get_type(environment)
     }
 }
 
