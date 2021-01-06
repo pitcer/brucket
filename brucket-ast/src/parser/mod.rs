@@ -28,8 +28,8 @@ use std::option::Option::Some;
 
 use crate::ast::{
     Application, ApplicationStrategy, Arity, Boolean, ComplexPath, Constant, ConstantValue,
-    Expression, Function, If, InternalFunction, Lambda, Let, Module, Number, Parameter, Path, Type,
-    Visibility,
+    Expression, Function, If, InternalFunction, Lambda, LambdaType, Let, Module, Number, Parameter,
+    Path, Type, Visibility,
 };
 
 use crate::token::{
@@ -326,18 +326,44 @@ impl Parser {
     fn parse_type(tokens: &mut Tokens) -> Result<Type, ExpressionError> {
         let next = tokens.next();
         if let Some(token) = next {
-            match token {
-                Token::PrimitiveType(primitive_type) => match primitive_type {
-                    PrimitiveType::Boolean => Ok(Type::Boolean),
-                    PrimitiveType::Integer => Ok(Type::Integer),
-                    PrimitiveType::String => Ok(Type::String),
-                    PrimitiveType::Any => Ok(Type::Any),
-                },
-                Token::Symbol(symbol) => Ok(Type::Symbol(symbol)),
-                _ => Err(Cow::from("Invalid type token")),
-            }
+            Self::parse_type_token(token, tokens)
         } else {
             Err(Cow::from("End of tokens"))
+        }
+    }
+
+    fn parse_type_token(token: Token, tokens: &mut Tokens) -> Result<Type, ExpressionError> {
+        match token {
+            Token::PrimitiveType(primitive_type) => match primitive_type {
+                PrimitiveType::Boolean => Ok(Type::Boolean),
+                PrimitiveType::Integer => Ok(Type::Integer),
+                PrimitiveType::String => Ok(Type::String),
+                PrimitiveType::Any => Ok(Type::Any),
+                PrimitiveType::Float => Ok(Type::Float),
+                PrimitiveType::Unit => Ok(Type::Unit),
+            },
+            Token::Symbol(symbol) => Ok(Type::Symbol(symbol)),
+            Token::Parenthesis(Parenthesis::Open('(')) => {
+                Self::parse_lambda_type(tokens).map(Type::Lambda)
+            }
+            _ => Err(Cow::from("Invalid type token")),
+        }
+    }
+
+    fn parse_lambda_type(tokens: &mut Tokens) -> Result<LambdaType, ExpressionError> {
+        let mut parameters_types = Vec::new();
+        while let Some(token) = tokens.next() {
+            if token == Token::Operator(Operator::SkinnyArrowRight) {
+                break;
+            }
+            let parameter_type = Self::parse_type_token(token, tokens)?;
+            parameters_types.push(parameter_type);
+        }
+        let return_type = Self::parse_type(tokens)?.into();
+        if let Some(Token::Parenthesis(Parenthesis::Close(')'))) = tokens.next() {
+            Ok(LambdaType::new(parameters_types, return_type))
+        } else {
+            Err("Missing close parenthesis in lambda type".into())
         }
     }
 

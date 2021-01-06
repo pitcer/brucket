@@ -695,3 +695,144 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_parse_function_with_lambda_type() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Function(Function {
+        visibility: Visibility::Private,
+        application_strategy: ApplicationStrategy::Eager,
+        name: "foobar".to_string(),
+        body: Lambda::new(
+            vec![
+                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
+                Parameter::new(
+                    "y".to_string(),
+                    Type::Lambda(LambdaType::new(
+                        vec![Type::Integer, Type::Boolean],
+                        Type::Symbol("Test".to_owned()).into(),
+                    )),
+                    Arity::Unary,
+                ),
+                Parameter::new("z".to_string(), Type::Integer, Arity::Variadic),
+            ],
+            Type::Lambda(LambdaType::new(vec![], Type::Integer.into())),
+            Box::new(Expression::Application(Application {
+                identifier: Box::new(Expression::Identifier(Path::Simple("bar".to_string()))),
+                arguments: vec![Expression::ConstantValue(ConstantValue::Numeric(
+                    Number::Integer("42".to_string()),
+                ))],
+            })),
+            maplit::hashset!("bar".to_string()),
+        ),
+    });
+    let actual = parser.parse(vec![
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Function),
+        Token::Symbol("foobar".to_string()),
+        Token::Parenthesis(Parenthesis::Open('[')),
+        Token::Symbol("x".to_string()),
+        Token::Operator(Operator::Type),
+        Token::PrimitiveType(PrimitiveType::Any),
+        Token::Symbol("y".to_string()),
+        Token::Operator(Operator::Type),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::PrimitiveType(PrimitiveType::Integer),
+        Token::PrimitiveType(PrimitiveType::Boolean),
+        Token::Operator(Operator::SkinnyArrowRight),
+        Token::Symbol("Test".to_owned()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+        Token::Symbol("z".to_string()),
+        Token::Operator(Operator::Type),
+        Token::PrimitiveType(PrimitiveType::Integer),
+        Token::Operator(Operator::Variadic),
+        Token::Parenthesis(Parenthesis::Close(']')),
+        Token::Operator(Operator::SkinnyArrowRight),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Operator(Operator::SkinnyArrowRight),
+        Token::PrimitiveType(PrimitiveType::Integer),
+        Token::Parenthesis(Parenthesis::Close(')')),
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Symbol("bar".to_string()),
+        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Parenthesis(Parenthesis::Close(')')),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
+    Ok(())
+}
+
+#[test]
+fn test_lambda_type_is_parsed_correctly() -> TestResult {
+    assert_eq!(
+        Type::Lambda(LambdaType::new(vec![], Type::Integer.into())),
+        Parser::parse_type(
+            &mut vec![
+                Token::Parenthesis(Parenthesis::Open('(')),
+                Token::Operator(Operator::SkinnyArrowRight),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Parenthesis(Parenthesis::Close(')')),
+            ]
+            .into_iter()
+            .peekable()
+        )?,
+    );
+    assert_eq!(
+        Type::Lambda(LambdaType::new(vec![Type::Integer], Type::Integer.into())),
+        Parser::parse_type(
+            &mut vec![
+                Token::Parenthesis(Parenthesis::Open('(')),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Operator(Operator::SkinnyArrowRight),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Parenthesis(Parenthesis::Close(')'))
+            ]
+            .into_iter()
+            .peekable()
+        )?,
+    );
+    assert_eq!(
+        Type::Lambda(LambdaType::new(
+            vec![Type::Integer, Type::Integer],
+            Type::Integer.into()
+        )),
+        Parser::parse_type(
+            &mut vec![
+                Token::Parenthesis(Parenthesis::Open('(')),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Operator(Operator::SkinnyArrowRight),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Parenthesis(Parenthesis::Close(')'))
+            ]
+            .into_iter()
+            .peekable()
+        )?,
+    );
+    assert_eq!(
+        Type::Lambda(LambdaType::new(
+            vec![
+                Type::Integer,
+                Type::Lambda(LambdaType::new(vec![Type::Integer], Type::Integer.into()))
+            ],
+            Type::Integer.into()
+        )),
+        Parser::parse_type(
+            &mut vec![
+                Token::Parenthesis(Parenthesis::Open('(')),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Parenthesis(Parenthesis::Open('(')),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Operator(Operator::SkinnyArrowRight),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Parenthesis(Parenthesis::Close(')')),
+                Token::Operator(Operator::SkinnyArrowRight),
+                Token::PrimitiveType(PrimitiveType::Integer),
+                Token::Parenthesis(Parenthesis::Close(')'))
+            ]
+            .into_iter()
+            .peekable()
+        )?,
+    );
+    Ok(())
+}

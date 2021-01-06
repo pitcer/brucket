@@ -119,8 +119,10 @@ impl Default for Lexer {
             "internal" => Token::Modifier(Modifier::Internal),
             "boo" => Token::PrimitiveType(PrimitiveType::Boolean),
             "int" => Token::PrimitiveType(PrimitiveType::Integer),
+            "flo" => Token::PrimitiveType(PrimitiveType::Float),
             "str" => Token::PrimitiveType(PrimitiveType::String),
             "any" => Token::PrimitiveType(PrimitiveType::Any),
+            "uni" => Token::PrimitiveType(PrimitiveType::Unit)
         };
         Self { symbol_map }
     }

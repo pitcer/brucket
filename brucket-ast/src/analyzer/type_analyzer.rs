@@ -22,38 +22,11 @@
  * SOFTWARE.
  */
 
-use crate::ast::{Application, ConstantValue, Expression, If, Lambda, Let, Number, Path};
+use crate::ast::{
+    Application, ConstantValue, Expression, If, Lambda, LambdaType, Let, Number, Path, Type,
+};
 use std::borrow::Cow;
 use std::collections::HashMap;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Type {
-    Unknown,
-    Unit,
-    Boolean,
-    Integer,
-    Float,
-    String,
-    Lambda(LambdaType),
-}
-
-impl From<&crate::ast::Type> for Type {
-    fn from(ast_type: &crate::ast::Type) -> Self {
-        match ast_type {
-            crate::ast::Type::Boolean => Type::Boolean,
-            crate::ast::Type::Integer => Type::Integer,
-            crate::ast::Type::String => Type::String,
-            crate::ast::Type::Any => Type::Unknown,
-            crate::ast::Type::Symbol(_) => unimplemented!(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct LambdaType {
-    pub return_type: Box<Type>,
-    pub parameters_types: Vec<Type>,
-}
 
 #[derive(Debug)]
 pub struct Environment {
@@ -85,7 +58,7 @@ impl Typed for ConstantValue {
     fn get_type(&self, _environment: &mut Environment) -> TypedResult {
         Ok(match self {
             ConstantValue::Unit => Type::Unit,
-            ConstantValue::Null => Type::Unknown,
+            ConstantValue::Null => Type::Any,
             ConstantValue::Numeric(number) => match number {
                 Number::Integer(_) => Type::Integer,
                 Number::FloatingPoint(_) => Type::Float,
@@ -117,12 +90,12 @@ impl Typed for Lambda {
         let parameters_types = self
             .parameters()
             .iter()
-            .map(|parameter| parameter.parameter_type().into())
+            .map(|parameter| parameter.parameter_type().clone())
             .collect::<Vec<Type>>();
-        Ok(Type::Lambda(LambdaType {
-            return_type: Box::new(return_type),
+        Ok(Type::Lambda(LambdaType::new(
             parameters_types,
-        }))
+            return_type.into(),
+        )))
     }
 }
 

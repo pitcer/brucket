@@ -419,12 +419,71 @@ fn test_primitive_types_are_tokenized_correctly() -> TestResult {
         lexer.tokenize("int".into())?
     );
     assert_eq!(
+        vec![Token::PrimitiveType(PrimitiveType::Float)],
+        lexer.tokenize("flo".into())?
+    );
+    assert_eq!(
         vec![Token::PrimitiveType(PrimitiveType::String)],
         lexer.tokenize("str".into())?
     );
     assert_eq!(
         vec![Token::PrimitiveType(PrimitiveType::Any)],
         lexer.tokenize("any".into())?
+    );
+    assert_eq!(
+        vec![Token::PrimitiveType(PrimitiveType::Unit)],
+        lexer.tokenize("uni".into())?
+    );
+    Ok(())
+}
+
+#[test]
+fn test_lambda_type_is_tokenized_correctly() -> TestResult {
+    let lexer = Lexer::default();
+    assert_eq!(
+        vec![
+            Token::Parenthesis(Parenthesis::Open('(')),
+            Token::Operator(Operator::SkinnyArrowRight),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Parenthesis(Parenthesis::Close(')')),
+        ],
+        lexer.tokenize("(-> int)".into())?
+    );
+    assert_eq!(
+        vec![
+            Token::Parenthesis(Parenthesis::Open('(')),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Operator(Operator::SkinnyArrowRight),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Parenthesis(Parenthesis::Close(')'))
+        ],
+        lexer.tokenize("(int -> int)".into())?
+    );
+    assert_eq!(
+        vec![
+            Token::Parenthesis(Parenthesis::Open('(')),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Operator(Operator::SkinnyArrowRight),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Parenthesis(Parenthesis::Close(')'))
+        ],
+        lexer.tokenize("(int int -> int)".into())?
+    );
+    assert_eq!(
+        vec![
+            Token::Parenthesis(Parenthesis::Open('(')),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Parenthesis(Parenthesis::Open('(')),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Operator(Operator::SkinnyArrowRight),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Parenthesis(Parenthesis::Close(')')),
+            Token::Operator(Operator::SkinnyArrowRight),
+            Token::PrimitiveType(PrimitiveType::Integer),
+            Token::Parenthesis(Parenthesis::Close(')'))
+        ],
+        lexer.tokenize("(int (int -> int) -> int)".into())?
     );
     Ok(())
 }

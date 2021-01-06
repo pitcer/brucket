@@ -106,17 +106,16 @@ impl Translate<CExpression> for Application {
     }
 }
 
-fn to_c_type(t: brucket_ast::analyzer::type_analyzer::Type) -> Type {
-    match t {
-        brucket_ast::analyzer::type_analyzer::Type::Unknown => panic!("unknown type"),
-        brucket_ast::analyzer::type_analyzer::Type::Unit => Type::Primitive(PrimitiveType::Int),
-        brucket_ast::analyzer::type_analyzer::Type::Boolean => Type::Primitive(PrimitiveType::Int),
-        brucket_ast::analyzer::type_analyzer::Type::Integer => Type::Primitive(PrimitiveType::Int),
-        brucket_ast::analyzer::type_analyzer::Type::Float => Type::Primitive(PrimitiveType::Double),
-        brucket_ast::analyzer::type_analyzer::Type::String => Type::Custom("char*".to_owned()),
-        brucket_ast::analyzer::type_analyzer::Type::Lambda(_lambda) => {
-            unimplemented!()
-        }
+fn to_c_type(brucket_type: brucket_ast::ast::Type) -> Type {
+    match brucket_type {
+        brucket_ast::ast::Type::Any => panic!("unknown type"),
+        brucket_ast::ast::Type::Unit => Type::Primitive(PrimitiveType::Int),
+        brucket_ast::ast::Type::Boolean => Type::Primitive(PrimitiveType::Int),
+        brucket_ast::ast::Type::Integer => Type::Primitive(PrimitiveType::Int),
+        brucket_ast::ast::Type::Float => Type::Primitive(PrimitiveType::Double),
+        brucket_ast::ast::Type::String => Type::Custom("char*".to_owned()),
+        brucket_ast::ast::Type::Lambda(_lambda) => unimplemented!(),
+        brucket_ast::ast::Type::Symbol(_symbol) => unimplemented!(),
     }
 }
 

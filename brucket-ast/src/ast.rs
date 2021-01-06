@@ -307,11 +307,29 @@ pub struct Parameter {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
+    Any,
+    Unit,
     Boolean,
     Integer,
+    Float,
     String,
-    Any,
+    Lambda(LambdaType),
     Symbol(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LambdaType {
+    pub parameters_types: Vec<Type>,
+    pub return_type: Box<Type>,
+}
+
+impl LambdaType {
+    pub fn new(parameters_types: Vec<Type>, return_type: Box<Type>) -> Self {
+        Self {
+            parameters_types,
+            return_type,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

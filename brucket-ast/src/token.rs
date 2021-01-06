@@ -86,6 +86,8 @@ pub enum Modifier {
 pub enum PrimitiveType {
     Boolean,
     Integer,
+    Float,
     String,
     Any,
+    Unit,
 }
