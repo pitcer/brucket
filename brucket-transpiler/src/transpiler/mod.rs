@@ -26,17 +26,19 @@ use brucket_ast::lexer::Lexer;
 use brucket_ast::parser::Parser;
 use c_generator::generator::{Generator, GeneratorResult};
 use c_generator::syntax::c_macro::{DefineMacro, Macro};
-use c_generator::syntax::expression::{CExpression, FunctionCallExpression, NumberExpression};
+use c_generator::syntax::expression::{
+    CExpression, FunctionCallExpression, FunctionIdentifier, NumberExpression,
+};
 use c_generator::syntax::function::{
     FunctionDefinition, FunctionHeader, FunctionParameter, Parameters,
 };
 use c_generator::syntax::instruction::Instruction;
 use c_generator::syntax::module::{Module, ModuleMember, ModuleMembers};
-use c_generator::syntax::{PrimitiveType, Type};
 
 use crate::translator::state::TranslationState;
 use crate::translator::Translate;
 use brucket_ast::analyzer::type_analyzer::{Environment, Typed};
+use c_generator::syntax::c_type::{CPrimitiveType, CType};
 use std::borrow::Cow;
 
 pub struct Transpiler;
@@ -70,8 +72,8 @@ impl Transpiler {
     ) -> Vec<ModuleMember> {
         let include_stdio_macro = ModuleMember::Macro(Macro::Include("stdio.h".to_string()));
         let define_unit_macro = ModuleMember::Macro(Macro::Define(DefineMacro::new(
-            "UNIT".to_string(),
-            "0".to_string(),
+            "BOOL".to_string(),
+            "signed char".to_string(),
         )));
         let define_true_macro = ModuleMember::Macro(Macro::Define(DefineMacro::new(
             "TRUE".to_string(),
@@ -81,11 +83,11 @@ impl Transpiler {
             "FALSE".to_string(),
             "0".to_string(),
         )));
-        let plus_function = self.create_binary_operator_function("__internal_plus", '+');
-        let minus_function = self.create_binary_operator_function("__internal_minus", '-');
-        let times_function = self.create_binary_operator_function("__internal_times", '*');
-        let divide_function = self.create_binary_operator_function("__internal_divide", '/');
-        let remainder_function = self.create_binary_operator_function("__internal_remainder", '%');
+        let plus_function = self.create_binary_operator_function("__$internal_add", '+');
+        let minus_function = self.create_binary_operator_function("__$internal_subtract", '-');
+        let times_function = self.create_binary_operator_function("__$internal_multiply", '*');
+        let divide_function = self.create_binary_operator_function("__$internal_divide", '/');
+        let remainder_function = self.create_binary_operator_function("__$internal_remainder", '%');
         let main_function = self.create_main_function(expression);
         let mut members = Vec::with_capacity(expression_members.len() + 10);
         members.push(include_stdio_macro);
@@ -105,13 +107,13 @@ impl Transpiler {
     fn create_main_function(&self, expression: CExpression) -> ModuleMember {
         ModuleMember::FunctionDefinition(FunctionDefinition::new(
             FunctionHeader::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "main".to_string(),
                 Parameters::default(),
             ),
             vec![
                 Instruction::Expression(CExpression::FunctionCall(FunctionCallExpression::new(
-                    "printf".to_string(),
+                    FunctionIdentifier::NamedReference("printf".to_string()),
                     vec![CExpression::String("%d\\n".to_string()), expression],
                 ))),
                 Instruction::Return(CExpression::Number(NumberExpression::Integer(
@@ -124,15 +126,15 @@ impl Transpiler {
     fn create_binary_operator_function(&self, name: &str, operator: char) -> ModuleMember {
         ModuleMember::FunctionDefinition(FunctionDefinition::new(
             FunctionHeader::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 name.to_string(),
                 vec![
                     FunctionParameter::new(
-                        Type::Primitive(PrimitiveType::Int),
+                        CType::Primitive(CPrimitiveType::Int),
                         "first".to_string(),
                     ),
                     FunctionParameter::new(
-                        Type::Primitive(PrimitiveType::Int),
+                        CType::Primitive(CPrimitiveType::Int),
                         "second".to_string(),
                     ),
                 ],

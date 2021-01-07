@@ -23,8 +23,8 @@
  */
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::syntax::c_type::CType;
 use crate::syntax::instruction::Instructions;
-use crate::syntax::Type;
 
 #[derive(Debug)]
 pub struct FunctionDeclaration {
@@ -76,13 +76,13 @@ impl Generator for FunctionDefinition {
 
 #[derive(Debug, Clone)]
 pub struct FunctionHeader {
-    return_type: Type,
+    return_type: CType,
     name: String,
     parameters: Parameters,
 }
 
 impl FunctionHeader {
-    pub fn new(return_type: Type, name: String, parameters: Parameters) -> Self {
+    pub fn new(return_type: CType, name: String, parameters: Parameters) -> Self {
         Self {
             return_type,
             name,
@@ -112,12 +112,12 @@ pub type Parameters = Vec<FunctionParameter>;
 
 #[derive(Debug, Clone)]
 pub struct FunctionParameter {
-    parameter_type: Type,
+    parameter_type: CType,
     name: String,
 }
 
 impl FunctionParameter {
-    pub fn new(parameter_type: Type, name: String) -> Self {
+    pub fn new(parameter_type: CType, name: String) -> Self {
         Self {
             parameter_type,
             name,
@@ -135,15 +135,16 @@ impl Generator for FunctionParameter {
 mod test {
     use crate::syntax::expression::CExpression;
     use crate::syntax::instruction::Instruction;
-    use crate::syntax::{PrimitiveType, TestResult};
+    use crate::syntax::TestResult;
 
     use super::*;
+    use crate::syntax::c_type::CPrimitiveType;
 
     #[test]
     fn test_function_parameter_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "int foobar",
-            FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "foobar".to_string())
+            FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "foobar".to_string())
                 .generate()?
         );
         Ok(())
@@ -154,11 +155,17 @@ mod test {
         assert_eq!(
             "int foobar(int foo, int bar)",
             FunctionHeader::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "foobar".to_string(),
                 vec![
-                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "foo".to_string()),
-                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "bar".to_string())
+                    FunctionParameter::new(
+                        CType::Primitive(CPrimitiveType::Int),
+                        "foo".to_string()
+                    ),
+                    FunctionParameter::new(
+                        CType::Primitive(CPrimitiveType::Int),
+                        "bar".to_string()
+                    )
                 ],
             )
             .generate()?
@@ -171,11 +178,17 @@ mod test {
         assert_eq!(
             "int foobar(int foo, int bar);",
             FunctionDeclaration::new(FunctionHeader::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "foobar".to_string(),
                 vec![
-                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "foo".to_string()),
-                    FunctionParameter::new(Type::Primitive(PrimitiveType::Int), "bar".to_string())
+                    FunctionParameter::new(
+                        CType::Primitive(CPrimitiveType::Int),
+                        "foo".to_string()
+                    ),
+                    FunctionParameter::new(
+                        CType::Primitive(CPrimitiveType::Int),
+                        "bar".to_string()
+                    )
                 ],
             ))
             .generate()?
@@ -191,7 +204,7 @@ mod test {
 }"#,
             FunctionDefinition::new(
                 FunctionHeader::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    CType::Primitive(CPrimitiveType::Int),
                     "foobar".to_string(),
                     Parameters::default()
                 ),
@@ -205,7 +218,7 @@ mod test {
 }"#,
             FunctionDefinition::new(
                 FunctionHeader::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    CType::Primitive(CPrimitiveType::Int),
                     "foobar".to_string(),
                     Parameters::default()
                 ),
@@ -222,10 +235,10 @@ mod test {
 }"#,
             FunctionDefinition::new(
                 FunctionHeader::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    CType::Primitive(CPrimitiveType::Int),
                     "foobar".to_string(),
                     vec![FunctionParameter::new(
-                        Type::Primitive(PrimitiveType::Int),
+                        CType::Primitive(CPrimitiveType::Int),
                         "foo".to_string()
                     )]
                 ),
@@ -243,15 +256,15 @@ mod test {
 }"#,
             FunctionDefinition::new(
                 FunctionHeader::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    CType::Primitive(CPrimitiveType::Int),
                     "foobar".to_string(),
                     vec![
                         FunctionParameter::new(
-                            Type::Primitive(PrimitiveType::Int),
+                            CType::Primitive(CPrimitiveType::Int),
                             "foo".to_string()
                         ),
                         FunctionParameter::new(
-                            Type::Primitive(PrimitiveType::Int),
+                            CType::Primitive(CPrimitiveType::Int),
                             "bar".to_string()
                         )
                     ]

@@ -23,8 +23,9 @@
  */
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::syntax::c_type::CType;
 use crate::syntax::expression::CExpression;
-use crate::syntax::Type;
+use crate::syntax::typedef::Typedef;
 
 #[derive(Debug)]
 pub enum Instruction {
@@ -32,6 +33,7 @@ pub enum Instruction {
     Variable(VariableInstruction),
     If(IfInstruction),
     IfElse(IfElseInstruction),
+    Typedef(Typedef),
     Return(CExpression),
 }
 
@@ -42,6 +44,7 @@ impl Generator for Instruction {
             Instruction::Variable(variable_instruction) => variable_instruction.generate(),
             Instruction::If(if_instruction) => if_instruction.generate(),
             Instruction::IfElse(if_else_instruction) => if_else_instruction.generate(),
+            Instruction::Typedef(typedef) => typedef.generate(),
             Instruction::Return(return_expression) => {
                 Ok(format!("return {};", return_expression.generate()?))
             }
@@ -51,13 +54,13 @@ impl Generator for Instruction {
 
 #[derive(Debug)]
 pub struct VariableInstruction {
-    variable_type: Type,
+    variable_type: CType,
     name: String,
     value: Option<CExpression>,
 }
 
 impl VariableInstruction {
-    pub fn new(variable_type: Type, name: String, value: Option<CExpression>) -> Self {
+    pub fn new(variable_type: CType, name: String, value: Option<CExpression>) -> Self {
         Self {
             variable_type,
             name,
@@ -149,16 +152,17 @@ fn join_instructions(instructions: Vec<Instruction>) -> GeneratorResult {
 
 #[cfg(test)]
 mod test {
-    use crate::syntax::{PrimitiveType, TestResult};
-
     use super::*;
+
+    use crate::syntax::c_type::CPrimitiveType;
+    use crate::syntax::TestResult;
 
     #[test]
     fn test_variable_instruction_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "int foobar;",
             VariableInstruction::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "foobar".to_string(),
                 None
             )
@@ -167,7 +171,7 @@ mod test {
         assert_eq!(
             "int foo = bar;",
             VariableInstruction::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "foo".to_string(),
                 Some(CExpression::NamedReference("bar".to_string()))
             )
@@ -235,7 +239,7 @@ mod test {
         assert_eq!(
             "int foo = bar;",
             Instruction::Variable(VariableInstruction::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "foo".to_string(),
                 Some(CExpression::NamedReference("bar".to_string()))
             ))

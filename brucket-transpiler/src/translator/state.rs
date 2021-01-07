@@ -22,55 +22,43 @@
  * SOFTWARE.
  */
 
-use brucket_ast::analyzer::type_analyzer::Environment;
+use c_generator::syntax::c_type::CType;
 use c_generator::syntax::function::{FunctionDeclaration, FunctionDefinition, FunctionHeader};
 use c_generator::syntax::instruction::Instructions;
 use c_generator::syntax::module::{ModuleMember, ModuleMembers};
-use c_generator::syntax::Type;
-use std::collections::HashMap;
+use c_generator::syntax::typedef::Typedef;
 
 #[derive(Debug)]
 pub struct TranslationState {
-    let_count: i32,
-    if_count: i32,
+    let_count: usize,
+    if_count: usize,
+    lambda_count: usize,
+    typedef_count: usize,
     variables: Vec<Variable>,
+    typedefs: ModuleMembers,
     declarations: ModuleMembers,
     members: ModuleMembers,
-    pub env: Environment,
 }
 
 impl Default for TranslationState {
     fn default() -> Self {
-        Self::new(
-            0,
-            0,
-            Vec::default(),
-            ModuleMembers::default(),
-            ModuleMembers::default(),
-            Environment {
-                variables: HashMap::default(),
-            },
-        )
+        Self {
+            let_count: 0,
+            if_count: 0,
+            lambda_count: 0,
+            typedef_count: 0,
+            variables: Vec::default(),
+            typedefs: ModuleMembers::default(),
+            declarations: ModuleMembers::default(),
+            members: ModuleMembers::default(),
+        }
     }
 }
 
 impl TranslationState {
-    pub fn new(
-        let_count: i32,
-        if_count: i32,
-        variables: Vec<Variable>,
-        declarations: ModuleMembers,
-        members: ModuleMembers,
-        env: Environment,
-    ) -> Self {
-        Self {
-            let_count,
-            if_count,
-            variables,
-            declarations,
-            members,
-            env,
-        }
+    pub fn add_typedef(&mut self, value: String) {
+        let typedef = ModuleMember::Typedef(Typedef::new(value));
+        self.typedefs.push(typedef);
     }
 
     pub fn add_function(&mut self, header: FunctionHeader, body: Instructions) {
@@ -102,17 +90,34 @@ impl TranslationState {
         self.if_count += 1
     }
 
-    pub fn into_members(mut self) -> ModuleMembers {
-        self.declarations.append(&mut self.members);
-        self.declarations
+    pub fn increment_lambda(&mut self) {
+        self.lambda_count += 1
     }
 
-    pub fn let_count(&self) -> i32 {
+    pub fn increment_typedef(&mut self) {
+        self.typedef_count += 1
+    }
+
+    pub fn into_members(mut self) -> ModuleMembers {
+        self.typedefs.append(&mut self.declarations);
+        self.typedefs.append(&mut self.members);
+        self.typedefs
+    }
+
+    pub fn let_count(&self) -> usize {
         self.let_count
     }
 
-    pub fn if_count(&self) -> i32 {
+    pub fn if_count(&self) -> usize {
         self.if_count
+    }
+
+    pub fn lambda_count(&self) -> usize {
+        self.lambda_count
+    }
+
+    pub fn typedef_count(&self) -> usize {
+        self.typedef_count
     }
 
     pub fn variables(&self) -> &Vec<Variable> {
@@ -123,11 +128,11 @@ impl TranslationState {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
     name: String,
-    variable_type: Type,
+    variable_type: CType,
 }
 
 impl Variable {
-    pub fn new(name: String, variable_type: Type) -> Self {
+    pub fn new(name: String, variable_type: CType) -> Self {
         Self {
             name,
             variable_type,
@@ -138,7 +143,7 @@ impl Variable {
         &self.name
     }
 
-    pub fn variable_type(&self) -> &Type {
+    pub fn variable_type(&self) -> &CType {
         &self.variable_type
     }
 }

@@ -118,7 +118,19 @@ impl Typed for Application<Expression> {
 
 impl Typed for Lambda<Expression> {
     fn into_typed(self, environment: &mut Environment) -> TypedResult {
+        // TODO: reduce number of clones
+        // ---
+        for parameter in &self.parameters {
+            environment.insert_variable(
+                Path::Simple(parameter.name.to_owned()),
+                parameter.parameter_type.clone(),
+            );
+        }
         let typed_body = self.body.into_typed(environment)?;
+        for parameter in &self.parameters {
+            environment.remove_variable(&Path::Simple(parameter.name.clone()));
+        }
+        // ---
         // TODO: get parameters types from usage context
         let parameters_types = self
             .parameters

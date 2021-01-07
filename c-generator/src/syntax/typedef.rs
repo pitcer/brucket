@@ -22,13 +22,21 @@
  * SOFTWARE.
  */
 
-pub mod c_macro;
-pub mod c_type;
-pub mod expression;
-pub mod function;
-pub mod instruction;
-pub mod module;
-pub mod typedef;
+use crate::generator::{Generator, GeneratorResult};
 
-#[cfg(test)]
-pub type TestResult = Result<(), String>;
+#[derive(Debug)]
+pub struct Typedef {
+    value: String,
+}
+
+impl Generator for Typedef {
+    fn generate(self) -> GeneratorResult {
+        Ok(format!("typedef {};", self.value))
+    }
+}
+
+impl Typedef {
+    pub fn new(value: String) -> Self {
+        Self { value }
+    }
+}

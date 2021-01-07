@@ -26,6 +26,7 @@ use crate::generator::{Generator, GeneratorError, GeneratorResult};
 use crate::syntax::c_macro::Macro;
 use crate::syntax::function::{FunctionDeclaration, FunctionDefinition};
 use crate::syntax::instruction::VariableInstruction;
+use crate::syntax::typedef::Typedef;
 
 pub struct Module {
     members: ModuleMembers,
@@ -44,7 +45,7 @@ impl Generator for Module {
             .into_iter()
             .map(|member| member.generate())
             .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join("\n"))
+            .join("\n\n"))
     }
 }
 
@@ -56,6 +57,7 @@ pub enum ModuleMember {
     FunctionDeclaration(FunctionDeclaration),
     FunctionDefinition(FunctionDefinition),
     StaticVariable(VariableInstruction),
+    Typedef(Typedef),
 }
 
 impl Generator for ModuleMember {
@@ -69,16 +71,18 @@ impl Generator for ModuleMember {
             ModuleMember::StaticVariable(variable) => {
                 Ok(format!("static {}", variable.generate()?))
             }
+            ModuleMember::Typedef(typedef) => typedef.generate(),
         }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use crate::syntax::c_type::{CPrimitiveType, CType};
     use crate::syntax::expression::CExpression;
     use crate::syntax::function::{FunctionHeader, Parameters};
     use crate::syntax::instruction::Instructions;
-    use crate::syntax::{PrimitiveType, TestResult, Type};
+    use crate::syntax::TestResult;
 
     use super::*;
 
@@ -87,20 +91,22 @@ mod test {
         assert_eq!("", Module::new(ModuleMembers::default()).generate()?);
         assert_eq!(
             r#"#include <test.h>
+
 static int FOOBAR = test;
+
 int foobar() {
 
 }"#,
             Module::new(vec![
                 ModuleMember::Macro(Macro::Include("test.h".to_string())),
                 ModuleMember::StaticVariable(VariableInstruction::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    CType::Primitive(CPrimitiveType::Int),
                     "FOOBAR".to_string(),
                     Some(CExpression::NamedReference("test".to_string()))
                 )),
                 ModuleMember::FunctionDefinition(FunctionDefinition::new(
                     FunctionHeader::new(
-                        Type::Primitive(PrimitiveType::Int),
+                        CType::Primitive(CPrimitiveType::Int),
                         "foobar".to_string(),
                         Parameters::default()
                     ),
@@ -124,7 +130,7 @@ int foobar() {
 }"#,
             ModuleMember::FunctionDefinition(FunctionDefinition::new(
                 FunctionHeader::new(
-                    Type::Primitive(PrimitiveType::Int),
+                    CType::Primitive(CPrimitiveType::Int),
                     "foobar".to_string(),
                     Parameters::default()
                 ),
@@ -135,7 +141,7 @@ int foobar() {
         assert_eq!(
             "static int FOOBAR = test;",
             ModuleMember::StaticVariable(VariableInstruction::new(
-                Type::Primitive(PrimitiveType::Int),
+                CType::Primitive(CPrimitiveType::Int),
                 "FOOBAR".to_string(),
                 Some(CExpression::NamedReference("test".to_string()))
             ))
