@@ -77,14 +77,11 @@ impl FunctionCallExpression {
 
 impl Generator for FunctionCallExpression {
     fn generate(self) -> GeneratorResult {
-        let identifier = self.identifier.generate()?;
-        let arguments = self
-            .arguments
-            .into_iter()
-            .map(|argument| argument.generate())
-            .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join(", ");
-        Ok(format!("{}({})", identifier, arguments))
+        Ok(format!(
+            "{}({})",
+            self.identifier.generate()?,
+            self.arguments.generate()?
+        ))
     }
 }
 
@@ -104,6 +101,16 @@ impl Generator for FunctionIdentifier {
 }
 
 pub type Arguments = Vec<CExpression>;
+
+impl Generator for Arguments {
+    fn generate(self) -> GeneratorResult {
+        Ok(self
+            .into_iter()
+            .map(Generator::generate)
+            .collect::<Result<Vec<String>, GeneratorError>>()?
+            .join(", "))
+    }
+}
 
 #[cfg(test)]
 mod test {

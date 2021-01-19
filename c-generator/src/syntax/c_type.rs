@@ -41,34 +41,41 @@ impl Generator for CType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionPointer {
-    pub return_type: Box<CType>,
+    pub return_type: CType,
     pub name: String,
-    pub parameters_types: Vec<CType>,
+    pub parameters_types: Types,
 }
 
 impl Generator for FunctionPointer {
     fn generate(self) -> GeneratorResult {
-        let return_type = self.return_type.generate()?;
-        let parameters_types = self
-            .parameters_types
-            .into_iter()
-            .map(|parameter_type| parameter_type.generate())
-            .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join(", ");
         Ok(format!(
             "{} (*{})({})",
-            return_type, self.name, parameters_types
+            self.return_type.generate()?,
+            self.name,
+            self.parameters_types.generate()?
         ))
     }
 }
 
 impl FunctionPointer {
-    pub fn new(return_type: Box<CType>, name: String, parameters_types: Vec<CType>) -> Self {
+    pub fn new(return_type: CType, name: String, parameters_types: Types) -> Self {
         Self {
             return_type,
             name,
             parameters_types,
         }
+    }
+}
+
+pub type Types = Vec<CType>;
+
+impl Generator for Types {
+    fn generate(self) -> GeneratorResult {
+        Ok(self
+            .into_iter()
+            .map(Generator::generate)
+            .collect::<Result<Vec<String>, GeneratorError>>()?
+            .join(", "))
     }
 }
 

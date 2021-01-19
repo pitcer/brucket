@@ -59,18 +59,11 @@ impl FunctionDefinition {
 
 impl Generator for FunctionDefinition {
     fn generate(self) -> GeneratorResult {
-        let header = self.header.generate()?;
-        let body = self
-            .body
-            .into_iter()
-            .map(|instruction| {
-                instruction
-                    .generate()
-                    .map(|instruction| format!("    {}", instruction))
-            })
-            .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join("\n");
-        Ok(format!("{} {{\n{}\n}}", header, body))
+        Ok(format!(
+            "{} {{\n{}\n}}",
+            self.header.generate()?,
+            self.body.generate()?
+        ))
     }
 }
 
@@ -93,22 +86,26 @@ impl FunctionHeader {
 
 impl Generator for FunctionHeader {
     fn generate(self) -> GeneratorResult {
-        let parameters = self
-            .parameters
-            .into_iter()
-            .map(|parameter| parameter.generate())
-            .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join(", ");
         Ok(format!(
             "{} {}({})",
             self.return_type.generate()?,
             self.name,
-            parameters
+            self.parameters.generate()?
         ))
     }
 }
 
 pub type Parameters = Vec<FunctionParameter>;
+
+impl Generator for Parameters {
+    fn generate(self) -> GeneratorResult {
+        Ok(self
+            .into_iter()
+            .map(Generator::generate)
+            .collect::<Result<Vec<String>, GeneratorError>>()?
+            .join(", "))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct FunctionParameter {

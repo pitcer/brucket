@@ -38,6 +38,7 @@ use crate::translator::state::{TranslationState, Variable};
 use brucket_ast::analyzer::type_analyzer::typed_ast::{TypedExpression, TypedExpressionType};
 use c_generator::generator::Generator;
 use c_generator::syntax::c_type::{CPrimitiveType, CType, FunctionPointer};
+use c_generator::syntax::modifiers::Modifiers;
 
 pub mod state;
 
@@ -75,7 +76,7 @@ impl Translate<CType> for LambdaType {
         let type_name = format!("__$type_{}", typedef_count);
         state.increment_typedef();
         let function_pointer =
-            FunctionPointer::new(Box::from(return_type), type_name.clone(), parameters_types);
+            FunctionPointer::new(return_type, type_name.clone(), parameters_types);
         let typedef_value = function_pointer.generate()?;
         state.add_typedef(typedef_value);
         Ok(CType::Custom(type_name))
@@ -180,9 +181,10 @@ impl Translate<CExpression> for Let<TypedExpression> {
             FunctionHeader::new(then_c_type, function_name.clone(), parameters),
             vec![
                 Instruction::Variable(VariableInstruction::new(
+                    Modifiers::default(),
                     value_c_type,
                     self.name,
-                    Some(value),
+                    value,
                 )),
                 Instruction::Return(next),
             ],

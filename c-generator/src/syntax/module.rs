@@ -25,7 +25,7 @@
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
 use crate::syntax::c_macro::Macro;
 use crate::syntax::function::{FunctionDeclaration, FunctionDefinition};
-use crate::syntax::instruction::VariableInstruction;
+use crate::syntax::instruction::{VariableDeclaration, VariableInstruction};
 use crate::syntax::typedef::Typedef;
 
 pub struct Module {
@@ -40,23 +40,29 @@ impl Module {
 
 impl Generator for Module {
     fn generate(self) -> GeneratorResult {
-        Ok(self
-            .members
-            .into_iter()
-            .map(|member| member.generate())
-            .collect::<Result<Vec<String>, GeneratorError>>()?
-            .join("\n\n"))
+        self.members.generate()
     }
 }
 
 pub type ModuleMembers = Vec<ModuleMember>;
+
+impl Generator for ModuleMembers {
+    fn generate(self) -> GeneratorResult {
+        Ok(self
+            .into_iter()
+            .map(Generator::generate)
+            .collect::<Result<Vec<String>, GeneratorError>>()?
+            .join("\n\n"))
+    }
+}
 
 #[derive(Debug)]
 pub enum ModuleMember {
     Macro(Macro),
     FunctionDeclaration(FunctionDeclaration),
     FunctionDefinition(FunctionDefinition),
-    StaticVariable(VariableInstruction),
+    VariableDeclaration(VariableDeclaration),
+    Variable(VariableInstruction),
     Typedef(Typedef),
 }
 
@@ -64,13 +70,10 @@ impl Generator for ModuleMember {
     fn generate(self) -> GeneratorResult {
         match self {
             ModuleMember::Macro(c_macro) => c_macro.generate(),
-            ModuleMember::FunctionDeclaration(function_declaration) => {
-                function_declaration.generate()
-            }
-            ModuleMember::FunctionDefinition(function_definition) => function_definition.generate(),
-            ModuleMember::StaticVariable(variable) => {
-                Ok(format!("static {}", variable.generate()?))
-            }
+            ModuleMember::FunctionDeclaration(function) => function.generate(),
+            ModuleMember::FunctionDefinition(function) => function.generate(),
+            ModuleMember::VariableDeclaration(variable) => variable.generate(),
+            ModuleMember::Variable(variable) => variable.generate(),
             ModuleMember::Typedef(typedef) => typedef.generate(),
         }
     }
@@ -85,6 +88,7 @@ mod test {
     use crate::syntax::TestResult;
 
     use super::*;
+    use crate::syntax::modifiers::Modifier;
 
     #[test]
     fn test_module_is_converted_to_c_syntax_correctly() -> TestResult {
@@ -99,10 +103,11 @@ int foobar() {
 }"#,
             Module::new(vec![
                 ModuleMember::Macro(Macro::Include("test.h".to_string())),
-                ModuleMember::StaticVariable(VariableInstruction::new(
+                ModuleMember::Variable(VariableInstruction::new(
+                    vec![Modifier::Static],
                     CType::Primitive(CPrimitiveType::Int),
                     "FOOBAR".to_string(),
-                    Some(CExpression::NamedReference("test".to_string()))
+                    CExpression::NamedReference("test".to_string())
                 )),
                 ModuleMember::FunctionDefinition(FunctionDefinition::new(
                     FunctionHeader::new(
@@ -140,10 +145,11 @@ int foobar() {
         );
         assert_eq!(
             "static int FOOBAR = test;",
-            ModuleMember::StaticVariable(VariableInstruction::new(
+            ModuleMember::Variable(VariableInstruction::new(
+                vec![Modifier::Static],
                 CType::Primitive(CPrimitiveType::Int),
                 "FOOBAR".to_string(),
-                Some(CExpression::NamedReference("test".to_string()))
+                CExpression::NamedReference("test".to_owned())
             ))
             .generate()?
         );
