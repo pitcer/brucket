@@ -22,7 +22,8 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::{ApplicationStrategy, Expression, Parameter};
+use brucket_ast::ast::{ApplicationStrategy, Parameter};
+use brucket_ast::parser::expression::Expression;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalFunction;

@@ -22,16 +22,16 @@
  * SOFTWARE.
  */
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
-use brucket_ast::ast::Expression;
 use brucket_ast::lexer::Lexer;
+use brucket_ast::parser::expression::Expression;
 use brucket_ast::parser::Parser;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
 use crate::value::Value;
-use std::borrow::Cow;
 
 #[cfg(test)]
 mod test;

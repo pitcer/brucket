@@ -29,9 +29,10 @@ use std::rc::Rc;
 use std::slice::Iter;
 
 use brucket_ast::ast::{
-    Application, ApplicationStrategy, Arity, Constant, ConstantValue, Expression, Function, If,
+    Application, ApplicationStrategy, Arity, Constant, ConstantValue, Function, If,
     InternalFunction, Lambda, Let, Module, Number, Path,
 };
+use brucket_ast::parser::expression::Expression;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;

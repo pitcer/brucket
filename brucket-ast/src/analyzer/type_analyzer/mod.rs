@@ -22,16 +22,16 @@
  * SOFTWARE.
  */
 
-use crate::analyzer::type_analyzer::typed_ast::{TypedExpression, TypedExpressionType};
-use crate::ast::{
-    Application, ConstantValue, Expression, If, Lambda, LambdaType, Let, Number, Path, Type,
-};
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use crate::analyzer::type_analyzer::typed_expression::{TypedExpression, TypedExpressionType};
+use crate::ast::{Application, ConstantValue, If, Lambda, LambdaType, Let, Number, Path, Type};
+use crate::parser::expression::Expression;
+
 #[cfg(test)]
 mod test;
-pub mod typed_ast;
+pub mod typed_expression;
 
 #[derive(Debug)]
 pub struct Environment {

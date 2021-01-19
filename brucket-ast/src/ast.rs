@@ -26,20 +26,6 @@ use std::collections::HashSet;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
-    ConstantValue(ConstantValue),
-    Identifier(Path),
-    Application(Application<Expression>),
-    Let(Let<Expression>),
-    If(If<Expression>),
-    Lambda(Lambda<Expression>),
-    Module(Module<Expression>),
-    Function(Function<Expression>),
-    InternalFunction(InternalFunction),
-    Constant(Constant<Expression>),
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct Let<T> {
     pub name: String,
     pub value: Box<T>,

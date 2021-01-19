@@ -24,21 +24,23 @@
 
 use std::borrow::Cow;
 
+use brucket_ast::analyzer::type_analyzer::typed_expression::{
+    TypedExpression, TypedExpressionType,
+};
 use brucket_ast::ast::{
     Application, Boolean, Constant, ConstantValue, Function, If, InternalFunction, Lambda,
     LambdaType, Let, Module, Number, Parameter, Path, Type,
 };
+use c_generator::generator::Generator;
+use c_generator::syntax::c_type::{CPrimitiveType, CType, FunctionPointer};
 use c_generator::syntax::expression::{
     Arguments, CExpression, FunctionCallExpression, FunctionIdentifier, NumberExpression,
 };
 use c_generator::syntax::function::{FunctionHeader, FunctionParameter, Parameters};
 use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableInstruction};
+use c_generator::syntax::modifiers::Modifiers;
 
 use crate::translator::state::{TranslationState, Variable};
-use brucket_ast::analyzer::type_analyzer::typed_ast::{TypedExpression, TypedExpressionType};
-use c_generator::generator::Generator;
-use c_generator::syntax::c_type::{CPrimitiveType, CType, FunctionPointer};
-use c_generator::syntax::modifiers::Modifiers;
 
 pub mod state;
 

@@ -22,23 +22,25 @@
  * SOFTWARE.
  */
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::iter::Peekable;
 use std::option::Option::Some;
+use std::vec::IntoIter;
+
+use expression::Expression;
 
 use crate::ast::{
     Application, ApplicationStrategy, Arity, Boolean, ComplexPath, Constant, ConstantValue,
-    Expression, Function, If, InternalFunction, Lambda, LambdaType, Let, Module, Number, Parameter,
-    Path, Type, Visibility,
+    Function, If, InternalFunction, Lambda, LambdaType, Let, Module, Number, Parameter, Path, Type,
+    Visibility,
 };
-
 use crate::token::{
     Boolean as BooleanToken, Keyword, Modifier, Number as NumberToken, Operator, Parenthesis,
     PrimitiveType, Token,
 };
-use std::borrow::Cow;
-use std::vec::IntoIter;
 
+pub mod expression;
 #[cfg(test)]
 mod test;
 
