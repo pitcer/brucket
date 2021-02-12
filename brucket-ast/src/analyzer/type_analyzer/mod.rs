@@ -35,7 +35,7 @@ pub mod typed_expression;
 
 #[derive(Debug)]
 pub struct Environment {
-    pub variables: HashMap<Path, Type>,
+    variables: HashMap<Path, Type>,
 }
 
 impl Default for Environment {
@@ -47,15 +47,15 @@ impl Default for Environment {
 }
 
 impl Environment {
-    fn insert_variable(&mut self, path: Path, variable_type: Type) {
+    pub fn insert_variable(&mut self, path: Path, variable_type: Type) {
         self.variables.insert(path, variable_type);
     }
 
-    fn remove_variable(&mut self, path: &Path) -> Option<Type> {
+    pub fn remove_variable(&mut self, path: &Path) -> Option<Type> {
         self.variables.remove(path)
     }
 
-    fn get_variable(&self, path: &Path) -> Option<&Type> {
+    pub fn get_variable(&self, path: &Path) -> Option<&Type> {
         self.variables.get(path)
     }
 }

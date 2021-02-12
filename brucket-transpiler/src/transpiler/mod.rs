@@ -38,6 +38,7 @@ use c_generator::syntax::module::{Module, ModuleMember, ModuleMembers};
 use crate::translator::state::TranslationState;
 use crate::translator::Translate;
 use brucket_ast::analyzer::type_analyzer::{Environment, Typed};
+use brucket_ast::ast::{LambdaType, Path, Type};
 use c_generator::syntax::c_type::{CPrimitiveType, CType};
 use std::borrow::Cow;
 
@@ -55,7 +56,7 @@ impl Transpiler {
         let parser = Parser::default();
         let tokens = lexer.tokenize(syntax)?;
         let expression = parser.parse(tokens)?;
-        let mut type_analyzer_environment = Environment::default();
+        let mut type_analyzer_environment = self.create_type_analyzer_environment();
         let expression = expression.into_typed(&mut type_analyzer_environment)?;
         let mut state = TranslationState::default();
         let expression = expression.translate(&mut state)?;
@@ -64,6 +65,20 @@ impl Transpiler {
         let module = Module::new(members);
         let generator_state = GeneratorState::default();
         module.generate_indented(&generator_state)
+    }
+
+    fn create_type_analyzer_environment(&self) -> Environment {
+        let mut environment = Environment::default();
+        let binary_int_lambda_type = Type::Lambda(LambdaType::new(
+            vec![Type::Integer, Type::Integer],
+            Type::Integer.into(),
+        ));
+        environment.insert_variable(Path::Simple("+".to_owned()), binary_int_lambda_type.clone());
+        environment.insert_variable(Path::Simple("-".to_owned()), binary_int_lambda_type.clone());
+        environment.insert_variable(Path::Simple("*".to_owned()), binary_int_lambda_type.clone());
+        environment.insert_variable(Path::Simple("/".to_owned()), binary_int_lambda_type.clone());
+        environment.insert_variable(Path::Simple("%".to_owned()), binary_int_lambda_type);
+        environment
     }
 
     fn create_module_members(
