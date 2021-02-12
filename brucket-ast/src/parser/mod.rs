@@ -499,17 +499,14 @@ impl Parser {
         let mut last_path_operator = false;
         while let Some(token) = tokens.peek() {
             match token {
-                Token::Operator(operator) => match operator {
-                    Operator::Path => {
-                        if last_path_operator {
-                            return Err(Cow::from("Unexpected path operator"));
-                        } else {
-                            last_path_operator = true;
-                            tokens.next();
-                        }
+                Token::Operator(Operator::Path) => {
+                    if last_path_operator {
+                        return Err(Cow::from("Unexpected path operator"));
+                    } else {
+                        last_path_operator = true;
+                        tokens.next();
                     }
-                    _ => break,
-                },
+                }
                 Token::Symbol(symbol) => {
                     if last_path_operator {
                         last_path_operator = false;

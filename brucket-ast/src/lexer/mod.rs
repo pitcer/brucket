@@ -148,7 +148,7 @@ impl Lexer {
                 Ok(None)
             }
             '.' => Self::tokenize_dots(characters),
-            ':' => Self::tokenize_colon(characters),
+            ':' => Ok(Some(Self::tokenize_colon(characters))),
             parenthesis if parenthesis.is_opening_parenthesis() => {
                 Ok(Some(Token::Parenthesis(Parenthesis::Open(parenthesis))))
             }
@@ -194,15 +194,13 @@ impl Lexer {
         }
     }
 
-    fn tokenize_colon(characters: &mut Characters) -> TokenResult {
+    fn tokenize_colon(characters: &mut Characters) -> Token {
         let second = characters.peek();
-        if let Some(second) = second {
-            if let ':' = second {
-                characters.next();
-                return Ok(Some(Token::Operator(Operator::Path)));
-            }
+        if let Some(':') = second {
+            characters.next();
+            return Token::Operator(Operator::Path);
         }
-        Ok(Some(Token::Operator(Operator::Type)))
+        Token::Operator(Operator::Type)
     }
 
     fn tokenize_string(characters: &mut Characters) -> String {

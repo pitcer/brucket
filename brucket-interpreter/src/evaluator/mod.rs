@@ -590,7 +590,7 @@ impl Evaluator {
             closures.push((identifier, Rc::clone(&closure), used_identifiers));
             evaluated_closures.insert(identifier, closure);
         }
-        Self::fill_closures(&closures, &evaluated_closures)?;
+        Self::fill_closures(&closures, &evaluated_closures);
         let mut evaluated_internal_functions = HashMap::new();
         for internal_function in module.internal_functions() {
             let visibility = &internal_function.visibility;
@@ -603,7 +603,7 @@ impl Evaluator {
             constants_environment.insert(identifier.clone(), Rc::clone(&closure));
             evaluated_internal_functions.insert(identifier, closure);
         }
-        Self::fill_closures(&closures, &evaluated_internal_functions)?;
+        Self::fill_closures(&closures, &evaluated_internal_functions);
         let mut evaluated_constants = HashMap::new();
         for constant in module.constants() {
             let visibility = &constant.visibility;
@@ -622,7 +622,7 @@ impl Evaluator {
             constants_environment.insert(identifier.clone(), Rc::clone(&value));
             evaluated_constants.insert(identifier, value);
         }
-        Self::fill_closures(&closures, &evaluated_constants)?;
+        Self::fill_closures(&closures, &evaluated_constants);
         let identifier = module.identifier();
         Ok(Value::Module(
             module.is_static(),
@@ -634,7 +634,7 @@ impl Evaluator {
     fn fill_closures(
         closures: &[(&String, Rc<Value>, &HashSet<String>)],
         values: &HashMap<&String, Rc<Value>>,
-    ) -> Result<(), String> {
+    ) {
         for (identifier, closure, used_identifiers) in closures {
             if let Value::FunctionClosure(_, closure) = closure.borrow() {
                 let environment = closure.environment();
@@ -651,6 +651,5 @@ impl Evaluator {
                 }
             }
         }
-        Ok(())
     }
 }

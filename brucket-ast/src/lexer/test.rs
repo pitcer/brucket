@@ -301,33 +301,30 @@ fn test_closing_parenthesis_after_symbol_is_handled_correctly() -> TestResult {
 }
 
 #[test]
-fn test_tokenize_number() -> TestResult {
+fn test_tokenize_number() {
     let mut characters = "224)".chars().peekable();
     let number = Lexer::tokenize_number('4', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
     assert_eq!(Number::Integer("4224".to_string()), number);
     assert_eq!(')', parenthesis);
-    Ok(())
 }
 
 #[test]
-fn test_tokenize_floating_point_number() -> TestResult {
+fn test_tokenize_floating_point_number() {
     let mut characters = "2.24)".chars().peekable();
     let number = Lexer::tokenize_number('4', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
     assert_eq!(Number::FloatingPoint("42.24".to_string()), number);
     assert_eq!(')', parenthesis);
-    Ok(())
 }
 
 #[test]
-fn test_tokenize_symbol() -> TestResult {
+fn test_tokenize_symbol() {
     let mut characters = "oo)".chars().peekable();
     let symbol = Lexer::tokenize_symbol('f', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
     assert_eq!("foo".to_string(), symbol);
     assert_eq!(')', parenthesis);
-    Ok(())
 }
 
 #[test]
