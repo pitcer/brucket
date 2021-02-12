@@ -22,7 +22,9 @@
  * SOFTWARE.
  */
 
-use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::generator::{
+    Generator, GeneratorError, GeneratorResult, GeneratorState, IndentedGenerator,
+};
 use crate::syntax::c_type::CType;
 use crate::syntax::instruction::Instructions;
 
@@ -37,11 +39,9 @@ impl FunctionDeclaration {
     }
 }
 
-impl Generator for FunctionDeclaration {
-    fn generate(self) -> GeneratorResult {
-        let mut header = self.header.generate()?;
-        header.push(';');
-        Ok(header)
+impl IndentedGenerator for FunctionDeclaration {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        Ok(format!("{}{};", state.indentation, self.header.generate()?))
     }
 }
 
@@ -57,12 +57,17 @@ impl FunctionDefinition {
     }
 }
 
-impl Generator for FunctionDefinition {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for FunctionDefinition {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        let indentation = &state.indentation;
+        let incremented_indentation = state.indentation.to_incremented();
+        let state = GeneratorState::new(incremented_indentation);
         Ok(format!(
-            "{} {{\n{}\n}}",
+            "{}{} {{\n{}\n{}}}",
+            indentation,
             self.header.generate()?,
-            self.body.generate()?
+            self.body.generate_indented(&state)?,
+            indentation
         ))
     }
 }
@@ -188,7 +193,7 @@ mod test {
                     )
                 ],
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -207,7 +212,7 @@ mod test {
                 ),
                 Instructions::default()
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             r#"int foobar() {
@@ -223,7 +228,7 @@ mod test {
                     "bar".to_string()
                 ))]
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             r#"int foobar(int foo) {
@@ -244,7 +249,7 @@ mod test {
                     Instruction::Return(CExpression::NamedReference("bar".to_string()))
                 ]
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             r#"int foobar(int foo, int bar) {
@@ -271,7 +276,7 @@ mod test {
                     Instruction::Return(CExpression::NamedReference("bar".to_string()))
                 ]
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }

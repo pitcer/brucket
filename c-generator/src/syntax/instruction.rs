@@ -22,7 +22,9 @@
  * SOFTWARE.
  */
 
-use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::generator::{
+    Generator, GeneratorError, GeneratorResult, GeneratorState, IndentedGenerator,
+};
 use crate::syntax::c_type::CType;
 use crate::syntax::expression::CExpression;
 use crate::syntax::modifiers::Modifiers;
@@ -40,19 +42,24 @@ pub enum Instruction {
     Return(CExpression),
 }
 
-impl Generator for Instruction {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for Instruction {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        let indentation = &state.indentation;
         match self {
-            Instruction::Expression(expression) => Ok(format!("{};", expression.generate()?)),
-            Instruction::VariableDeclaration(variable) => variable.generate(),
-            Instruction::VariableDefinition(variable) => variable.generate(),
-            Instruction::Variable(variable) => variable.generate(),
-            Instruction::If(if_instruction) => if_instruction.generate(),
-            Instruction::IfElse(if_else_instruction) => if_else_instruction.generate(),
-            Instruction::Typedef(typedef) => typedef.generate(),
-            Instruction::Return(return_expression) => {
-                Ok(format!("return {};", return_expression.generate()?))
+            Instruction::Expression(expression) => {
+                Ok(format!("{}{};", indentation, expression.generate()?))
             }
+            Instruction::VariableDeclaration(variable) => variable.generate_indented(state),
+            Instruction::VariableDefinition(variable) => variable.generate_indented(state),
+            Instruction::Variable(variable) => variable.generate_indented(state),
+            Instruction::If(instruction) => instruction.generate_indented(state),
+            Instruction::IfElse(instruction) => instruction.generate_indented(state),
+            Instruction::Typedef(typedef) => typedef.generate_indented(state),
+            Instruction::Return(return_expression) => Ok(format!(
+                "{}return {};",
+                indentation,
+                return_expression.generate()?
+            )),
         }
     }
 }
@@ -74,14 +81,15 @@ impl VariableDeclaration {
     }
 }
 
-impl Generator for VariableDeclaration {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for VariableDeclaration {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let mut modifiers = self.modifiers.generate()?;
         if !modifiers.is_empty() {
             modifiers.push(' ');
         }
         Ok(format!(
-            "{}{} {};",
+            "{}{}{} {};",
+            state.indentation,
             modifiers,
             self.variable_type.generate()?,
             self.name
@@ -101,9 +109,14 @@ impl VariableDefinition {
     }
 }
 
-impl Generator for VariableDefinition {
-    fn generate(self) -> GeneratorResult {
-        Ok(format!("{} = {};", self.name, self.value.generate()?,))
+impl IndentedGenerator for VariableDefinition {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        Ok(format!(
+            "{}{} = {};",
+            state.indentation,
+            self.name,
+            self.value.generate()?,
+        ))
     }
 }
 
@@ -131,14 +144,15 @@ impl VariableInstruction {
     }
 }
 
-impl Generator for VariableInstruction {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for VariableInstruction {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let mut modifiers = self.modifiers.generate()?;
         if !modifiers.is_empty() {
             modifiers.push(' ')
         }
         Ok(format!(
-            "{}{} {} = {};",
+            "{}{}{} {} = {};",
+            state.indentation,
             modifiers,
             self.variable_type.generate()?,
             self.name,
@@ -159,12 +173,17 @@ impl IfInstruction {
     }
 }
 
-impl Generator for IfInstruction {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for IfInstruction {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        let indentation = &state.indentation;
+        let incremented_indentation = state.indentation.to_incremented();
+        let state = GeneratorState::new(incremented_indentation);
         Ok(format!(
-            "if ({}) {{\n{}\n}}",
+            "{}if ({}) {{\n{}\n{}}}",
+            indentation,
             self.condition.generate()?,
-            self.body.generate()?
+            self.body.generate_indented(&state)?,
+            indentation
         ))
     }
 }
@@ -186,28 +205,30 @@ impl IfElseInstruction {
     }
 }
 
-impl Generator for IfElseInstruction {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for IfElseInstruction {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        let indentation = &state.indentation;
+        let incremented_indentation = state.indentation.to_incremented();
+        let state = GeneratorState::new(incremented_indentation);
         Ok(format!(
-            "if ({}) {{\n{}\n}} else {{\n{}\n}}",
+            "{}if ({}) {{\n{}\n{}}} else {{\n{}\n{}}}",
+            indentation,
             self.condition.generate()?,
-            self.if_body.generate()?,
-            self.else_body.generate()?
+            self.if_body.generate_indented(&state)?,
+            indentation,
+            self.else_body.generate_indented(&state)?,
+            indentation
         ))
     }
 }
 
 pub type Instructions = Vec<Instruction>;
 
-impl Generator for Instructions {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for Instructions {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(self
             .into_iter()
-            .map(|instruction| {
-                instruction
-                    .generate()
-                    .map(|instruction| format!("    {}", instruction))
-            })
+            .map(|instruction| instruction.generate_indented(state))
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join("\n"))
     }
@@ -230,7 +251,7 @@ mod test {
                 CType::Primitive(CPrimitiveType::Int),
                 "foobar".to_string(),
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "const int foobar;",
@@ -239,7 +260,7 @@ mod test {
                 CType::Primitive(CPrimitiveType::Int),
                 "foobar".to_string(),
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -252,7 +273,7 @@ mod test {
                 "foo".to_string(),
                 CExpression::NamedReference("bar".to_string())
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -267,7 +288,7 @@ mod test {
                 "foo".to_string(),
                 CExpression::NamedReference("bar".to_string())
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "const int foo = bar;",
@@ -277,7 +298,7 @@ mod test {
                 "foo".to_string(),
                 CExpression::NamedReference("bar".to_string())
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -296,7 +317,7 @@ mod test {
                     Instruction::Expression(CExpression::NamedReference("bar".to_string()))
                 ]
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -322,7 +343,7 @@ mod test {
                     Instruction::Expression(CExpression::NamedReference("foo".to_string()))
                 ],
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -332,11 +353,12 @@ mod test {
         assert_eq!(
             "foobar;",
             Instruction::Expression(CExpression::NamedReference("foobar".to_string()))
-                .generate()?
+                .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "return foobar;",
-            Instruction::Return(CExpression::NamedReference("foobar".to_string())).generate()?
+            Instruction::Return(CExpression::NamedReference("foobar".to_string()))
+                .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "int foo = bar;",
@@ -346,7 +368,7 @@ mod test {
                 "foo".to_string(),
                 CExpression::NamedReference("bar".to_string())
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
 
         assert_eq!(
@@ -361,7 +383,7 @@ mod test {
                     Instruction::Expression(CExpression::NamedReference("bar".to_string()))
                 ]
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             r#"if (foobar) {
@@ -382,7 +404,7 @@ mod test {
                     Instruction::Expression(CExpression::NamedReference("foo".to_string()))
                 ],
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }

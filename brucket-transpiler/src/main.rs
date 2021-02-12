@@ -25,14 +25,13 @@
 #![forbid(unsafe_code)]
 
 use crate::transpiler::Transpiler;
-use std::borrow::Cow;
 use std::io;
 use std::io::Read;
 
 mod translator;
 mod transpiler;
 
-fn main() -> Result<(), Cow<'static, str>> {
+fn main() {
     let mut standard_input = io::stdin();
     let syntax = read(&mut standard_input).expect("Cannot read syntax from standard input");
     let transpiler = Transpiler::default();
@@ -40,7 +39,6 @@ fn main() -> Result<(), Cow<'static, str>> {
         .transpile(syntax.into())
         .expect("Cannot transpile the given syntax");
     println!("{}", transpiled);
-    Ok(())
 }
 
 fn read(input: &mut impl Read) -> io::Result<String> {

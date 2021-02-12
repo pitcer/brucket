@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::generator::{Generator, GeneratorResult};
+use crate::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
 
 #[derive(Debug)]
 pub enum Macro {
@@ -30,11 +30,11 @@ pub enum Macro {
     Define(DefineMacro),
 }
 
-impl Generator for Macro {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for Macro {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         match self {
-            Macro::Include(module) => Ok(format!("#include <{}>", module)),
-            Macro::Define(define_macro) => define_macro.generate(),
+            Macro::Include(module) => Ok(format!("{}#include <{}>", state.indentation, module)),
+            Macro::Define(define_macro) => define_macro.generate_indented(state),
         }
     }
 }
@@ -51,9 +51,12 @@ impl DefineMacro {
     }
 }
 
-impl Generator for DefineMacro {
-    fn generate(self) -> GeneratorResult {
-        Ok(format!("#define {} {}", self.name, self.value))
+impl IndentedGenerator for DefineMacro {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        Ok(format!(
+            "{}#define {} {}",
+            state.indentation, self.name, self.value
+        ))
     }
 }
 
@@ -67,7 +70,8 @@ mod test {
     fn test_define_macros_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "#define FOOBAR foo bar",
-            DefineMacro::new("FOOBAR".to_string(), "foo bar".to_string()).generate()?
+            DefineMacro::new("FOOBAR".to_string(), "foo bar".to_string())
+                .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -76,7 +80,7 @@ mod test {
     fn test_macros_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "#include <stdio.h>",
-            Macro::Include("stdio.h".to_string()).generate()?
+            Macro::Include("stdio.h".to_string()).generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "#define FOOBAR foo bar",
@@ -84,7 +88,7 @@ mod test {
                 "FOOBAR".to_string(),
                 "foo bar".to_string()
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }

@@ -22,8 +22,9 @@
  * SOFTWARE.
  */
 
-use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::generator::{GeneratorError, GeneratorResult, GeneratorState, IndentedGenerator};
 use crate::syntax::c_macro::Macro;
+use crate::syntax::c_struct::CStruct;
 use crate::syntax::function::{FunctionDeclaration, FunctionDefinition};
 use crate::syntax::instruction::{VariableDeclaration, VariableInstruction};
 use crate::syntax::typedef::Typedef;
@@ -38,19 +39,19 @@ impl Module {
     }
 }
 
-impl Generator for Module {
-    fn generate(self) -> GeneratorResult {
-        self.members.generate()
+impl IndentedGenerator for Module {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        self.members.generate_indented(state)
     }
 }
 
 pub type ModuleMembers = Vec<ModuleMember>;
 
-impl Generator for ModuleMembers {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for ModuleMembers {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(self
             .into_iter()
-            .map(Generator::generate)
+            .map(|member| member.generate_indented(state))
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join("\n\n"))
     }
@@ -64,17 +65,19 @@ pub enum ModuleMember {
     VariableDeclaration(VariableDeclaration),
     Variable(VariableInstruction),
     Typedef(Typedef),
+    Struct(CStruct),
 }
 
-impl Generator for ModuleMember {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for ModuleMember {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         match self {
-            ModuleMember::Macro(c_macro) => c_macro.generate(),
-            ModuleMember::FunctionDeclaration(function) => function.generate(),
-            ModuleMember::FunctionDefinition(function) => function.generate(),
-            ModuleMember::VariableDeclaration(variable) => variable.generate(),
-            ModuleMember::Variable(variable) => variable.generate(),
-            ModuleMember::Typedef(typedef) => typedef.generate(),
+            ModuleMember::Macro(c_macro) => c_macro.generate_indented(state),
+            ModuleMember::FunctionDeclaration(function) => function.generate_indented(state),
+            ModuleMember::FunctionDefinition(function) => function.generate_indented(state),
+            ModuleMember::VariableDeclaration(variable) => variable.generate_indented(state),
+            ModuleMember::Variable(variable) => variable.generate_indented(state),
+            ModuleMember::Typedef(typedef) => typedef.generate_indented(state),
+            ModuleMember::Struct(c_struct) => c_struct.generate_indented(state),
         }
     }
 }
@@ -92,7 +95,10 @@ mod test {
 
     #[test]
     fn test_module_is_converted_to_c_syntax_correctly() -> TestResult {
-        assert_eq!("", Module::new(ModuleMembers::default()).generate()?);
+        assert_eq!(
+            "",
+            Module::new(ModuleMembers::default()).generate_indented(&GeneratorState::default())?
+        );
         assert_eq!(
             r#"#include <test.h>
 
@@ -118,7 +124,7 @@ int foobar() {
                     Instructions::default()
                 ))
             ])
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -127,7 +133,8 @@ int foobar() {
     fn test_module_member_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "#include <test.h>",
-            ModuleMember::Macro(Macro::Include("test.h".to_string())).generate()?
+            ModuleMember::Macro(Macro::Include("test.h".to_string()))
+                .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             r#"int foobar() {
@@ -141,7 +148,7 @@ int foobar() {
                 ),
                 Instructions::default()
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "static int FOOBAR = test;",
@@ -151,7 +158,7 @@ int foobar() {
                 "FOOBAR".to_string(),
                 CExpression::NamedReference("test".to_owned())
             ))
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }

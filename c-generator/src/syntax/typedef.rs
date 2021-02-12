@@ -22,16 +22,16 @@
  * SOFTWARE.
  */
 
-use crate::generator::{Generator, GeneratorResult};
+use crate::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
 
 #[derive(Debug)]
 pub struct Typedef {
     value: String,
 }
 
-impl Generator for Typedef {
-    fn generate(self) -> GeneratorResult {
-        Ok(format!("typedef {};", self.value))
+impl IndentedGenerator for Typedef {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        Ok(format!("{}typedef {};", state.indentation, self.value))
     }
 }
 

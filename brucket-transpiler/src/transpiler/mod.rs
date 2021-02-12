@@ -24,7 +24,7 @@
 
 use brucket_ast::lexer::Lexer;
 use brucket_ast::parser::Parser;
-use c_generator::generator::{Generator, GeneratorResult};
+use c_generator::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
 use c_generator::syntax::c_macro::{DefineMacro, Macro};
 use c_generator::syntax::expression::{
     CExpression, FunctionCallExpression, FunctionIdentifier, NumberExpression,
@@ -62,7 +62,8 @@ impl Transpiler {
         let expression_members = state.into_members();
         let members = self.create_module_members(expression, expression_members);
         let module = Module::new(members);
-        module.generate()
+        let generator_state = GeneratorState::default();
+        module.generate_indented(&generator_state)
     }
 
     fn create_module_members(

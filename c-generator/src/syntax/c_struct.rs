@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::generator::{GeneratorError, GeneratorResult, GeneratorState, IndentedGenerator};
 use crate::syntax::instruction::VariableDeclaration;
 
 #[derive(Debug)]
@@ -37,23 +37,28 @@ impl CStruct {
     }
 }
 
-impl Generator for CStruct {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for CStruct {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
+        let indentation = &state.indentation;
+        let incremented_indentation = state.indentation.to_incremented();
+        let state = GeneratorState::new(incremented_indentation);
         Ok(format!(
-            "struct {} {{\n{}\n}};",
+            "{}struct {} {{\n{}\n{}}};",
+            indentation,
             self.name,
-            self.fields.generate()?
+            self.fields.generate_indented(&state)?,
+            indentation
         ))
     }
 }
 
 pub type Fields = Vec<VariableDeclaration>;
 
-impl Generator for Fields {
-    fn generate(self) -> GeneratorResult {
+impl IndentedGenerator for Fields {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(self
             .into_iter()
-            .map(Generator::generate)
+            .map(|field| field.generate_indented(state))
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join("\n"))
     }
@@ -87,7 +92,7 @@ mod test {
                     "c".to_owned()
                 )
             ]
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }
@@ -95,7 +100,7 @@ mod test {
     #[test]
     fn test_generate_struct() -> TestResult {
         assert_eq!(
-            "struct foobar {\nconst int a;\nint b;\nint c;\n};",
+            "struct foobar {\n    const int a;\n    int b;\n    int c;\n};",
             CStruct::new(
                 "foobar".to_owned(),
                 vec![
@@ -116,7 +121,7 @@ mod test {
                     )
                 ]
             )
-            .generate()?
+            .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }

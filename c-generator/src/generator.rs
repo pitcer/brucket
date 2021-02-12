@@ -23,10 +23,60 @@
  */
 
 use std::borrow::Cow;
+use std::fmt::{Display, Formatter};
 
 pub type GeneratorResult = Result<String, GeneratorError>;
 pub type GeneratorError = Cow<'static, str>;
 
 pub trait Generator {
     fn generate(self) -> GeneratorResult;
+}
+
+pub trait IndentedGenerator {
+    fn generate_indented(self, state: &GeneratorState) -> GeneratorResult;
+}
+
+pub struct GeneratorState {
+    pub indentation: Indentation,
+}
+
+impl Default for GeneratorState {
+    fn default() -> Self {
+        Self::new(Indentation::default())
+    }
+}
+
+impl GeneratorState {
+    pub fn new(indentation: Indentation) -> Self {
+        GeneratorState { indentation }
+    }
+}
+
+pub struct Indentation {
+    character: Cow<'static, str>,
+    level: usize,
+}
+
+impl Default for Indentation {
+    fn default() -> Self {
+        Self::new("    ".into(), 0)
+    }
+}
+
+impl Indentation {
+    pub fn new(character: Cow<'static, str>, level: usize) -> Self {
+        Indentation { character, level }
+    }
+
+    pub fn to_incremented(&self) -> Indentation {
+        let character = self.character.clone();
+        Indentation::new(character, self.level + 1)
+    }
+}
+
+impl Display for Indentation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let indentation = self.character.repeat(self.level);
+        write!(f, "{}", indentation)
+    }
 }
