@@ -137,7 +137,12 @@ impl Evaluator {
                 module_environment,
                 environment,
             ),
-            Expression::Let(Let { name, value, then }) => self.evaluate_let(
+            Expression::Let(Let {
+                name,
+                value_type: _,
+                value,
+                then,
+            }) => self.evaluate_let(
                 name,
                 value,
                 then,

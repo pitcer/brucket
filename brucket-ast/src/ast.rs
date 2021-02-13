@@ -28,13 +28,19 @@ use std::fmt::{Debug, Display, Formatter};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Let<T> {
     pub name: String,
+    pub value_type: Type,
     pub value: Box<T>,
     pub then: Box<T>,
 }
 
 impl<T> Let<T> {
-    pub fn new(name: String, value: Box<T>, then: Box<T>) -> Self {
-        Self { name, value, then }
+    pub fn new(name: String, value_type: Type, value: Box<T>, then: Box<T>) -> Self {
+        Self {
+            name,
+            value_type,
+            value,
+            then,
+        }
     }
 }
 

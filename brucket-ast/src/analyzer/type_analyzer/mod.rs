@@ -156,13 +156,27 @@ impl Typed for Lambda<Expression> {
 impl Typed for Let<Expression> {
     fn into_typed(self, environment: &mut Environment) -> TypedResult {
         let typed_value = self.value.into_typed(environment)?;
-        let path = Path::Simple(self.name.clone());
         let value_type = typed_value.evaluated_type.clone();
+        let name = self.name.clone();
+        let expected_value_type = self.value_type;
+        if expected_value_type != Type::Any && expected_value_type != value_type {
+            return Err(format!(
+                "Invalid let variable type, name: {}, expected: {}, actual: {}",
+                name, expected_value_type, value_type
+            )
+            .into());
+        }
+        let path = Path::Simple(name);
         environment.insert_variable(path.clone(), value_type);
         let typed_then = self.then.into_typed(environment)?;
         environment.remove_variable(&path);
         let then_type = typed_then.evaluated_type.clone();
-        let typed_let = Let::new(self.name, typed_value.into(), typed_then.into());
+        let typed_let = Let::new(
+            self.name,
+            expected_value_type,
+            typed_value.into(),
+            typed_then.into(),
+        );
         let expression = TypedExpressionType::Let(typed_let);
         let expression = TypedExpression::new(expression, then_type);
         Ok(expression)
@@ -174,19 +188,19 @@ impl Typed for If<Expression> {
         let typed_then = self.if_true.into_typed(environment)?;
         let typed_else = self.if_false.into_typed(environment)?;
         let then_type = typed_then.evaluated_type.clone();
-        if then_type == typed_else.evaluated_type {
-            let typed_condition = self.condition.into_typed(environment)?;
-            let typed_if = If::new(typed_condition.into(), typed_then.into(), typed_else.into());
-            let expression = TypedExpressionType::If(typed_if);
-            let expression = TypedExpression::new(expression, then_type);
-            Ok(expression)
-        } else {
-            Err(format!(
+        let else_type = &typed_else.evaluated_type;
+        if &then_type != else_type {
+            return Err(format!(
                 "Types in both if expression's branches must be the same, actual: {}, {}",
-                then_type, typed_else.evaluated_type
+                then_type, else_type
             )
-            .into())
+            .into());
         }
+        let typed_condition = self.condition.into_typed(environment)?;
+        let typed_if = If::new(typed_condition.into(), typed_then.into(), typed_else.into());
+        let expression = TypedExpressionType::If(typed_if);
+        let expression = TypedExpression::new(expression, then_type);
+        Ok(expression)
     }
 }
 

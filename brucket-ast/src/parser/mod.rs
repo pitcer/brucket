@@ -108,7 +108,7 @@ impl Parser {
     fn parse_first(tokens: &mut Tokens) -> ExpressionResult {
         match tokens.next() {
             Some(token) => Self::parse_first_token(token, tokens),
-            None => Err(Cow::from("Empty tokens")),
+            None => Err("Empty tokens".into()),
         }
     }
 
@@ -116,14 +116,14 @@ impl Parser {
         match token {
             Token::Parenthesis(parenthesis) => match parenthesis {
                 Parenthesis::Open(_) => Self::parse_section(tokens),
-                Parenthesis::Close(_) => Err(Cow::from("Unexpected close parenthesis")),
+                Parenthesis::Close(_) => Err("Unexpected close parenthesis".into()),
             },
             Token::Operator(operator) => match operator {
-                Operator::Variadic => Err(Cow::from("Unexpected variadic operator")),
-                Operator::Path => Err(Cow::from("Unexpected path operator")),
-                Operator::Type => Err(Cow::from("Unexpected type operator")),
-                Operator::SkinnyArrowRight => Err(Cow::from("Unexpected '->'")),
-                Operator::ThickArrowRight => Err(Cow::from("Unexpected '=>'")),
+                Operator::Variadic => Err("Unexpected variadic operator".into()),
+                Operator::Path => Err("Unexpected path operator".into()),
+                Operator::Type => Err("Unexpected type operator".into()),
+                Operator::SkinnyArrowRight => Err("Unexpected '->'".into()),
+                Operator::ThickArrowRight => Err("Unexpected '=>'".into()),
             },
             Token::Null => Ok(Expression::ConstantValue(ConstantValue::Null)),
             Token::String(value) => Ok(Expression::ConstantValue(ConstantValue::String(value))),
@@ -133,15 +133,15 @@ impl Parser {
             Token::Boolean(value) => Ok(Expression::ConstantValue(ConstantValue::Boolean(
                 value.parse()?,
             ))),
-            Token::Keyword(keyword) => Err(Cow::from(format!("Unexpected token: {:?}", keyword))),
+            Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword).into()),
             Token::Symbol(symbol) => Ok(Expression::Identifier(Self::parse_path_symbol(
                 symbol, tokens,
             )?)),
             Token::Modifier(modifier) => {
-                Err(Cow::from(format!("Unexpected token: {:?}", modifier)))
+                Err(format!("Unexpected token: {:?}", modifier).into())
             }
             Token::PrimitiveType(type_token) => {
-                Err(Cow::from(format!("Unexpected token: {:?}", type_token)))
+                Err(format!("Unexpected token: {:?}", type_token).into())
             }
         }
     }
@@ -149,7 +149,7 @@ impl Parser {
     fn parse_section(tokens: &mut Tokens) -> ExpressionResult {
         match tokens.next() {
             Some(token) => Self::parse_section_token(token, tokens),
-            None => Err(Cow::from("Empty tokens")),
+            None => Err("Empty tokens".into()),
         }
     }
 
@@ -195,16 +195,29 @@ impl Parser {
 
     fn parse_let(tokens: &mut Tokens) -> ExpressionResult {
         let name = Self::parse_identifier(tokens)?;
-        let value = Self::parse_first(tokens)?;
-        let then = Self::parse_first(tokens)?;
-        if !Self::is_section_closed(tokens) {
-            return Err(Cow::from("Invalid let expression"));
+        let next = tokens.peek();
+        if let Some(token) = next {
+            let value_type = match token {
+                Token::Operator(Operator::Type) => {
+                    tokens.next();
+                    Self::parse_type(tokens)?
+                }
+                _ => Type::Any,
+            };
+            let value = Self::parse_first(tokens)?;
+            let then = Self::parse_first(tokens)?;
+            if !Self::is_section_closed(tokens) {
+                return Err(Cow::from("Invalid let expression"));
+            }
+            Ok(Expression::Let(Let::new(
+                name,
+                value_type,
+                Box::new(value),
+                Box::new(then),
+            )))
+        } else {
+            Err("Invalid let expression: end of tokens".into())
         }
-        Ok(Expression::Let(Let::new(
-            name,
-            Box::new(value),
-            Box::new(then),
-        )))
     }
 
     fn parse_if(tokens: &mut Tokens) -> ExpressionResult {
@@ -214,11 +227,11 @@ impl Parser {
         if !Self::is_section_closed(tokens) {
             return Err(Cow::from("Invalid if expression"));
         }
-        Ok(Expression::If(If {
-            condition: Box::new(condition),
-            if_true: Box::new(if_true_then),
-            if_false: Box::new(if_false_then),
-        }))
+        Ok(Expression::If(If::new(
+            Box::new(condition),
+            Box::new(if_true_then),
+            Box::new(if_false_then),
+        )))
     }
 
     fn parse_modifiers(first_modifier: Modifier, tokens: &mut Tokens) -> ExpressionResult {
@@ -261,32 +274,50 @@ impl Parser {
                 Modifier::Lazy => application_strategy = ApplicationStrategy::Lazy,
                 Modifier::Internal => internal = true,
                 Modifier::Static => {
-                    return Err(Cow::from("Static is an invalid modifier for function"))
+                    return Err("Static is an invalid modifier for a function".into())
                 }
             }
         }
         if internal {
-            let parameters = Self::parse_parameters(tokens)?;
-            let return_type = Self::parse_return_type(tokens)?;
-            if !Self::is_section_closed(tokens) {
-                return Err(Cow::from("Invalid internal function expression"));
-            }
-            Ok(Expression::InternalFunction(InternalFunction::new(
-                visibility,
-                application_strategy,
-                identifier,
-                parameters,
-                return_type,
-            )))
+            Self::parse_internal_function(tokens, identifier, visibility, application_strategy)
         } else {
-            let lambda = Self::parse_lambda(tokens)?;
-            Ok(Expression::Function(Function {
-                visibility,
-                application_strategy,
-                name: identifier,
-                body: lambda,
-            }))
+            Self::parse_lambda_function(tokens, identifier, visibility, application_strategy)
         }
+    }
+
+    fn parse_lambda_function(
+        tokens: &mut Tokens,
+        identifier: String,
+        visibility: Visibility,
+        application_strategy: ApplicationStrategy,
+    ) -> ExpressionResult {
+        let lambda = Self::parse_lambda(tokens)?;
+        Ok(Expression::Function(Function::new(
+            visibility,
+            application_strategy,
+            identifier,
+            lambda,
+        )))
+    }
+
+    fn parse_internal_function(
+        tokens: &mut Tokens,
+        identifier: String,
+        visibility: Visibility,
+        application_strategy: ApplicationStrategy,
+    ) -> ExpressionResult {
+        let parameters = Self::parse_parameters(tokens)?;
+        let return_type = Self::parse_return_type(tokens)?;
+        if !Self::is_section_closed(tokens) {
+            return Err(Cow::from("Invalid internal function expression"));
+        }
+        Ok(Expression::InternalFunction(InternalFunction::new(
+            visibility,
+            application_strategy,
+            identifier,
+            parameters,
+            return_type,
+        )))
     }
 
     fn parse_lambda(tokens: &mut Tokens) -> Result<Lambda<Expression>, ExpressionError> {
@@ -330,7 +361,7 @@ impl Parser {
         if let Some(token) = next {
             Self::parse_type_token(token, tokens)
         } else {
-            Err(Cow::from("End of tokens"))
+            Err("End of tokens".into())
         }
     }
 
@@ -388,6 +419,7 @@ impl Parser {
             }
             Expression::Let(Let {
                 name: _,
+                value_type: _,
                 value,
                 then,
             }) => {

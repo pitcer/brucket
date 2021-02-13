@@ -123,14 +123,14 @@ fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult 
 #[test]
 fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Application(Application {
-        identifier: Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
-        arguments: vec![
+    let expected = Expression::Application(Application::new(
+        Box::new(Expression::Identifier(Path::Simple("foobar".to_string()))),
+        vec![
             Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("42".to_string()))),
             Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("24".to_string()))),
             Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("0".to_string()))),
         ],
-    });
+    ));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_string()),
@@ -146,13 +146,14 @@ fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> T
 #[test]
 fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let parser = Parser::default();
-    let expected = Expression::Let(Let {
-        name: "x".to_string(),
-        value: Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+    let expected = Expression::Let(Let::new(
+        "x".to_string(),
+        Type::Any,
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
             Number::Integer("42".to_string()),
         ))),
-        then: Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
-    });
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
+    ));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
@@ -834,5 +835,30 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
             .peekable()
         )?,
     );
+    Ok(())
+}
+
+#[test]
+fn test_typed_let_is_let_expression() -> TestResult {
+    let parser = Parser::default();
+    let expected = Expression::Let(Let::new(
+        "x".to_string(),
+        Type::Integer,
+        Box::new(Expression::ConstantValue(ConstantValue::Numeric(
+            Number::Integer("42".to_string()),
+        ))),
+        Box::new(Expression::Identifier(Path::Simple("x".to_string()))),
+    ));
+    let actual = parser.parse(vec![
+        Token::Parenthesis(Parenthesis::Open('(')),
+        Token::Keyword(Keyword::Let),
+        Token::Symbol("x".to_string()),
+        Token::Operator(Operator::Type),
+        Token::PrimitiveType(PrimitiveType::Integer),
+        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("x".to_string()),
+        Token::Parenthesis(Parenthesis::Close(')')),
+    ])?;
+    assert_eq!(expected, actual);
     Ok(())
 }

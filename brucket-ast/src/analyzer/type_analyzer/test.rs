@@ -29,6 +29,7 @@ fn test_let_types_are_evaluated_correctly() -> Result<(), Cow<'static, str>> {
     let expected = TypedExpression::new(
         TypedExpressionType::Let(Let::new(
             "foo".into(),
+            Type::Any,
             TypedExpression::new(
                 TypedExpressionType::ConstantValue(ConstantValue::Numeric(Number::Integer(
                     "1".into(),
@@ -39,6 +40,7 @@ fn test_let_types_are_evaluated_correctly() -> Result<(), Cow<'static, str>> {
             TypedExpression::new(
                 TypedExpressionType::Let(Let::new(
                     "bar".into(),
+                    Type::Any,
                     TypedExpression::new(
                         TypedExpressionType::ConstantValue(ConstantValue::Numeric(
                             Number::FloatingPoint("1.1".into()),
@@ -60,9 +62,11 @@ fn test_let_types_are_evaluated_correctly() -> Result<(), Cow<'static, str>> {
     );
     let expression = Expression::Let(Let::new(
         "foo".into(),
+        Type::Any,
         Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("1".into()))).into(),
         Expression::Let(Let::new(
             "bar".into(),
+            Type::Any,
             Expression::ConstantValue(ConstantValue::Numeric(Number::FloatingPoint("1.1".into())))
                 .into(),
             Expression::Identifier(Path::Simple("foo".into())).into(),
