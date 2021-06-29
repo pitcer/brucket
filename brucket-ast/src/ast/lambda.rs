@@ -22,9 +22,52 @@
  * SOFTWARE.
  */
 
-#![forbid(unsafe_code)]
+use crate::ast::ast_type::Type;
+use crate::ast::{Node, NodeId};
 
-pub mod ast;
-pub mod lexer;
-pub mod parser;
-pub mod token;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Lambda {
+    pub node_id: NodeId,
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
+    pub body: Box<Node>,
+}
+
+impl Lambda {
+    pub fn new(
+        node_id: NodeId,
+        parameters: Vec<Parameter>,
+        return_type: Type,
+        body: Box<Node>,
+    ) -> Self {
+        Lambda {
+            node_id,
+            parameters,
+            return_type,
+            body,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Parameter {
+    pub name: String,
+    pub parameter_type: Type,
+    pub arity: Arity,
+}
+
+impl Parameter {
+    pub fn new(name: String, parameter_type: Type, arity: Arity) -> Self {
+        Self {
+            name,
+            parameter_type,
+            arity,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Arity {
+    Unary,
+    Variadic,
+}

@@ -23,6 +23,7 @@
  */
 
 pub mod type_analyzer;
+pub mod variables_analyzer;
 
 pub struct Analyzer;
 

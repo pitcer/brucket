@@ -1,10 +1,9 @@
 [package]
-name = "brucket-interpreter"
+name = "brucket-analyzer"
 version = "0.1.0"
 authors = ["Piotr Dobiech"]
 edition = "2018"
 
 [dependencies]
 brucket-ast = { path = "../brucket-ast" }
-brucket-analyzer = { path = "../brucket-analyzer" }
 maplit = "1.0.2"

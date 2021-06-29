@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "brucket-ast",
+    "brucket-analyzer",
     "brucket-interpreter",
     "brucket-transpiler",
     "c-generator"

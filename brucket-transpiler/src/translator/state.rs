@@ -98,10 +98,13 @@ impl TranslationState {
         self.typedef_count += 1
     }
 
-    pub fn into_members(mut self) -> ModuleMembers {
-        self.typedefs.append(&mut self.declarations);
-        self.typedefs.append(&mut self.members);
-        self.typedefs
+    pub fn get_members(&mut self) -> ModuleMembers {
+        let length = self.declarations.len() + self.members.len() + self.typedefs.len();
+        let mut members = Vec::with_capacity(length);
+        members.append(&mut self.typedefs);
+        members.append(&mut self.declarations);
+        members.append(&mut self.members);
+        members
     }
 
     pub fn let_count(&self) -> usize {

@@ -24,13 +24,13 @@
 
 use std::borrow::Cow;
 
-use brucket_ast::analyzer::type_analyzer::typed_expression::{
-    TypedExpression, TypedExpressionType,
-};
-use brucket_ast::ast::{
-    Application, Boolean, Constant, ConstantValue, Function, If, InternalFunction, Lambda,
-    LambdaType, Let, Module, Number, Parameter, Path, Type,
-};
+use brucket_analyzer::type_analyzer::NodeTypes;
+use brucket_ast::ast::ast_type::{LambdaType, Type};
+use brucket_ast::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
+use brucket_ast::ast::function::{Function, InternalFunction};
+use brucket_ast::ast::lambda::{Lambda, Parameter};
+use brucket_ast::ast::path::Path;
+use brucket_ast::ast::{Application, Constant, Identifier, If, Let, Module, Node};
 use c_generator::generator::Generator;
 use c_generator::syntax::c_type::{CPrimitiveType, CType, FunctionPointer};
 use c_generator::syntax::expression::{
@@ -47,68 +47,90 @@ pub mod state;
 pub type TranslatorResult<T> = Result<T, TranslatorError>;
 pub type TranslatorError = Cow<'static, str>;
 
-pub trait Translate<T> {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<T>;
+pub struct Environment {
+    types: NodeTypes,
+    state: TranslationState,
 }
 
-impl Translate<CType> for Type {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CType> {
-        match self {
-            Type::Any => Err("Cannot translate any type to C equivalent".into()),
-            Type::Unit => Ok(CType::Primitive(CPrimitiveType::Void)),
-            Type::Boolean => Ok(CType::Custom("BOOL".to_owned())),
-            Type::Integer => Ok(CType::Primitive(CPrimitiveType::Int)),
-            Type::Float => Ok(CType::Primitive(CPrimitiveType::Double)),
-            Type::String => Ok(CType::Custom("char*".to_owned())),
-            Type::Symbol(symbol) => Ok(CType::Custom(symbol)),
-            Type::Lambda(lambda) => lambda.translate(state),
+impl Environment {
+    pub fn new(types: NodeTypes, state: TranslationState) -> Self {
+        Environment { types, state }
+    }
+}
+
+pub struct Translator {
+    environment: Environment,
+}
+
+impl Translator {
+    pub fn new(environment: Environment) -> Self {
+        Translator { environment }
+    }
+
+    pub fn get_state(&mut self) -> &mut TranslationState {
+        &mut self.environment.state
+    }
+
+    pub fn translate(&mut self, node: Node) -> TranslatorResult<CExpression> {
+        self.translate_node(node)
+    }
+
+    fn translate_node(&mut self, node: Node) -> TranslatorResult<CExpression> {
+        match node {
+            Node::ConstantValue(value) => self.translate_constant_value(value),
+            Node::Identifier(identifier) => self.translate_identifier(identifier),
+            Node::Application(application) => self.translate_application(application),
+            Node::Let(let_expression) => self.translate_let(let_expression),
+            Node::If(if_expression) => self.translate_if(if_expression),
+            Node::Lambda(lambda) => self.translate_lambda(lambda),
+            Node::Function(function) => self.translate_function(function),
+            Node::InternalFunction(function) => self.translate_internal_function(function),
+            Node::Constant(constant) => self.translate_constant(constant),
+            Node::Module(module) => self.translate_module(module),
         }
     }
-}
 
-impl Translate<CType> for LambdaType {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CType> {
-        let return_type = self.return_type.translate(state)?;
-        let parameters_types = self
-            .parameters_types
-            .into_iter()
-            .map(|parameter_type| parameter_type.translate(state))
-            .collect::<Result<Vec<CType>, TranslatorError>>()?;
-        let typedef_count = state.typedef_count();
-        let type_name = format!("__$type_{}", typedef_count);
-        state.increment_typedef();
-        let function_pointer =
-            FunctionPointer::new(return_type, type_name.clone(), parameters_types);
-        let typedef_value = function_pointer.generate()?;
-        state.add_typedef(typedef_value);
-        Ok(CType::Custom(type_name))
+    fn translate_type(&mut self, node_type: &Type) -> TranslatorResult<CType> {
+        translate_type(&mut self.environment.state, node_type)
     }
-}
 
-impl Translate<CExpression> for ConstantValue {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let expression = match self {
-            ConstantValue::Unit => CExpression::Empty,
-            ConstantValue::Null => CExpression::NamedReference("NULL".to_string()),
-            ConstantValue::Numeric(numeric) => match numeric {
+    fn translate_lambda_type(&mut self, lambda_type: &LambdaType) -> TranslatorResult<CType> {
+        translate_lambda_type(&mut self.environment.state, lambda_type)
+    }
+
+    fn translate_constant_value(&self, value: ConstantValue) -> TranslatorResult<CExpression> {
+        self.translate_constant_variant(value.variant)
+    }
+
+    fn translate_constant_variant(
+        &self,
+        variant: ConstantVariant,
+    ) -> TranslatorResult<CExpression> {
+        let expression = match variant {
+            ConstantVariant::Unit => CExpression::Empty,
+            ConstantVariant::Null => CExpression::NamedReference("NULL".to_string()),
+            ConstantVariant::Numeric(numeric) => match numeric {
                 Number::Integer(value) => CExpression::Number(NumberExpression::Integer(value)),
                 Number::FloatingPoint(value) => {
                     CExpression::Number(NumberExpression::FloatingPoint(value))
                 }
             },
-            ConstantValue::Boolean(boolean) => match boolean {
+            ConstantVariant::Boolean(boolean) => match boolean {
                 Boolean::True => CExpression::NamedReference("TRUE".to_string()),
                 Boolean::False => CExpression::NamedReference("FALSE".to_string()),
             },
-            ConstantValue::String(string) => CExpression::String(string),
+            ConstantVariant::String(string) => CExpression::String(string),
         };
         Ok(expression)
     }
-}
 
-impl Translate<String> for Path {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<String> {
-        match self {
+    fn translate_identifier(&self, identifier: Identifier) -> TranslatorResult<CExpression> {
+        let path = self.translate_path(&identifier.path)?;
+        Ok(CExpression::NamedReference(path))
+    }
+
+    fn translate_path(&self, path: &Path) -> TranslatorResult<String> {
+        match path {
             Path::Simple(path) => Ok(path
                 .replace("+", "__$internal_add")
                 .replace("-", "__$internal_subtract")
@@ -117,21 +139,19 @@ impl Translate<String> for Path {
                 .replace("%", "__$internal_remainder")),
             Path::Complex(complex_path) => Ok(format!(
                 "{}_{}",
-                complex_path.path().join("_"),
-                complex_path.identifier()
+                complex_path.path.join("_"),
+                &complex_path.identifier
             )),
         }
     }
-}
 
-impl Translate<CExpression> for Application<TypedExpression> {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let name = self.identifier.translate(state)?;
+    fn translate_application(&mut self, application: Application) -> TranslatorResult<CExpression> {
+        let name = self.translate_node(*application.identifier)?;
         if let CExpression::NamedReference(name) = name {
-            let arguments = self
+            let arguments = application
                 .arguments
                 .into_iter()
-                .map(|argument| argument.translate(state))
+                .map(|argument| self.translate_node(argument))
                 .collect::<Result<Vec<CExpression>, TranslatorError>>()?;
             Ok(CExpression::FunctionCall(FunctionCallExpression::new(
                 FunctionIdentifier::NamedReference(name),
@@ -143,33 +163,35 @@ impl Translate<CExpression> for Application<TypedExpression> {
             ))
         }
     }
-}
 
-impl Translate<CExpression> for Let<TypedExpression> {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let then_type = self.then.evaluated_type.clone();
-        let then_c_type = then_type.translate(state)?;
-        let value_type = self.value.evaluated_type.clone();
-        let value_c_type = value_type.translate(state)?;
-        let value = self.value.translate(state)?;
-        let variable = Variable::new(self.name.clone(), value_c_type.clone());
-        let next = if !state.contains_variable(&variable) {
-            state.push_variable(variable);
-            let next = self.then.translate(state)?;
-            state.pop_variable();
+    fn translate_let(&mut self, let_node: Let) -> TranslatorResult<CExpression> {
+        let then_type = self.environment.types.get(&*let_node.then)?;
+        let then_c_type = translate_type(&mut self.environment.state, then_type)?;
+        let value_type = self.environment.types.get(&*let_node.value)?;
+        let value_c_type = translate_type(&mut self.environment.state, value_type)?;
+        let value = self.translate_node(*let_node.value)?;
+        let variable = Variable::new(let_node.name.clone(), value_c_type.clone());
+        let next = if !self.environment.state.contains_variable(&variable) {
+            self.environment.state.push_variable(variable);
+            let next = self.translate_node(*let_node.then)?;
+            self.environment.state.pop_variable();
             next
         } else {
-            self.then.translate(state)?
+            self.translate_node(*let_node.then)?
         };
-        let let_count = state.let_count();
-        let function_name = format!("__$let_{}_{}", let_count, self.name);
-        state.increment_let();
-        let arguments = state
+        let let_count = self.environment.state.let_count();
+        let function_name = format!("__$let_{}_{}", let_count, let_node.name);
+        self.environment.state.increment_let();
+        let arguments = self
+            .environment
+            .state
             .variables()
             .iter()
             .map(|variable| CExpression::NamedReference(variable.name().to_string()))
             .collect::<Arguments>();
-        let parameters = state
+        let parameters = self
+            .environment
+            .state
             .variables()
             .iter()
             .map(|variable| {
@@ -179,13 +201,13 @@ impl Translate<CExpression> for Let<TypedExpression> {
                 )
             })
             .collect::<Parameters>();
-        state.add_function(
+        self.environment.state.add_function(
             FunctionHeader::new(then_c_type, function_name.clone(), parameters),
             vec![
                 Instruction::Variable(VariableInstruction::new(
                     Modifiers::default(),
                     value_c_type,
-                    self.name,
+                    let_node.name,
                     value,
                 )),
                 Instruction::Return(next),
@@ -196,24 +218,26 @@ impl Translate<CExpression> for Let<TypedExpression> {
             arguments,
         )))
     }
-}
 
-impl Translate<CExpression> for If<TypedExpression> {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let if_type = self.if_true.evaluated_type.clone();
-        let if_c_type = if_type.translate(state)?;
-        let condition = self.condition.translate(state)?;
-        let if_body = self.if_true.translate(state)?;
-        let else_body = self.if_false.translate(state)?;
-        let if_count = state.if_count();
+    fn translate_if(&mut self, if_node: If) -> TranslatorResult<CExpression> {
+        let if_type = self.environment.types.get(&*if_node.if_true)?;
+        let if_c_type = translate_type(&mut self.environment.state, if_type)?;
+        let condition = self.translate_node(*if_node.condition)?;
+        let if_body = self.translate_node(*if_node.if_true)?;
+        let else_body = self.translate_node(*if_node.if_false)?;
+        let if_count = self.environment.state.if_count();
         let function_name = format!("__$if_{}", if_count);
-        state.increment_if();
-        let arguments = state
+        self.environment.state.increment_if();
+        let arguments = self
+            .environment
+            .state
             .variables()
             .iter()
             .map(|variable| CExpression::NamedReference(variable.name().to_string()))
             .collect::<Arguments>();
-        let parameters = state
+        let parameters = self
+            .environment
+            .state
             .variables()
             .iter()
             .map(|variable| {
@@ -223,7 +247,7 @@ impl Translate<CExpression> for If<TypedExpression> {
                 )
             })
             .collect::<Parameters>();
-        state.add_function(
+        self.environment.state.add_function(
             FunctionHeader::new(if_c_type, function_name.clone(), parameters),
             vec![Instruction::IfElse(IfElseInstruction::new(
                 condition,
@@ -236,79 +260,81 @@ impl Translate<CExpression> for If<TypedExpression> {
             arguments,
         )))
     }
-}
 
-impl Translate<CExpression> for Lambda<TypedExpression> {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        let body_type = self.body.evaluated_type.clone();
-        let body_c_type = body_type.translate(state)?;
-        let body = self.body.translate(state)?;
-        let lambda_count = state.lambda_count();
+    fn translate_lambda(&mut self, lambda: Lambda) -> TranslatorResult<CExpression> {
+        let body_type = self.environment.types.get(&*lambda.body)?;
+        let body_c_type = translate_type(&mut self.environment.state, body_type)?;
+        let body = self.translate_node(*lambda.body)?;
+        let lambda_count = self.environment.state.lambda_count();
         let function_name = format!("__$lambda_{}", lambda_count);
-        state.increment_lambda();
-        let parameters = self
+        self.environment.state.increment_lambda();
+        let parameters = lambda
             .parameters
             .into_iter()
-            .map(|parameter| parameter.translate(state))
+            .map(|parameter| self.translate_parameter(parameter))
             .collect::<TranslatorResult<Parameters>>()?;
-        state.add_function(
+        self.environment.state.add_function(
             FunctionHeader::new(body_c_type, function_name.clone(), parameters),
             vec![Instruction::Return(body)],
         );
         // TODO: close used variables in closure
         Ok(CExpression::NamedReference(function_name))
     }
-}
 
-impl Translate<FunctionParameter> for Parameter {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<FunctionParameter> {
+    fn translate_parameter(&mut self, parameter: Parameter) -> TranslatorResult<FunctionParameter> {
         // TODO: provide also self.arity
-        let parameter_type = self.parameter_type.translate(state)?;
-        Ok(FunctionParameter::new(parameter_type, self.name))
+        let parameter_type = self.translate_type(&parameter.parameter_type)?;
+        Ok(FunctionParameter::new(parameter_type, parameter.name))
     }
-}
 
-impl Translate<CExpression> for Module<TypedExpression> {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
+    fn translate_function(&self, function: Function) -> TranslatorResult<CExpression> {
+        unimplemented!("Function#translate()")
+    }
+
+    fn translate_internal_function(
+        &self,
+        function: InternalFunction,
+    ) -> TranslatorResult<CExpression> {
+        unimplemented!("InternalFunction#translate()")
+    }
+
+    fn translate_constant(&self, constant: Constant) -> TranslatorResult<CExpression> {
+        unimplemented!("Constant#translate()")
+    }
+
+    fn translate_module(&self, module: Module) -> TranslatorResult<CExpression> {
         unimplemented!("Module#translate()")
     }
 }
 
-impl Translate<CExpression> for Function<TypedExpression> {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        unimplemented!("Function#translate()")
+fn translate_type(state: &mut TranslationState, node_type: &Type) -> TranslatorResult<CType> {
+    match node_type {
+        Type::Any => Err("Cannot translate any type to C equivalent".into()),
+        Type::Unit => Ok(CType::Primitive(CPrimitiveType::Void)),
+        Type::Boolean => Ok(CType::Custom("BOOL".to_owned())),
+        Type::Integer => Ok(CType::Primitive(CPrimitiveType::Int)),
+        Type::Float => Ok(CType::Primitive(CPrimitiveType::Double)),
+        Type::String => Ok(CType::Custom("char*".to_owned())),
+        Type::Symbol(symbol) => Ok(CType::Custom(symbol.clone())),
+        Type::Lambda(lambda) => translate_lambda_type(state, lambda),
     }
 }
 
-impl Translate<CExpression> for InternalFunction {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        unimplemented!("InternalFunction#translate()")
-    }
-}
-
-impl Translate<CExpression> for Constant<TypedExpression> {
-    fn translate(self, _state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        unimplemented!("Constant#translate()")
-    }
-}
-
-impl Translate<CExpression> for TypedExpression {
-    fn translate(self, state: &mut TranslationState) -> TranslatorResult<CExpression> {
-        match self.expression {
-            TypedExpressionType::ConstantValue(value) => value.translate(state),
-            TypedExpressionType::Identifier(path) => {
-                Ok(CExpression::NamedReference(path.translate(state)?))
-            }
-            TypedExpressionType::Application(application) => application.translate(state),
-            TypedExpressionType::Let(let_expression) => let_expression.translate(state),
-            TypedExpressionType::If(if_expression) => if_expression.translate(state),
-            TypedExpressionType::Lambda(lambda) => lambda.translate(state),
-            TypedExpressionType::Module(module) => module.translate(state),
-            TypedExpressionType::Function(function) => function.translate(state),
-            TypedExpressionType::InternalFunction(internal_function) => {
-                internal_function.translate(state)
-            }
-            TypedExpressionType::Constant(constant) => constant.translate(state),
-        }
-    }
+fn translate_lambda_type(
+    state: &mut TranslationState,
+    lambda_type: &LambdaType,
+) -> TranslatorResult<CType> {
+    let return_type = translate_type(state, &*lambda_type.return_type)?;
+    let parameters_types = lambda_type
+        .parameters_types
+        .iter()
+        .map(|parameter_type| translate_type(state, &parameter_type))
+        .collect::<Result<Vec<CType>, TranslatorError>>()?;
+    let typedef_count = state.typedef_count();
+    let type_name = format!("__$type_{}", typedef_count);
+    state.increment_typedef();
+    let function_pointer = FunctionPointer::new(return_type, type_name.clone(), parameters_types);
+    let typedef_value = function_pointer.generate()?;
+    state.add_typedef(typedef_value);
+    Ok(CType::Custom(type_name))
 }

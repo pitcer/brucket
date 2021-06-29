@@ -22,71 +22,79 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::function::ApplicationStrategy;
-use brucket_ast::ast::lambda::Parameter;
+use crate::ast::ast_type::Type;
+use crate::ast::lambda::{Lambda, Parameter};
+use crate::ast::{NodeId, Visibility};
 
-use crate::evaluator::environment::Environment;
-use crate::evaluator::internal::InternalFunction;
-use brucket_ast::ast::Node;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Value {
-    Unit,
-    Null,
-    Numeric(Numeric),
-    Textual(String),
-    Boolean(bool),
-    Pair(Box<Value>, Box<Value>),
-    Closure(Closure),
-    FunctionClosure(ApplicationStrategy, Closure),
-    InternalFunctionClosure(InternalFunctionClosure),
-    Thunk(Box<Node>, Environment),
-    Module(bool, String, Environment),
-}
-
-#[derive(Debug, PartialEq, PartialOrd, Clone)]
-pub enum Numeric {
-    Integer(i32),
-    FloatingPoint(f64),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct InternalFunctionClosure {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Function {
+    pub node_id: NodeId,
+    pub visibility: Visibility,
     pub application_strategy: ApplicationStrategy,
-    pub parameters: Vec<Parameter>,
-    pub function: InternalFunction,
-    pub environment: Environment,
+    pub name: String,
+    pub body: Lambda,
 }
 
-impl InternalFunctionClosure {
+impl Function {
     pub fn new(
+        node_id: NodeId,
+        visibility: Visibility,
         application_strategy: ApplicationStrategy,
-        parameters: Vec<Parameter>,
-        function: InternalFunction,
-        environment: Environment,
+        name: String,
+        body: Lambda,
     ) -> Self {
-        Self {
+        Function {
+            node_id,
+            visibility,
             application_strategy,
-            parameters,
-            function,
-            environment,
+            name,
+            body,
         }
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Closure {
+#[derive(Debug, Clone, PartialEq)]
+pub struct InternalFunction {
+    pub node_id: NodeId,
+    pub visibility: Visibility,
+    pub application_strategy: ApplicationStrategy,
+    pub name: String,
     pub parameters: Vec<Parameter>,
-    pub body: Box<Node>,
-    pub environment: Environment,
+    pub return_type: Type,
 }
 
-impl Closure {
-    pub fn new(parameters: Vec<Parameter>, body: Box<Node>, environment: Environment) -> Self {
-        Self {
+impl InternalFunction {
+    pub fn new(
+        node_id: NodeId,
+        visibility: Visibility,
+        application_strategy: ApplicationStrategy,
+        name: String,
+        parameters: Vec<Parameter>,
+        return_type: Type,
+    ) -> Self {
+        InternalFunction {
+            node_id,
+            visibility,
+            application_strategy,
+            name,
             parameters,
-            body,
-            environment,
+            return_type,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ApplicationStrategy {
+    Eager,
+    Lazy,
+}
+
+impl ApplicationStrategy {
+    pub fn is_eager(&self) -> bool {
+        matches!(self, ApplicationStrategy::Eager)
+    }
+
+    pub fn is_lazy(&self) -> bool {
+        matches!(self, ApplicationStrategy::Lazy)
     }
 }

@@ -22,20 +22,37 @@
  * SOFTWARE.
  */
 
-use crate::ast::{
-    Application, Constant, ConstantValue, Function, If, InternalFunction, Lambda, Let, Module, Path,
-};
+use crate::ast::NodeId;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
-    ConstantValue(ConstantValue),
-    Identifier(Path),
-    Application(Application<Expression>),
-    Let(Let<Expression>),
-    If(If<Expression>),
-    Lambda(Lambda<Expression>),
-    Module(Module<Expression>),
-    Function(Function<Expression>),
-    InternalFunction(InternalFunction),
-    Constant(Constant<Expression>),
+pub struct ConstantValue {
+    pub node_id: NodeId,
+    pub variant: ConstantVariant,
+}
+
+impl ConstantValue {
+    pub fn new(node_id: NodeId, variant: ConstantVariant) -> Self {
+        ConstantValue { node_id, variant }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ConstantVariant {
+    Unit,
+    Null,
+    Numeric(Number),
+    Boolean(Boolean),
+    String(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Number {
+    Integer(String),
+    FloatingPoint(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Boolean {
+    True,
+    False,
 }

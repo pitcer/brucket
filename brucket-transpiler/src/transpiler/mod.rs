@@ -22,10 +22,15 @@
  * SOFTWARE.
  */
 
+use std::borrow::Cow;
+
+use brucket_ast::ast::ast_type::{LambdaType, Type};
+use brucket_ast::ast::path::Path;
 use brucket_ast::lexer::Lexer;
 use brucket_ast::parser::Parser;
 use c_generator::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
 use c_generator::syntax::c_macro::{DefineMacro, Macro};
+use c_generator::syntax::c_type::{CPrimitiveType, CType};
 use c_generator::syntax::expression::{
     CExpression, FunctionCallExpression, FunctionIdentifier, NumberExpression,
 };
@@ -35,12 +40,10 @@ use c_generator::syntax::function::{
 use c_generator::syntax::instruction::Instruction;
 use c_generator::syntax::module::{Module, ModuleMember, ModuleMembers};
 
+use crate::translator;
 use crate::translator::state::TranslationState;
-use crate::translator::Translate;
-use brucket_ast::analyzer::type_analyzer::{Environment, Typed};
-use brucket_ast::ast::{LambdaType, Path, Type};
-use c_generator::syntax::c_type::{CPrimitiveType, CType};
-use std::borrow::Cow;
+use crate::translator::Translator;
+use brucket_analyzer::type_analyzer::{Environment, TypeAnalyzer};
 
 pub struct Transpiler;
 
@@ -53,14 +56,17 @@ impl Default for Transpiler {
 impl Transpiler {
     pub fn transpile(&self, syntax: Cow<str>) -> GeneratorResult {
         let lexer = Lexer::default();
-        let parser = Parser::default();
+        let mut parser = Parser::default();
         let tokens = lexer.tokenize(syntax)?;
-        let expression = parser.parse(tokens)?;
-        let mut type_analyzer_environment = self.create_type_analyzer_environment();
-        let expression = expression.into_typed(&mut type_analyzer_environment)?;
-        let mut state = TranslationState::default();
-        let expression = expression.translate(&mut state)?;
-        let expression_members = state.into_members();
+        let node = parser.parse(tokens)?;
+        let environment = self.create_type_analyzer_environment();
+        let mut type_analyzer = TypeAnalyzer::new(environment);
+        let (_node_type, node_types) = type_analyzer.analyze_types(&node)?;
+        let state = TranslationState::default();
+        let translator_environment = translator::Environment::new(node_types, state);
+        let mut translator = Translator::new(translator_environment);
+        let expression = translator.translate(node)?;
+        let expression_members = translator.get_state().get_members();
         let members = self.create_module_members(expression, expression_members);
         let module = Module::new(members);
         let generator_state = GeneratorState::default();

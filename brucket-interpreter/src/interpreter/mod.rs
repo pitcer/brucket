@@ -26,12 +26,13 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use brucket_ast::lexer::Lexer;
-use brucket_ast::parser::expression::Expression;
 use brucket_ast::parser::Parser;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
 use crate::value::Value;
+use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
+use brucket_ast::ast::Node;
 
 #[cfg(test)]
 mod test;
@@ -43,6 +44,7 @@ type ValueResult = Result<Value, Cow<'static, str>>;
 pub struct Interpreter {
     lexer: Lexer,
     parser: Parser,
+    variables_analyzer: VariablesAnalyzer,
     evaluator: Evaluator,
 }
 
@@ -50,16 +52,23 @@ impl Default for Interpreter {
     fn default() -> Self {
         let lexer = Lexer::default();
         let parser = Parser::default();
+        let variables_analyzer = VariablesAnalyzer::default();
         let evaluator = Evaluator::default();
-        Interpreter::new(lexer, parser, evaluator)
+        Interpreter::new(lexer, parser, variables_analyzer, evaluator)
     }
 }
 
 impl Interpreter {
-    fn new(lexer: Lexer, parser: Parser, evaluator: Evaluator) -> Self {
+    fn new(
+        lexer: Lexer,
+        parser: Parser,
+        variables_analyzer: VariablesAnalyzer,
+        evaluator: Evaluator,
+    ) -> Self {
         Self {
             lexer,
             parser,
+            variables_analyzer,
             evaluator,
         }
     }
@@ -103,9 +112,11 @@ impl Interpreter {
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
     ) -> ValueResult {
-        let expression = self.parse_syntax(syntax)?;
+        let node = self.parse_syntax(syntax)?;
+        let (_, variables) = self.variables_analyzer.analyze_variables(&node)?;
         self.evaluator.evaluate_with_module_environment(
-            &expression,
+            &node,
+            &variables,
             static_module_environment,
             module_environment,
         )
@@ -121,7 +132,7 @@ impl Interpreter {
         )
     }
 
-    fn parse_syntax(&self, syntax: Cow<str>) -> Result<Expression, Cow<'static, str>> {
+    fn parse_syntax(&mut self, syntax: Cow<str>) -> Result<Node, Cow<'static, str>> {
         let tokens = self.lexer.tokenize(syntax)?;
         self.parser.parse(tokens)
     }

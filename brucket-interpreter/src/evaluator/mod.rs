@@ -28,11 +28,13 @@ use std::option::Option::Some;
 use std::rc::Rc;
 use std::slice::Iter;
 
-use brucket_ast::ast::{
-    Application, ApplicationStrategy, Arity, Constant, ConstantValue, Function, If,
-    InternalFunction, Lambda, Let, Module, Number, Path,
-};
-use brucket_ast::parser::expression::Expression;
+use brucket_analyzer::variables_analyzer::{Variables, VariablesError};
+use brucket_ast::ast::constant_value::{Boolean, ConstantVariant, Number};
+use brucket_ast::ast::function::{ApplicationStrategy, InternalFunction};
+use brucket_ast::ast::lambda::{Arity, Lambda};
+use brucket_ast::ast::path::Path;
+use brucket_ast::ast::Module;
+use brucket_ast::ast::Node;
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;
@@ -42,6 +44,7 @@ use crate::value::{Closure, InternalFunctionClosure, Numeric, Value};
 #[macro_use]
 pub mod environment;
 pub mod internal;
+
 #[cfg(test)]
 mod test;
 
@@ -67,11 +70,25 @@ impl Evaluator {
     }
 
     #[cfg(test)]
-    fn evaluate(&mut self, expression: &Expression) -> ValueResult {
+    fn evaluate(&mut self, expression: &Node) -> ValueResult {
+        let variables = Variables::default();
         let module_environment = ModuleEnvironment::default();
         let static_module_environment = Environment::new();
         self.evaluate_with_module_environment(
             expression,
+            &variables,
+            &static_module_environment,
+            &module_environment,
+        )
+    }
+
+    #[cfg(test)]
+    fn evaluate_with_variables(&mut self, variables: Variables, expression: &Node) -> ValueResult {
+        let module_environment = ModuleEnvironment::default();
+        let static_module_environment = Environment::new();
+        self.evaluate_with_module_environment(
+            expression,
+            &variables,
             &static_module_environment,
             &module_environment,
         )
@@ -79,13 +96,15 @@ impl Evaluator {
 
     pub fn evaluate_with_module_environment(
         &mut self,
-        expression: &Expression,
+        expression: &Node,
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
     ) -> ValueResult {
         let environment = Environment::default();
         self.evaluate_environment(
             expression,
+            variables,
             static_module_environment,
             module_environment,
             &environment,
@@ -94,16 +113,17 @@ impl Evaluator {
 
     fn evaluate_environment(
         &mut self,
-        expression: &Expression,
+        expression: &Node,
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
     ) -> ValueResult {
         match expression {
-            Expression::ConstantValue(value) => match value {
-                ConstantValue::Unit => Ok(Value::Unit),
-                ConstantValue::Null => Ok(Value::Null),
-                ConstantValue::Numeric(value) => {
+            Node::ConstantValue(value) => match &value.variant {
+                ConstantVariant::Unit => Ok(Value::Unit),
+                ConstantVariant::Null => Ok(Value::Null),
+                ConstantVariant::Numeric(value) => {
                     let value = match value {
                         Number::Integer(value) => Numeric::Integer(
                             value
@@ -118,77 +138,66 @@ impl Evaluator {
                     };
                     Ok(Value::Numeric(value))
                 }
-                ConstantValue::Boolean(value) => Ok(Value::Boolean(value.to_bool())),
-                ConstantValue::String(value) => Ok(Value::Textual(value.clone())),
+                ConstantVariant::Boolean(value) => match value {
+                    Boolean::True => Ok(Value::Boolean(true)),
+                    Boolean::False => Ok(Value::Boolean(false)),
+                },
+                ConstantVariant::String(value) => Ok(Value::Textual(value.clone())),
             },
-            Expression::Identifier(value) => Self::get_from_environment(
+            Node::Identifier(identifier) => Self::get_from_environment(
                 static_module_environment,
                 module_environment,
                 environment,
-                value,
+                &identifier.path,
             ),
-            Expression::Application(Application {
-                identifier,
-                arguments,
-            }) => self.evaluate_application(
-                identifier,
-                arguments,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
-            Expression::Let(Let {
-                name,
-                value_type: _,
-                value,
-                then,
-            }) => self.evaluate_let(
-                name,
-                value,
-                then,
+            Node::Application(application) => self.evaluate_application(
+                &application.identifier,
+                &application.arguments,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
             ),
-            Expression::If(If {
-                condition,
-                if_true,
-                if_false,
-            }) => self.evaluate_if(
-                condition,
-                if_true,
-                if_false,
+            Node::Let(let_expression) => self.evaluate_let(
+                &let_expression.name,
+                &let_expression.value,
+                &let_expression.then,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
             ),
-            Expression::Lambda(lambda) => {
-                Ok(Value::Closure(Self::evaluate_lambda(lambda, environment)))
-            }
-            Expression::Module(module) => self.evaluate_module(
+            Node::If(if_expression) => self.evaluate_if(
+                &if_expression.condition,
+                &*if_expression.if_true,
+                &*if_expression.if_false,
+                variables,
+                static_module_environment,
+                module_environment,
+                environment,
+            ),
+            Node::Lambda(lambda) => Ok(Value::Closure(Self::evaluate_lambda(
+                lambda,
+                variables,
+                environment,
+            )?)),
+            Node::Module(module) => self.evaluate_module(
                 module,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
             ),
-            Expression::Function(Function {
-                visibility: _,
-                application_strategy,
-                name: _,
-                body: lambda,
-            }) => Ok(Value::FunctionClosure(
-                application_strategy.clone(),
-                Self::evaluate_lambda(lambda, environment),
+            Node::Function(function) => Ok(Value::FunctionClosure(
+                function.application_strategy.clone(),
+                Self::evaluate_lambda(&function.body, variables, environment)?,
             )),
-            Expression::InternalFunction(internal_function) => {
+            Node::InternalFunction(internal_function) => {
                 self.evaluate_internal_function(environment, internal_function)
             }
-            Expression::Constant(Constant {
-                visibility: _,
-                name: _,
-                value,
-            }) => self.evaluate_environment(
-                value,
+            Node::Constant(constant) => self.evaluate_environment(
+                &constant.value,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
@@ -223,50 +232,57 @@ impl Evaluator {
     fn evaluate_let(
         &mut self,
         identifier: &str,
-        value: &Expression,
-        then: &Expression,
+        value: &Node,
+        then: &Node,
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
     ) -> ValueResult {
         let evaluated_value = self.evaluate_environment(
             value,
+            variables,
             static_module_environment,
             module_environment,
             environment,
         )?;
         let evaluated_value = Rc::new(evaluated_value);
-        if let Expression::Lambda(lambda) = value {
+        let identifier = Path::Simple(identifier.to_string());
+        if let Node::Lambda(_) = value {
             if let Value::Closure(closure) = evaluated_value.borrow() {
-                let identifier = identifier.to_string();
-                if lambda.used_identifiers().contains(&identifier) {
-                    let closure_environment = closure.environment();
-                    closure_environment.insert_weak(identifier, Rc::downgrade(&evaluated_value));
+                let used_variables = &variables.get(value)?.used_variables;
+                if used_variables.contains(&identifier) {
+                    let closure_environment = &closure.environment;
+                    closure_environment
+                        .insert_weak(identifier.clone(), Rc::downgrade(&evaluated_value));
                 }
             }
         }
-        environment.insert(identifier.to_string(), evaluated_value);
+        environment.insert(identifier.clone(), evaluated_value);
         let result = self.evaluate_environment(
             then,
+            variables,
             static_module_environment,
             module_environment,
             environment,
         );
-        environment.remove(identifier);
+        environment.remove(&identifier);
         result
     }
 
     fn evaluate_if(
         &mut self,
-        condition: &Expression,
-        if_true_then: &Expression,
-        if_false_then: &Expression,
+        condition: &Node,
+        if_true_then: &Node,
+        if_false_then: &Node,
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
     ) -> ValueResult {
         let condition = self.evaluate_environment(
             condition,
+            variables,
             static_module_environment,
             module_environment,
             environment,
@@ -275,6 +291,7 @@ impl Evaluator {
             let body = if value { if_true_then } else { if_false_then };
             self.evaluate_environment(
                 body,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
@@ -284,16 +301,25 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_lambda(lambda: &Lambda<Expression>, environment: &Environment) -> Closure {
-        let environment = Self::get_optimized_lambda_environment(lambda, environment);
-        Closure::new(lambda.parameters.clone(), lambda.body.clone(), environment)
+    fn evaluate_lambda(
+        lambda: &Lambda,
+        variables: &Variables,
+        environment: &Environment,
+    ) -> Result<Closure, VariablesError> {
+        let environment = Self::get_optimized_lambda_environment(lambda, variables, environment)?;
+        Ok(Closure::new(
+            lambda.parameters.clone(),
+            lambda.body.clone(),
+            environment,
+        ))
     }
 
-    fn get_optimized_lambda_environment<T>(
-        lambda: &Lambda<T>,
+    fn get_optimized_lambda_environment(
+        lambda: &Lambda,
+        variables: &Variables,
         environment: &Environment,
-    ) -> Environment {
-        let identifiers = lambda.used_identifiers();
+    ) -> Result<Environment, ValueError> {
+        let identifiers = &variables.get(lambda)?.used_variables;
         let new_env: Environment = identifiers
             .iter()
             .filter_map(|identifier| {
@@ -302,7 +328,7 @@ impl Evaluator {
             })
             .collect();
         new_env.insert_all_weak(environment);
-        new_env
+        Ok(new_env)
     }
 
     fn get_from_environment(
@@ -313,18 +339,16 @@ impl Evaluator {
     ) -> ValueResult {
         match path {
             Path::Simple(identifier) => {
-                let value = environment.get(identifier).or_else(|| {
-                    environment
-                        .get_weak(identifier)
-                        .and_then(|value| value.upgrade())
-                });
+                let value = environment
+                    .get(path)
+                    .or_else(|| environment.get_weak(path).and_then(|value| value.upgrade()));
                 if let Some(value) = value {
                     let value: &Value = &value;
                     Ok(value.clone())
                 } else {
-                    let value = static_module_environment.get(identifier).or_else(|| {
+                    let value = static_module_environment.get(path).or_else(|| {
                         static_module_environment
-                            .get_weak(identifier)
+                            .get_weak(path)
                             .and_then(|value| value.upgrade())
                     });
                     if let Some(value) = value {
@@ -336,7 +360,7 @@ impl Evaluator {
                 }
             }
             Path::Complex(path) => {
-                let first_path = path.path().get(0);
+                let first_path = path.path.get(0);
                 if let Some(first_path) = first_path {
                     let module_env = module_environment.get(first_path);
                     if let Some(module_env) = module_env {
@@ -344,7 +368,7 @@ impl Evaluator {
                             static_module_environment,
                             module_environment,
                             module_env,
-                            &Path::Simple(path.identifier().clone()),
+                            &Path::Simple(path.identifier.clone()),
                         )
                     } else {
                         Err(Cow::from(format!("Undefined environment: {}", first_path)))
@@ -358,14 +382,16 @@ impl Evaluator {
 
     fn evaluate_application(
         &mut self,
-        identifier: &Expression,
-        arguments: &[Expression],
+        identifier: &Node,
+        arguments: &[Node],
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
     ) -> ValueResult {
         let identifier = self.evaluate_environment(
             identifier,
+            variables,
             static_module_environment,
             module_environment,
             environment,
@@ -374,6 +400,7 @@ impl Evaluator {
             Value::Closure(closure) => self.evaluate_closure_application(
                 ApplicationStrategy::Eager,
                 arguments,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
@@ -383,6 +410,7 @@ impl Evaluator {
                 .evaluate_closure_application(
                     application_strategy,
                     arguments,
+                    variables,
                     static_module_environment,
                     module_environment,
                     environment,
@@ -390,6 +418,7 @@ impl Evaluator {
                 ),
             Value::InternalFunctionClosure(closure) => self.evaluate_internal_closure_application(
                 arguments,
+                variables,
                 static_module_environment,
                 module_environment,
                 environment,
@@ -397,6 +426,7 @@ impl Evaluator {
             ),
             Value::Thunk(body, environment) => self.evaluate_environment(
                 &body,
+                variables,
                 static_module_environment,
                 module_environment,
                 &environment,
@@ -411,7 +441,8 @@ impl Evaluator {
     fn evaluate_closure_application(
         &mut self,
         application_strategy: ApplicationStrategy,
-        arguments: &[Expression],
+        arguments: &[Node],
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
@@ -419,10 +450,10 @@ impl Evaluator {
     ) -> ValueResult {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
-        let closure_environment = closure.environment();
-        for parameter in closure.parameters() {
-            let name = parameter.name();
-            let arity = parameter.arity();
+        let closure_environment = &closure.environment;
+        for parameter in &closure.parameters {
+            let name = &parameter.name;
+            let arity = &parameter.arity;
             match arity {
                 Arity::Unary => {
                     let argument = arguments_iterator
@@ -431,6 +462,7 @@ impl Evaluator {
                     let argument = if application_strategy.is_eager() {
                         self.evaluate_environment(
                             argument,
+                            variables,
                             static_module_environment,
                             module_environment,
                             environment,
@@ -441,23 +473,24 @@ impl Evaluator {
                             environment.clone(),
                         ))
                     }?;
-                    closure_environment.insert(name.clone(), Rc::new(argument));
+                    closure_environment.insert(Path::Simple(name.clone()), Rc::new(argument));
                 }
                 Arity::Variadic => {
                     let list = self.create_pair_list(
                         application_strategy,
                         arguments_iterator,
+                        variables,
                         static_module_environment,
                         module_environment,
                         environment,
                     )?;
-                    closure_environment.insert(name.clone(), Rc::new(list));
+                    closure_environment.insert(Path::Simple(name.clone()), Rc::new(list));
                     has_variadic_parameter = true;
                     break;
                 }
             }
         }
-        let parameters = closure.parameters();
+        let parameters = &closure.parameters;
         let parameters_length = parameters.len();
         let arguments_length = arguments.len();
         if !has_variadic_parameter && parameters_length != arguments_length {
@@ -467,21 +500,23 @@ impl Evaluator {
             )));
         }
         let result = self.evaluate_environment(
-            closure.body(),
+            &closure.body,
+            variables,
             static_module_environment,
             module_environment,
             closure_environment,
         );
         for parameter in parameters {
-            let name = parameter.name();
-            closure_environment.remove(name);
+            let name = &parameter.name;
+            closure_environment.remove(&Path::Simple(name.clone()));
         }
         result
     }
 
     fn evaluate_internal_closure_application(
         &mut self,
-        arguments: &[Expression],
+        arguments: &[Node],
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
@@ -491,8 +526,8 @@ impl Evaluator {
         let mut has_variadic_parameter = false;
         let mut closure_environment = HashMap::new();
         for parameter in &closure.parameters {
-            let name = parameter.name();
-            let arity = parameter.arity();
+            let name = &parameter.name;
+            let arity = &parameter.arity;
             match arity {
                 Arity::Unary => {
                     let argument = arguments_iterator
@@ -501,6 +536,7 @@ impl Evaluator {
                     let argument = if closure.application_strategy.is_eager() {
                         self.evaluate_environment(
                             argument,
+                            variables,
                             static_module_environment,
                             module_environment,
                             environment,
@@ -517,6 +553,7 @@ impl Evaluator {
                     let list = self.create_pair_list(
                         closure.application_strategy,
                         arguments_iterator,
+                        variables,
                         static_module_environment,
                         module_environment,
                         environment,
@@ -543,7 +580,8 @@ impl Evaluator {
     fn create_pair_list(
         &mut self,
         application_strategy: ApplicationStrategy,
-        arguments: Iter<Expression>,
+        arguments: Iter<Node>,
+        variables: &Variables,
         static_module_environment: &Environment,
         module_environment: &ModuleEnvironment,
         environment: &Environment,
@@ -553,6 +591,7 @@ impl Evaluator {
             let argument = if application_strategy.is_eager() {
                 self.evaluate_environment(
                     argument,
+                    variables,
                     static_module_environment,
                     module_environment,
                     environment,
@@ -570,7 +609,8 @@ impl Evaluator {
 
     fn evaluate_module(
         &mut self,
-        module: &Module<Expression>,
+        module: &Module,
+        variables: &Variables,
         static_module_environment: &Environment,
         global_module_environment: &ModuleEnvironment,
         environment: &Environment,
@@ -579,73 +619,81 @@ impl Evaluator {
         let constants_environment = environment.clone();
         let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();
-        for function in module.functions() {
+        for function in &module.functions {
             let visibility = &function.visibility;
             let application_strategy = &function.application_strategy;
             let identifier = &function.name;
+            let identifier_path = Path::Simple(identifier.clone());
             let lambda = &function.body;
-            let closure = Self::evaluate_lambda(lambda, environment);
+            let closure = Self::evaluate_lambda(lambda, variables, environment)?;
             let closure = Value::FunctionClosure(application_strategy.clone(), closure);
             let closure = Rc::new(closure);
             if visibility.is_public() {
-                module_environment.insert(identifier.clone(), Rc::clone(&closure));
+                module_environment.insert(identifier_path.clone(), Rc::clone(&closure));
             }
-            constants_environment.insert(identifier.clone(), Rc::clone(&closure));
-            let used_identifiers = lambda.used_identifiers();
-            closures.push((identifier, Rc::clone(&closure), used_identifiers));
-            evaluated_closures.insert(identifier, closure);
+            constants_environment.insert(identifier_path.clone(), Rc::clone(&closure));
+            let used_identifiers = &variables.get(lambda)?.used_variables;
+            closures.push((
+                identifier_path.clone(),
+                Rc::clone(&closure),
+                used_identifiers,
+            ));
+            evaluated_closures.insert(identifier_path, closure);
         }
         Self::fill_closures(&closures, &evaluated_closures);
         let mut evaluated_internal_functions = HashMap::new();
-        for internal_function in module.internal_functions() {
+        for internal_function in &module.internal_functions {
             let visibility = &internal_function.visibility;
             let identifier = &internal_function.name;
+            let identifier_path = Path::Simple(identifier.clone());
             let closure = self.evaluate_internal_function(environment, internal_function)?;
             let closure = Rc::new(closure);
             if visibility.is_public() {
-                module_environment.insert(identifier.clone(), Rc::clone(&closure));
+                module_environment.insert(identifier_path.clone(), Rc::clone(&closure));
             }
-            constants_environment.insert(identifier.clone(), Rc::clone(&closure));
-            evaluated_internal_functions.insert(identifier, closure);
+            constants_environment.insert(identifier_path.clone(), Rc::clone(&closure));
+            evaluated_internal_functions.insert(identifier_path, closure);
         }
         Self::fill_closures(&closures, &evaluated_internal_functions);
         let mut evaluated_constants = HashMap::new();
-        for constant in module.constants() {
+        for constant in &module.constants {
             let visibility = &constant.visibility;
             let identifier = &constant.name;
+            let identifier_path = Path::Simple(identifier.clone());
             let value = &constant.value;
             let value = self.evaluate_environment(
                 value,
+                variables,
                 static_module_environment,
                 global_module_environment,
                 &constants_environment,
             )?;
             let value = Rc::new(value);
             if visibility.is_public() {
-                module_environment.insert(identifier.clone(), Rc::clone(&value));
+                module_environment.insert(identifier_path.clone(), Rc::clone(&value));
             }
-            constants_environment.insert(identifier.clone(), Rc::clone(&value));
-            evaluated_constants.insert(identifier, value);
+            constants_environment.insert(identifier_path.clone(), Rc::clone(&value));
+            evaluated_constants.insert(identifier_path, value);
         }
         Self::fill_closures(&closures, &evaluated_constants);
-        let identifier = module.identifier();
+        let identifier = &module.identifier;
         Ok(Value::Module(
-            module.is_static(),
+            module.is_static,
             identifier.to_string(),
             module_environment,
         ))
     }
 
     fn fill_closures(
-        closures: &[(&String, Rc<Value>, &HashSet<String>)],
-        values: &HashMap<&String, Rc<Value>>,
+        closures: &[(Path, Rc<Value>, &HashSet<Path>)],
+        values: &HashMap<Path, Rc<Value>>,
     ) {
         for (identifier, closure, used_identifiers) in closures {
             if let Value::FunctionClosure(_, closure) = closure.borrow() {
-                let environment = closure.environment();
+                let environment = &closure.environment;
                 for used_identifier in used_identifiers.iter() {
                     if let Some(evaluated_value) = values.get(used_identifier) {
-                        if &used_identifier == identifier {
+                        if *used_identifier == *identifier {
                             let value = Rc::downgrade(evaluated_value);
                             environment.insert_weak(used_identifier.clone(), value);
                         } else {

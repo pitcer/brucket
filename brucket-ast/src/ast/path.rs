@@ -22,36 +22,37 @@
  * SOFTWARE.
  */
 
-use crate::ast::{
-    Application, Constant, ConstantValue, Function, If, InternalFunction, Lambda, Let, Module,
-    Path, Type,
-};
+use std::fmt::{Display, Formatter};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum TypedExpressionType {
-    ConstantValue(ConstantValue),
-    Identifier(Path),
-    Application(Application<TypedExpression>),
-    Let(Let<TypedExpression>),
-    If(If<TypedExpression>),
-    Lambda(Lambda<TypedExpression>),
-    Module(Module<TypedExpression>),
-    Function(Function<TypedExpression>),
-    InternalFunction(InternalFunction),
-    Constant(Constant<TypedExpression>),
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Path {
+    Simple(String),
+    Complex(ComplexPath),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypedExpression {
-    pub expression: TypedExpressionType,
-    pub evaluated_type: Type,
-}
-
-impl TypedExpression {
-    pub fn new(expression: TypedExpressionType, evaluated_type: Type) -> Self {
-        Self {
-            expression,
-            evaluated_type,
+impl Display for Path {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Path::Simple(name) => write!(f, "{}", name),
+            Path::Complex(path) => std::fmt::Display::fmt(path, f),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ComplexPath {
+    pub identifier: String,
+    pub path: Vec<String>,
+}
+
+impl Display for ComplexPath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}::{}", self.path.join("::"), self.identifier)
+    }
+}
+
+impl ComplexPath {
+    pub fn new(identifier: String, path: Vec<String>) -> Self {
+        Self { identifier, path }
     }
 }

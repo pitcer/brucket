@@ -22,8 +22,13 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::{ApplicationStrategy, Arity, ConstantValue, Number, Parameter, Path, Type};
-use brucket_ast::parser::expression::Expression;
+use brucket_ast::ast::ast_type::Type;
+use brucket_ast::ast::constant_value::{ConstantValue, ConstantVariant, Number};
+use brucket_ast::ast::function::ApplicationStrategy;
+use brucket_ast::ast::lambda::{Arity, Parameter};
+use brucket_ast::ast::path::Path;
+use brucket_ast::ast::Identifier;
+use brucket_ast::ast::{Node, NodeId};
 
 use crate::value::Value;
 use crate::value::{Closure, Numeric};
@@ -144,7 +149,10 @@ fn test_interpret_module() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("2".to_string())))),
+                    Box::new(Node::ConstantValue(ConstantValue::new(
+                        NodeId(408),
+                        ConstantVariant::Numeric(Number::Integer("2".to_string()))
+                    ))),
                     Environment::new(),
             )),
             "foobar" => Value::Numeric(Numeric::Integer(3)),
@@ -152,7 +160,10 @@ fn test_interpret_module() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-                    Box::new(Expression::ConstantValue(ConstantValue::Numeric(Number::Integer("4".to_string())))),
+                    Box::new(Node::ConstantValue(ConstantValue::new(
+                        NodeId(418),
+                        ConstantVariant::Numeric(Number::Integer("4".to_string()))
+                    ))),
                     Environment::new(),
             ))
         },
@@ -180,7 +191,10 @@ fn test_interpret_function() -> TestResult {
         ApplicationStrategy::Eager,
         Closure::new(
             vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-            Box::from(Expression::Identifier(Path::Simple("x".to_string()))),
+            Box::from(Node::Identifier(Identifier::new(
+                NodeId(406),
+                Path::Simple("x".to_string()),
+            ))),
             Environment::new(),
         ),
     );
