@@ -22,14 +22,14 @@
  * SOFTWARE.
  */
 
+use brucket_analyzer::variables_analyzer::NodeVariables;
 use brucket_ast::ast::ast_type::Type;
 use brucket_ast::ast::constant_value::{Boolean, ConstantValue};
+use brucket_ast::ast::function::Function;
 use brucket_ast::ast::lambda::Parameter;
 use brucket_ast::ast::{Application, Constant, Identifier, If, Let, NodeId, Visibility};
 
 use super::*;
-use brucket_analyzer::variables_analyzer::NodeVariables;
-use brucket_ast::ast::function::Function;
 
 type TestResult = Result<(), ValueError>;
 
@@ -248,7 +248,7 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
             NodeId(0),
             Path::Simple("y".to_string()),
         ))),
-        Environment::new(),
+        Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
@@ -291,7 +291,7 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
             NodeId(0),
             Path::Simple("y".to_string()),
         ))),
-        Environment::new(),
+        Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
@@ -526,7 +526,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 Closure::new(
                     Vec::new(),
                     Box::new(Node::ConstantValue(ConstantValue::new(NodeId(0),ConstantVariant::Numeric(Number::Integer("42".to_string()))))),
-                    Environment::new(),
+                    Environment::default(),
             ))
         },
     );
@@ -573,7 +573,7 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
                 NodeId(0),
                 ConstantVariant::Numeric(Number::Integer("42".to_string())),
             ))),
-            Environment::new(),
+            Environment::default(),
         ),
     );
     let actual = evaluator.evaluate_with_variables(
@@ -616,7 +616,7 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
             NodeId(0),
             Path::Simple("x".to_string()),
         ))),
-        Environment::new(),
+        Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
@@ -714,7 +714,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 Closure::new(
                     Vec::new(),
                     Box::new(Node::ConstantValue(ConstantValue::new(NodeId(0),ConstantVariant::Numeric(Number::Integer("42".to_string()))))),
-                    Environment::new(),
+                    Environment::default(),
             )),
             "baar" => Value::Numeric(Numeric::Integer(42))
         },
@@ -800,7 +800,7 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
                 NodeId(0),
                 ConstantVariant::Numeric(Number::Integer("42".to_string())),
             ))),
-            Environment::new(),
+            Environment::default(),
         ),
     );
     let actual = evaluator.evaluate_with_variables(
@@ -838,7 +838,7 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_string())),
         ))),
-        Environment::new(),
+        Environment::default(),
     );
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
@@ -874,7 +874,7 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
 #[test]
 fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
     let mut evaluator = Evaluator::default();
-    let expected = Value::Module(true, "foo".to_string(), Environment::new());
+    let expected = Value::Module(true, "foo".to_string(), Environment::default());
     let actual = evaluator.evaluate(&Node::Module(Module::new(
         NodeId(0),
         true,

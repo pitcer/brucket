@@ -22,10 +22,6 @@
  * SOFTWARE.
  */
 
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
-
 use brucket_ast::ast::ast_type::Type;
 use brucket_ast::ast::constant_value::ConstantValue;
 use brucket_ast::ast::function::{Function, InternalFunction};
@@ -33,6 +29,10 @@ use brucket_ast::ast::lambda::Lambda;
 use brucket_ast::ast::path::Path;
 use brucket_ast::ast::{Application, Constant, If, Let, Module, NodeIdHolder};
 use brucket_ast::ast::{Identifier, Node, NodeId};
+use derive_more::Constructor;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::mem;
 
 #[cfg(test)]
@@ -41,14 +41,8 @@ mod test;
 pub type VariablesError = Cow<'static, str>;
 pub type VariablesResult = Result<NodeVariables, VariablesError>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default, Constructor)]
 pub struct Variables(pub HashMap<NodeId, NodeVariables>);
-
-impl Default for Variables {
-    fn default() -> Self {
-        Variables(HashMap::default())
-    }
-}
 
 impl Variables {
     pub fn insert(&mut self, node: &dyn NodeIdHolder, node_variables: NodeVariables) {
@@ -64,37 +58,18 @@ impl Variables {
     }
 }
 
+#[derive(Default, Constructor)]
 pub struct Environment {
     variables: Variables,
 }
 
-impl Default for Environment {
-    fn default() -> Self {
-        let variables = Variables::default();
-        Self { variables }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default, Constructor)]
 pub struct NodeVariables {
     pub variables: HashSet<Variable>,
     pub used_variables: HashSet<Path>,
 }
 
-impl Default for NodeVariables {
-    fn default() -> Self {
-        Self::new(HashSet::new(), HashSet::new())
-    }
-}
-
 impl NodeVariables {
-    pub fn new(variables: HashSet<Variable>, used_variables: HashSet<Path>) -> Self {
-        Self {
-            variables,
-            used_variables,
-        }
-    }
-
     fn append(&mut self, node_variables: NodeVariables) {
         for variable in node_variables.variables {
             self.variables.insert(variable);
@@ -105,30 +80,15 @@ impl NodeVariables {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Constructor)]
 pub struct Variable {
     name: String,
     expected_type: Type,
 }
 
-impl Variable {
-    pub fn new(name: String, expected_type: Type) -> Self {
-        Self {
-            name,
-            expected_type,
-        }
-    }
-}
-
+#[derive(Default, Constructor)]
 pub struct VariablesAnalyzer {
     environment: Environment,
-}
-
-impl Default for VariablesAnalyzer {
-    fn default() -> Self {
-        let environment = Environment::default();
-        Self { environment }
-    }
 }
 
 impl VariablesAnalyzer {

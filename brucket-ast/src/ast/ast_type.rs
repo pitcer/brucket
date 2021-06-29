@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use derive_more::Constructor;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,19 +52,10 @@ impl Display for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Constructor)]
 pub struct LambdaType {
     pub parameters_types: Vec<Type>,
     pub return_type: Box<Type>,
-}
-
-impl LambdaType {
-    pub fn new(parameters_types: Vec<Type>, return_type: Box<Type>) -> Self {
-        Self {
-            parameters_types,
-            return_type,
-        }
-    }
 }
 
 impl Display for LambdaType {

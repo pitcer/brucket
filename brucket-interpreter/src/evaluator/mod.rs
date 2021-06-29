@@ -22,12 +22,10 @@
  * SOFTWARE.
  */
 
-use std::borrow::{Borrow, Cow};
-use std::collections::{HashMap, HashSet};
-use std::option::Option::Some;
-use std::rc::Rc;
-use std::slice::Iter;
-
+use crate::evaluator::environment::Environment;
+use crate::evaluator::internal::InternalEnvironment;
+use crate::interpreter::ModuleEnvironment;
+use crate::value::{Closure, InternalFunctionClosure, Numeric, Value};
 use brucket_analyzer::variables_analyzer::{Variables, VariablesError};
 use brucket_ast::ast::constant_value::{Boolean, ConstantVariant, Number};
 use brucket_ast::ast::function::{ApplicationStrategy, InternalFunction};
@@ -35,11 +33,12 @@ use brucket_ast::ast::lambda::{Arity, Lambda};
 use brucket_ast::ast::path::Path;
 use brucket_ast::ast::Module;
 use brucket_ast::ast::Node;
-
-use crate::evaluator::environment::Environment;
-use crate::evaluator::internal::InternalEnvironment;
-use crate::interpreter::ModuleEnvironment;
-use crate::value::{Closure, InternalFunctionClosure, Numeric, Value};
+use derive_more::Constructor;
+use std::borrow::{Borrow, Cow};
+use std::collections::{HashMap, HashSet};
+use std::option::Option::Some;
+use std::rc::Rc;
+use std::slice::Iter;
 
 #[macro_use]
 pub mod environment;
@@ -51,29 +50,17 @@ mod test;
 type ValueError = Cow<'static, str>;
 type ValueResult = Result<Value, ValueError>;
 
+#[derive(Default, Constructor)]
 pub struct Evaluator {
     internal_environment: InternalEnvironment,
 }
 
-impl Default for Evaluator {
-    fn default() -> Self {
-        let internal_environment = InternalEnvironment::default();
-        Self::new(internal_environment)
-    }
-}
-
 impl Evaluator {
-    fn new(internal_environment: InternalEnvironment) -> Self {
-        Self {
-            internal_environment,
-        }
-    }
-
     #[cfg(test)]
     fn evaluate(&mut self, expression: &Node) -> ValueResult {
         let variables = Variables::default();
         let module_environment = ModuleEnvironment::default();
-        let static_module_environment = Environment::new();
+        let static_module_environment = Environment::default();
         self.evaluate_with_module_environment(
             expression,
             &variables,
@@ -85,7 +72,7 @@ impl Evaluator {
     #[cfg(test)]
     fn evaluate_with_variables(&mut self, variables: Variables, expression: &Node) -> ValueResult {
         let module_environment = ModuleEnvironment::default();
-        let static_module_environment = Environment::new();
+        let static_module_environment = Environment::default();
         self.evaluate_with_module_environment(
             expression,
             &variables,
@@ -615,7 +602,7 @@ impl Evaluator {
         global_module_environment: &ModuleEnvironment,
         environment: &Environment,
     ) -> ValueResult {
-        let module_environment = Environment::new();
+        let module_environment = Environment::default();
         let constants_environment = environment.clone();
         let mut closures = Vec::new();
         let mut evaluated_closures = HashMap::new();

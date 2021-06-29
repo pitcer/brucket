@@ -22,14 +22,14 @@
  * SOFTWARE.
  */
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-
 use brucket_ast::ast::ast_type::{LambdaType, Type};
 use brucket_ast::ast::constant_value::{ConstantValue, ConstantVariant, Number};
 use brucket_ast::ast::lambda::Lambda;
 use brucket_ast::ast::path::Path;
 use brucket_ast::ast::{Application, Identifier, If, Let, Node, NodeId, NodeIdHolder};
+use derive_more::Constructor;
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::mem;
 
 #[cfg(test)]
@@ -38,14 +38,8 @@ mod test;
 pub type TypedError = Cow<'static, str>;
 pub type TypedResult = Result<Type, TypedError>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default, Constructor)]
 pub struct NodeTypes(HashMap<NodeId, Type>);
-
-impl Default for NodeTypes {
-    fn default() -> Self {
-        NodeTypes(HashMap::default())
-    }
-}
 
 impl NodeTypes {
     pub fn insert(&mut self, node: &dyn NodeIdHolder, node_type: Type) {
@@ -61,21 +55,10 @@ impl NodeTypes {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Constructor)]
 pub struct Environment {
     variables: HashMap<Path, Type>,
     node_types: NodeTypes,
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        let variables = HashMap::default();
-        let node_types = NodeTypes::default();
-        Self {
-            variables,
-            node_types,
-        }
-    }
 }
 
 impl Environment {
@@ -92,22 +75,12 @@ impl Environment {
     }
 }
 
+#[derive(Default, Constructor)]
 pub struct TypeAnalyzer {
     environment: Environment,
 }
 
-impl Default for TypeAnalyzer {
-    fn default() -> Self {
-        let environment = Environment::default();
-        Self { environment }
-    }
-}
-
 impl TypeAnalyzer {
-    pub fn new(environment: Environment) -> Self {
-        TypeAnalyzer { environment }
-    }
-
     pub fn analyze_types(&mut self, node: &Node) -> Result<(Type, NodeTypes), TypedError> {
         let node_type = self.analyze_node_types(node)?;
         let node_types = mem::take(&mut self.environment.node_types);

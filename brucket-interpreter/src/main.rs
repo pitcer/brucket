@@ -24,11 +24,10 @@
 
 #![forbid(unsafe_code)]
 
+use brucket_interpreter::interpreter::Interpreter;
 use std::fs::File;
 use std::io::Read;
 use std::{env, io};
-
-use brucket_interpreter::interpreter::Interpreter;
 
 fn main() {
     let mut stdin = io::stdin();

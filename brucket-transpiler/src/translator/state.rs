@@ -27,8 +27,9 @@ use c_generator::syntax::function::{FunctionDeclaration, FunctionDefinition, Fun
 use c_generator::syntax::instruction::Instructions;
 use c_generator::syntax::module::{ModuleMember, ModuleMembers};
 use c_generator::syntax::typedef::Typedef;
+use derive_more::Constructor;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TranslationState {
     let_count: usize,
     if_count: usize,
@@ -38,21 +39,6 @@ pub struct TranslationState {
     typedefs: ModuleMembers,
     declarations: ModuleMembers,
     members: ModuleMembers,
-}
-
-impl Default for TranslationState {
-    fn default() -> Self {
-        Self {
-            let_count: 0,
-            if_count: 0,
-            lambda_count: 0,
-            typedef_count: 0,
-            variables: Vec::default(),
-            typedefs: ModuleMembers::default(),
-            declarations: ModuleMembers::default(),
-            members: ModuleMembers::default(),
-        }
-    }
 }
 
 impl TranslationState {
@@ -128,25 +114,8 @@ impl TranslationState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Constructor)]
 pub struct Variable {
-    name: String,
-    variable_type: CType,
-}
-
-impl Variable {
-    pub fn new(name: String, variable_type: CType) -> Self {
-        Self {
-            name,
-            variable_type,
-        }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn variable_type(&self) -> &CType {
-        &self.variable_type
-    }
+    pub name: String,
+    pub variable_type: CType,
 }

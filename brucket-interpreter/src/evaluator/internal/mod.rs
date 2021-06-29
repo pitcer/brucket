@@ -22,11 +22,10 @@
  * SOFTWARE.
  */
 
-use std::collections::HashMap;
-
 use crate::evaluator::{Value, ValueResult};
 use crate::value::Numeric;
-
+use derive_more::Constructor;
+use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[cfg(test)]
@@ -48,6 +47,7 @@ macro_rules! internal_environment_map {
 pub type InternalFunction = fn(HashMap<String, Value>) -> ValueResult;
 pub type InternalEnvironmentMap = HashMap<&'static str, InternalFunction>;
 
+#[derive(Constructor)]
 pub struct InternalEnvironment {
     map: InternalEnvironmentMap,
 }
@@ -74,10 +74,6 @@ impl Default for InternalEnvironment {
 }
 
 impl InternalEnvironment {
-    fn new(map: InternalEnvironmentMap) -> Self {
-        Self { map }
-    }
-
     pub fn get(&mut self, identifier: &str) -> Option<&InternalFunction> {
         self.map.get(identifier)
     }

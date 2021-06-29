@@ -22,11 +22,6 @@
  * SOFTWARE.
  */
 
-use std::borrow::Cow;
-use std::iter::Peekable;
-use std::option::Option::Some;
-use std::vec::IntoIter;
-
 use crate::ast::ast_type::{LambdaType, Type};
 use crate::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
 use crate::ast::function::{ApplicationStrategy, Function, InternalFunction};
@@ -37,6 +32,11 @@ use crate::token::{
     Boolean as BooleanToken, Keyword, Modifier, Number as NumberToken, Operator, Parenthesis,
     PrimitiveType, Token,
 };
+use derive_more::Constructor;
+use std::borrow::Cow;
+use std::iter::Peekable;
+use std::option::Option::Some;
+use std::vec::IntoIter;
 
 #[cfg(test)]
 mod test;
@@ -64,15 +64,9 @@ impl Token {
 
 type Tokens = Peekable<IntoIter<Token>>;
 
+#[derive(Default, Constructor)]
 pub struct Parser {
     current_id: NodeId,
-}
-
-impl Default for Parser {
-    fn default() -> Self {
-        let current_id = NodeId(0);
-        Parser { current_id }
-    }
 }
 
 impl Parser {

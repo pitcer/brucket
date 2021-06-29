@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use derive_more::Constructor;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -39,7 +40,7 @@ impl Display for Path {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Constructor)]
 pub struct ComplexPath {
     pub identifier: String,
     pub path: Vec<String>,
@@ -48,11 +49,5 @@ pub struct ComplexPath {
 impl Display for ComplexPath {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}::{}", self.path.join("::"), self.identifier)
-    }
-}
-
-impl ComplexPath {
-    pub fn new(identifier: String, path: Vec<String>) -> Self {
-        Self { identifier, path }
     }
 }

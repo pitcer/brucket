@@ -22,9 +22,12 @@
  * SOFTWARE.
  */
 
+#![forbid(unsafe_code)]
+
+use derive_more::Constructor;
+
 pub mod type_analyzer;
 pub mod variables_analyzer;
 
+#[derive(Default, Constructor)]
 pub struct Analyzer;
-
-impl Analyzer {}

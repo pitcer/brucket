@@ -24,8 +24,9 @@
 
 use crate::ast::ast_type::Type;
 use crate::ast::{Node, NodeId};
+use derive_more::{Constructor, IsVariant};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Lambda {
     pub node_id: NodeId,
     pub parameters: Vec<Parameter>,
@@ -33,40 +34,14 @@ pub struct Lambda {
     pub body: Box<Node>,
 }
 
-impl Lambda {
-    pub fn new(
-        node_id: NodeId,
-        parameters: Vec<Parameter>,
-        return_type: Type,
-        body: Box<Node>,
-    ) -> Self {
-        Lambda {
-            node_id,
-            parameters,
-            return_type,
-            body,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Parameter {
     pub name: String,
     pub parameter_type: Type,
     pub arity: Arity,
 }
 
-impl Parameter {
-    pub fn new(name: String, parameter_type: Type, arity: Arity) -> Self {
-        Self {
-            name,
-            parameter_type,
-            arity,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, IsVariant)]
 pub enum Arity {
     Unary,
     Variadic,

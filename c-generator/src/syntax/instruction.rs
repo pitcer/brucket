@@ -29,6 +29,7 @@ use crate::syntax::c_type::CType;
 use crate::syntax::expression::CExpression;
 use crate::syntax::modifiers::Modifiers;
 use crate::syntax::typedef::Typedef;
+use derive_more::Constructor;
 
 #[derive(Debug)]
 pub enum Instruction {
@@ -64,21 +65,11 @@ impl IndentedGenerator for Instruction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct VariableDeclaration {
     modifiers: Modifiers,
     variable_type: CType,
     name: String,
-}
-
-impl VariableDeclaration {
-    pub fn new(modifiers: Modifiers, variable_type: CType, name: String) -> Self {
-        VariableDeclaration {
-            modifiers,
-            variable_type,
-            name,
-        }
-    }
 }
 
 impl IndentedGenerator for VariableDeclaration {
@@ -97,16 +88,10 @@ impl IndentedGenerator for VariableDeclaration {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct VariableDefinition {
     name: String,
     value: CExpression,
-}
-
-impl VariableDefinition {
-    pub fn new(name: String, value: CExpression) -> Self {
-        VariableDefinition { name, value }
-    }
 }
 
 impl IndentedGenerator for VariableDefinition {
@@ -120,28 +105,12 @@ impl IndentedGenerator for VariableDefinition {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct VariableInstruction {
     modifiers: Modifiers,
     variable_type: CType,
     name: String,
     value: CExpression,
-}
-
-impl VariableInstruction {
-    pub fn new(
-        modifiers: Modifiers,
-        variable_type: CType,
-        name: String,
-        value: CExpression,
-    ) -> Self {
-        VariableInstruction {
-            modifiers,
-            variable_type,
-            name,
-            value,
-        }
-    }
 }
 
 impl IndentedGenerator for VariableInstruction {
@@ -161,16 +130,10 @@ impl IndentedGenerator for VariableInstruction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct IfInstruction {
     condition: CExpression,
     body: Instructions,
-}
-
-impl IfInstruction {
-    pub fn new(condition: CExpression, body: Instructions) -> Self {
-        Self { condition, body }
-    }
 }
 
 impl IndentedGenerator for IfInstruction {
@@ -188,21 +151,11 @@ impl IndentedGenerator for IfInstruction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct IfElseInstruction {
     condition: CExpression,
     if_body: Instructions,
     else_body: Instructions,
-}
-
-impl IfElseInstruction {
-    pub fn new(condition: CExpression, if_body: Instructions, else_body: Instructions) -> Self {
-        Self {
-            condition,
-            if_body,
-            else_body,
-        }
-    }
 }
 
 impl IndentedGenerator for IfElseInstruction {

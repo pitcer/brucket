@@ -23,6 +23,7 @@
  */
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use derive_more::Constructor;
 
 #[derive(Debug, Clone)]
 pub enum CExpression {
@@ -60,19 +61,10 @@ impl Generator for NumberExpression {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Constructor)]
 pub struct FunctionCallExpression {
     identifier: FunctionIdentifier,
     arguments: Arguments,
-}
-
-impl FunctionCallExpression {
-    pub fn new(identifier: FunctionIdentifier, arguments: Arguments) -> Self {
-        Self {
-            identifier,
-            arguments,
-        }
-    }
 }
 
 impl Generator for FunctionCallExpression {

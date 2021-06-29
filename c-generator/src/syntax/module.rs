@@ -28,15 +28,11 @@ use crate::syntax::c_struct::CStruct;
 use crate::syntax::function::{FunctionDeclaration, FunctionDefinition};
 use crate::syntax::instruction::{VariableDeclaration, VariableInstruction};
 use crate::syntax::typedef::Typedef;
+use derive_more::Constructor;
 
+#[derive(Constructor)]
 pub struct Module {
     members: ModuleMembers,
-}
-
-impl Module {
-    pub fn new(members: ModuleMembers) -> Self {
-        Self { members }
-    }
 }
 
 impl IndentedGenerator for Module {

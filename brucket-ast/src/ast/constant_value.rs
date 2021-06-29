@@ -23,17 +23,12 @@
  */
 
 use crate::ast::NodeId;
+use derive_more::Constructor;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct ConstantValue {
     pub node_id: NodeId,
     pub variant: ConstantVariant,
-}
-
-impl ConstantValue {
-    pub fn new(node_id: NodeId, variant: ConstantVariant) -> Self {
-        ConstantValue { node_id, variant }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

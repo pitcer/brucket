@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+use crate::value::Value;
+use crate::value::{Closure, Numeric};
 use brucket_ast::ast::ast_type::Type;
 use brucket_ast::ast::constant_value::{ConstantValue, ConstantVariant, Number};
 use brucket_ast::ast::function::ApplicationStrategy;
@@ -29,9 +31,6 @@ use brucket_ast::ast::lambda::{Arity, Parameter};
 use brucket_ast::ast::path::Path;
 use brucket_ast::ast::Identifier;
 use brucket_ast::ast::{Node, NodeId};
-
-use crate::value::Value;
-use crate::value::{Closure, Numeric};
 
 use super::*;
 
@@ -153,7 +152,7 @@ fn test_interpret_module() -> TestResult {
                         NodeId(408),
                         ConstantVariant::Numeric(Number::Integer("2".to_string()))
                     ))),
-                    Environment::new(),
+                    Environment::default(),
             )),
             "foobar" => Value::Numeric(Numeric::Integer(3)),
             "fooo" => Value::FunctionClosure(
@@ -164,7 +163,7 @@ fn test_interpret_module() -> TestResult {
                         NodeId(418),
                         ConstantVariant::Numeric(Number::Integer("4".to_string()))
                     ))),
-                    Environment::new(),
+                    Environment::default(),
             ))
         },
     );
@@ -195,7 +194,7 @@ fn test_interpret_function() -> TestResult {
                 NodeId(406),
                 Path::Simple("x".to_string()),
             ))),
-            Environment::new(),
+            Environment::default(),
         ),
     );
     let actual = interpreter.interpret_with_base_library("(function foo [x] x))")?;

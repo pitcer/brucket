@@ -22,15 +22,15 @@
  * SOFTWARE.
  */
 
+use crate::value::Value;
+use brucket_ast::ast::path::Path;
+use derive_more::Constructor;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::option::Option::Some;
 use std::rc::{Rc, Weak};
-
-use crate::value::Value;
-use brucket_ast::ast::path::Path;
 
 #[cfg(test)]
 macro_rules! environment {
@@ -48,13 +48,7 @@ macro_rules! environment {
     };
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Environment {
-    map: RefCell<HashMap<Path, Rc<Value>>>,
-    weak_map: RefCell<HashMap<Path, WeakWrapper<Value>>>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Constructor)]
 struct WeakWrapper<T> {
     weak: Weak<T>,
 }
@@ -73,10 +67,6 @@ impl<T: PartialEq> PartialEq for WeakWrapper<T> {
 }
 
 impl<T> WeakWrapper<T> {
-    fn new(weak: Weak<T>) -> Self {
-        Self { weak }
-    }
-
     fn clone(&self) -> Weak<T> {
         Weak::clone(&self.weak)
     }
@@ -84,6 +74,12 @@ impl<T> WeakWrapper<T> {
     fn upgrade(&self) -> Option<Rc<T>> {
         Weak::upgrade(&self.weak)
     }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Environment {
+    map: RefCell<HashMap<Path, Rc<Value>>>,
+    weak_map: RefCell<HashMap<Path, WeakWrapper<Value>>>,
 }
 
 impl Default for Environment {
@@ -100,10 +96,6 @@ impl FromIterator<(Path, Rc<Value>)> for Environment {
 }
 
 impl Environment {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     fn from_map(map: HashMap<Path, Rc<Value>>) -> Self {
         let map = RefCell::new(map);
         let weak_map = RefCell::new(HashMap::new());

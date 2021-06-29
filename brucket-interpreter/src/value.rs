@@ -22,12 +22,12 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::function::ApplicationStrategy;
-use brucket_ast::ast::lambda::Parameter;
-
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalFunction;
+use brucket_ast::ast::function::ApplicationStrategy;
+use brucket_ast::ast::lambda::Parameter;
 use brucket_ast::ast::Node;
+use derive_more::Constructor;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -50,7 +50,7 @@ pub enum Numeric {
     FloatingPoint(f64),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct InternalFunctionClosure {
     pub application_strategy: ApplicationStrategy,
     pub parameters: Vec<Parameter>,
@@ -58,35 +58,9 @@ pub struct InternalFunctionClosure {
     pub environment: Environment,
 }
 
-impl InternalFunctionClosure {
-    pub fn new(
-        application_strategy: ApplicationStrategy,
-        parameters: Vec<Parameter>,
-        function: InternalFunction,
-        environment: Environment,
-    ) -> Self {
-        Self {
-            application_strategy,
-            parameters,
-            function,
-            environment,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Closure {
     pub parameters: Vec<Parameter>,
     pub body: Box<Node>,
     pub environment: Environment,
-}
-
-impl Closure {
-    pub fn new(parameters: Vec<Parameter>, body: Box<Node>, environment: Environment) -> Self {
-        Self {
-            parameters,
-            body,
-            environment,
-        }
-    }
 }

@@ -23,8 +23,9 @@
  */
 
 use crate::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
+use derive_more::Constructor;
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct Typedef {
     value: String,
 }
@@ -32,11 +33,5 @@ pub struct Typedef {
 impl IndentedGenerator for Typedef {
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(format!("{}typedef {};", state.indentation, self.value))
-    }
-}
-
-impl Typedef {
-    pub fn new(value: String) -> Self {
-        Self { value }
     }
 }

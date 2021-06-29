@@ -22,8 +22,7 @@
  * SOFTWARE.
  */
 
-use std::borrow::Cow;
-
+use crate::translator::state::{TranslationState, Variable};
 use brucket_analyzer::type_analyzer::NodeTypes;
 use brucket_ast::ast::ast_type::{LambdaType, Type};
 use brucket_ast::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
@@ -39,34 +38,26 @@ use c_generator::syntax::expression::{
 use c_generator::syntax::function::{FunctionHeader, FunctionParameter, Parameters};
 use c_generator::syntax::instruction::{IfElseInstruction, Instruction, VariableInstruction};
 use c_generator::syntax::modifiers::Modifiers;
-
-use crate::translator::state::{TranslationState, Variable};
+use derive_more::Constructor;
+use std::borrow::Cow;
 
 pub mod state;
 
 pub type TranslatorResult<T> = Result<T, TranslatorError>;
 pub type TranslatorError = Cow<'static, str>;
 
+#[derive(Default, Constructor)]
 pub struct Environment {
     types: NodeTypes,
     state: TranslationState,
 }
 
-impl Environment {
-    pub fn new(types: NodeTypes, state: TranslationState) -> Self {
-        Environment { types, state }
-    }
-}
-
+#[derive(Default, Constructor)]
 pub struct Translator {
     environment: Environment,
 }
 
 impl Translator {
-    pub fn new(environment: Environment) -> Self {
-        Translator { environment }
-    }
-
     pub fn get_state(&mut self) -> &mut TranslationState {
         &mut self.environment.state
     }
@@ -92,10 +83,6 @@ impl Translator {
 
     fn translate_type(&mut self, node_type: &Type) -> TranslatorResult<CType> {
         translate_type(&mut self.environment.state, node_type)
-    }
-
-    fn translate_lambda_type(&mut self, lambda_type: &LambdaType) -> TranslatorResult<CType> {
-        translate_lambda_type(&mut self.environment.state, lambda_type)
     }
 
     fn translate_constant_value(&self, value: ConstantValue) -> TranslatorResult<CExpression> {
@@ -187,7 +174,7 @@ impl Translator {
             .state
             .variables()
             .iter()
-            .map(|variable| CExpression::NamedReference(variable.name().to_string()))
+            .map(|variable| CExpression::NamedReference(variable.name.to_string()))
             .collect::<Arguments>();
         let parameters = self
             .environment
@@ -195,10 +182,7 @@ impl Translator {
             .variables()
             .iter()
             .map(|variable| {
-                FunctionParameter::new(
-                    variable.variable_type().clone(),
-                    variable.name().to_string(),
-                )
+                FunctionParameter::new(variable.variable_type.clone(), variable.name.to_string())
             })
             .collect::<Parameters>();
         self.environment.state.add_function(
@@ -233,7 +217,7 @@ impl Translator {
             .state
             .variables()
             .iter()
-            .map(|variable| CExpression::NamedReference(variable.name().to_string()))
+            .map(|variable| CExpression::NamedReference(variable.name.clone()))
             .collect::<Arguments>();
         let parameters = self
             .environment
@@ -241,10 +225,7 @@ impl Translator {
             .variables()
             .iter()
             .map(|variable| {
-                FunctionParameter::new(
-                    variable.variable_type().clone(),
-                    variable.name().to_string(),
-                )
+                FunctionParameter::new(variable.variable_type.clone(), variable.name.clone())
             })
             .collect::<Parameters>();
         self.environment.state.add_function(

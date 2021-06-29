@@ -22,8 +22,10 @@
  * SOFTWARE.
  */
 
-use std::borrow::Cow;
-
+use crate::translator;
+use crate::translator::state::TranslationState;
+use crate::translator::Translator;
+use brucket_analyzer::type_analyzer::{Environment, TypeAnalyzer};
 use brucket_ast::ast::ast_type::{LambdaType, Type};
 use brucket_ast::ast::path::Path;
 use brucket_ast::lexer::Lexer;
@@ -39,19 +41,11 @@ use c_generator::syntax::function::{
 };
 use c_generator::syntax::instruction::Instruction;
 use c_generator::syntax::module::{Module, ModuleMember, ModuleMembers};
+use derive_more::Constructor;
+use std::borrow::Cow;
 
-use crate::translator;
-use crate::translator::state::TranslationState;
-use crate::translator::Translator;
-use brucket_analyzer::type_analyzer::{Environment, TypeAnalyzer};
-
+#[derive(Default, Constructor)]
 pub struct Transpiler;
-
-impl Default for Transpiler {
-    fn default() -> Self {
-        Self {}
-    }
-}
 
 impl Transpiler {
     pub fn transpile(&self, syntax: Cow<str>) -> GeneratorResult {

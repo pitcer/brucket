@@ -25,8 +25,9 @@
 use crate::ast::ast_type::Type;
 use crate::ast::lambda::{Lambda, Parameter};
 use crate::ast::{NodeId, Visibility};
+use derive_more::{Constructor, IsVariant};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Function {
     pub node_id: NodeId,
     pub visibility: Visibility,
@@ -35,25 +36,7 @@ pub struct Function {
     pub body: Lambda,
 }
 
-impl Function {
-    pub fn new(
-        node_id: NodeId,
-        visibility: Visibility,
-        application_strategy: ApplicationStrategy,
-        name: String,
-        body: Lambda,
-    ) -> Self {
-        Function {
-            node_id,
-            visibility,
-            application_strategy,
-            name,
-            body,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct InternalFunction {
     pub node_id: NodeId,
     pub visibility: Visibility,
@@ -63,38 +46,8 @@ pub struct InternalFunction {
     pub return_type: Type,
 }
 
-impl InternalFunction {
-    pub fn new(
-        node_id: NodeId,
-        visibility: Visibility,
-        application_strategy: ApplicationStrategy,
-        name: String,
-        parameters: Vec<Parameter>,
-        return_type: Type,
-    ) -> Self {
-        InternalFunction {
-            node_id,
-            visibility,
-            application_strategy,
-            name,
-            parameters,
-            return_type,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, IsVariant)]
 pub enum ApplicationStrategy {
     Eager,
     Lazy,
-}
-
-impl ApplicationStrategy {
-    pub fn is_eager(&self) -> bool {
-        matches!(self, ApplicationStrategy::Eager)
-    }
-
-    pub fn is_lazy(&self) -> bool {
-        matches!(self, ApplicationStrategy::Lazy)
-    }
 }

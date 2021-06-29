@@ -8,3 +8,8 @@ edition = "2018"
 brucket-ast = { path = "../brucket-ast" }
 brucket-analyzer = { path = "../brucket-analyzer" }
 maplit = "1.0.2"
+
+[dependencies.derive_more]
+version = "0.99.14"
+default-features = false
+features = ["constructor"]

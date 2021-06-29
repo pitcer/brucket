@@ -24,17 +24,12 @@
 
 use crate::generator::{GeneratorError, GeneratorResult, GeneratorState, IndentedGenerator};
 use crate::syntax::instruction::VariableDeclaration;
+use derive_more::Constructor;
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct CStruct {
     name: String,
     fields: Fields,
-}
-
-impl CStruct {
-    pub fn new(name: String, fields: Fields) -> Self {
-        CStruct { name, fields }
-    }
 }
 
 impl IndentedGenerator for CStruct {
@@ -66,10 +61,11 @@ impl IndentedGenerator for Fields {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::syntax::c_type::{CPrimitiveType, CType};
     use crate::syntax::modifiers::Modifier;
     use crate::syntax::TestResult;
+
+    use super::*;
 
     #[test]
     fn test_generate_fields() -> TestResult {

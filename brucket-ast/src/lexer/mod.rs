@@ -22,21 +22,24 @@
  * SOFTWARE.
  */
 
+use crate::token::{
+    Boolean, Keyword, Modifier, Number, Operator, Parenthesis, PrimitiveType, Token,
+};
+use derive_more::Constructor;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::option::Option::Some;
 use std::str::Chars;
 
-use crate::token::{
-    Boolean, Keyword, Modifier, Number, Operator, Parenthesis, PrimitiveType, Token,
-};
-use std::borrow::Cow;
-
 #[cfg(test)]
 mod test;
 
+type SymbolMap = HashMap<&'static str, Token>;
+
+#[derive(Constructor)]
 pub struct Lexer {
-    symbol_map: HashMap<&'static str, Token>,
+    symbol_map: SymbolMap,
 }
 
 trait LexerCharacter {
@@ -124,7 +127,7 @@ impl Default for Lexer {
             "any" => Token::PrimitiveType(PrimitiveType::Any),
             "uni" => Token::PrimitiveType(PrimitiveType::Unit)
         };
-        Self { symbol_map }
+        Self::new(symbol_map)
     }
 }
 

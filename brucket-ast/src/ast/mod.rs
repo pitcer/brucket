@@ -22,15 +22,14 @@
  * SOFTWARE.
  */
 
-use std::fmt::{Debug, Display, Formatter};
-
-use ast_type::Type;
-use constant_value::ConstantValue;
-use function::InternalFunction;
-use path::Path;
-
 use crate::ast::function::Function;
 use crate::ast::lambda::Lambda;
+use ast_type::Type;
+use constant_value::ConstantValue;
+use derive_more::{Constructor, Display, IsVariant};
+use function::InternalFunction;
+use path::Path;
+use std::fmt::Debug;
 
 pub mod ast_type;
 pub mod constant_value;
@@ -52,14 +51,8 @@ pub enum Node {
     Module(Module),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Constructor, Display)]
 pub struct NodeId(pub u64);
-
-impl Display for NodeId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 pub trait NodeIdHolder {
     fn node_id(&self) -> NodeId;
@@ -103,36 +96,20 @@ impl_node_id_holder!(InternalFunction);
 impl_node_id_holder!(Constant);
 impl_node_id_holder!(Module);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Identifier {
     pub node_id: NodeId,
     pub path: Path,
 }
 
-impl Identifier {
-    pub fn new(node_id: NodeId, path: Path) -> Self {
-        Identifier { node_id, path }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Application {
     pub node_id: NodeId,
     pub identifier: Box<Node>,
     pub arguments: Vec<Node>,
 }
 
-impl Application {
-    pub fn new(node_id: NodeId, identifier: Box<Node>, arguments: Vec<Node>) -> Self {
-        Application {
-            node_id,
-            identifier,
-            arguments,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Let {
     pub node_id: NodeId,
     pub name: String,
@@ -141,25 +118,7 @@ pub struct Let {
     pub then: Box<Node>,
 }
 
-impl Let {
-    pub fn new(
-        node_id: NodeId,
-        name: String,
-        value_type: Type,
-        value: Box<Node>,
-        then: Box<Node>,
-    ) -> Self {
-        Let {
-            node_id,
-            name,
-            value_type,
-            value,
-            then,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct If {
     pub node_id: NodeId,
     pub condition: Box<Node>,
@@ -167,23 +126,7 @@ pub struct If {
     pub if_false: Box<Node>,
 }
 
-impl If {
-    pub fn new(
-        node_id: NodeId,
-        condition: Box<Node>,
-        if_true: Box<Node>,
-        if_false: Box<Node>,
-    ) -> Self {
-        If {
-            node_id,
-            condition,
-            if_true,
-            if_false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Constant {
     pub node_id: NodeId,
     pub visibility: Visibility,
@@ -191,34 +134,13 @@ pub struct Constant {
     pub value: Box<Node>,
 }
 
-impl Constant {
-    pub fn new(node_id: NodeId, visibility: Visibility, name: String, value: Box<Node>) -> Self {
-        Constant {
-            node_id,
-            visibility,
-            name,
-            value,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, IsVariant)]
 pub enum Visibility {
     Public,
     Private,
 }
 
-impl Visibility {
-    pub fn is_public(&self) -> bool {
-        matches!(self, Visibility::Public)
-    }
-
-    pub fn is_private(&self) -> bool {
-        matches!(self, Visibility::Private)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Module {
     pub node_id: NodeId,
     pub is_static: bool,
@@ -226,24 +148,4 @@ pub struct Module {
     pub functions: Vec<Function>,
     pub internal_functions: Vec<InternalFunction>,
     pub constants: Vec<Constant>,
-}
-
-impl Module {
-    pub fn new(
-        node_id: NodeId,
-        is_static: bool,
-        identifier: String,
-        functions: Vec<Function>,
-        internal_functions: Vec<InternalFunction>,
-        constants: Vec<Constant>,
-    ) -> Self {
-        Module {
-            node_id,
-            is_static,
-            identifier,
-            functions,
-            internal_functions,
-            constants,
-        }
-    }
 }

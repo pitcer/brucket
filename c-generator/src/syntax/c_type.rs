@@ -23,6 +23,7 @@
  */
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use derive_more::Constructor;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CType {
@@ -39,7 +40,7 @@ impl Generator for CType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Constructor)]
 pub struct FunctionPointer {
     pub return_type: CType,
     pub name: String,
@@ -54,16 +55,6 @@ impl Generator for FunctionPointer {
             self.name,
             self.parameters_types.generate()?
         ))
-    }
-}
-
-impl FunctionPointer {
-    pub fn new(return_type: CType, name: String, parameters_types: Types) -> Self {
-        Self {
-            return_type,
-            name,
-            parameters_types,
-        }
     }
 }
 
@@ -105,8 +96,9 @@ impl Generator for CPrimitiveType {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::syntax::TestResult;
+
+    use super::*;
 
     #[test]
     fn test_primitive_types_are_converted_to_c_syntax_correctly() -> TestResult {

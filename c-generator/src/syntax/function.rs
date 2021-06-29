@@ -27,16 +27,11 @@ use crate::generator::{
 };
 use crate::syntax::c_type::CType;
 use crate::syntax::instruction::Instructions;
+use derive_more::Constructor;
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct FunctionDeclaration {
     header: FunctionHeader,
-}
-
-impl FunctionDeclaration {
-    pub fn new(header: FunctionHeader) -> Self {
-        Self { header }
-    }
 }
 
 impl IndentedGenerator for FunctionDeclaration {
@@ -45,16 +40,10 @@ impl IndentedGenerator for FunctionDeclaration {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Constructor)]
 pub struct FunctionDefinition {
     header: FunctionHeader,
     body: Instructions,
-}
-
-impl FunctionDefinition {
-    pub fn new(header: FunctionHeader, body: Instructions) -> Self {
-        Self { header, body }
-    }
 }
 
 impl IndentedGenerator for FunctionDefinition {
@@ -72,21 +61,11 @@ impl IndentedGenerator for FunctionDefinition {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Constructor)]
 pub struct FunctionHeader {
     return_type: CType,
     name: String,
     parameters: Parameters,
-}
-
-impl FunctionHeader {
-    pub fn new(return_type: CType, name: String, parameters: Parameters) -> Self {
-        Self {
-            return_type,
-            name,
-            parameters,
-        }
-    }
 }
 
 impl Generator for FunctionHeader {
@@ -112,19 +91,10 @@ impl Generator for Parameters {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Constructor)]
 pub struct FunctionParameter {
     parameter_type: CType,
     name: String,
-}
-
-impl FunctionParameter {
-    pub fn new(parameter_type: CType, name: String) -> Self {
-        Self {
-            parameter_type,
-            name,
-        }
-    }
 }
 
 impl Generator for FunctionParameter {
@@ -135,12 +105,12 @@ impl Generator for FunctionParameter {
 
 #[cfg(test)]
 mod test {
+    use crate::syntax::c_type::CPrimitiveType;
     use crate::syntax::expression::CExpression;
     use crate::syntax::instruction::Instruction;
     use crate::syntax::TestResult;
 
     use super::*;
-    use crate::syntax::c_type::CPrimitiveType;
 
     #[test]
     fn test_function_parameter_is_converted_to_c_syntax_correctly() -> TestResult {

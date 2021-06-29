@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use derive_more::Constructor;
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
@@ -36,22 +37,12 @@ pub trait IndentedGenerator {
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult;
 }
 
+#[derive(Default, Constructor)]
 pub struct GeneratorState {
     pub indentation: Indentation,
 }
 
-impl Default for GeneratorState {
-    fn default() -> Self {
-        Self::new(Indentation::default())
-    }
-}
-
-impl GeneratorState {
-    pub fn new(indentation: Indentation) -> Self {
-        GeneratorState { indentation }
-    }
-}
-
+#[derive(Constructor)]
 pub struct Indentation {
     character: Cow<'static, str>,
     level: usize,
@@ -64,10 +55,6 @@ impl Default for Indentation {
 }
 
 impl Indentation {
-    pub fn new(character: Cow<'static, str>, level: usize) -> Self {
-        Indentation { character, level }
-    }
-
     pub fn to_incremented(&self) -> Indentation {
         let character = self.character.clone();
         Indentation::new(character, self.level + 1)

@@ -22,25 +22,24 @@
  * SOFTWARE.
  */
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-
-use brucket_ast::lexer::Lexer;
-use brucket_ast::parser::Parser;
-
 use crate::evaluator::environment::Environment;
 use crate::evaluator::Evaluator;
 use crate::value::Value;
 use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
 use brucket_ast::ast::Node;
+use brucket_ast::lexer::Lexer;
+use brucket_ast::parser::Parser;
+use derive_more::Constructor;
+use std::borrow::Cow;
+use std::collections::HashMap;
 
 #[cfg(test)]
 mod test;
 
 pub type ModuleEnvironment = HashMap<String, Environment>;
-
 type ValueResult = Result<Value, Cow<'static, str>>;
 
+#[derive(Default, Constructor)]
 pub struct Interpreter {
     lexer: Lexer,
     parser: Parser,
@@ -48,37 +47,13 @@ pub struct Interpreter {
     evaluator: Evaluator,
 }
 
-impl Default for Interpreter {
-    fn default() -> Self {
-        let lexer = Lexer::default();
-        let parser = Parser::default();
-        let variables_analyzer = VariablesAnalyzer::default();
-        let evaluator = Evaluator::default();
-        Interpreter::new(lexer, parser, variables_analyzer, evaluator)
-    }
-}
-
 impl Interpreter {
-    fn new(
-        lexer: Lexer,
-        parser: Parser,
-        variables_analyzer: VariablesAnalyzer,
-        evaluator: Evaluator,
-    ) -> Self {
-        Self {
-            lexer,
-            parser,
-            variables_analyzer,
-            evaluator,
-        }
-    }
-
     pub fn interpret_with_modules(
         &mut self,
         endpoint_syntax: Cow<str>,
         modules_syntax: Vec<Cow<str>>,
     ) -> ValueResult {
-        let static_module_environment = Environment::new();
+        let static_module_environment = Environment::default();
         let mut module_environment = ModuleEnvironment::new();
         for module_syntax in modules_syntax {
             let result = self.interpret_with_module_environment(
@@ -124,7 +99,7 @@ impl Interpreter {
 
     pub fn interpret(&mut self, syntax: Cow<str>) -> ValueResult {
         let module_environment = ModuleEnvironment::new();
-        let static_module_environment = Environment::new();
+        let static_module_environment = Environment::default();
         self.interpret_with_module_environment(
             syntax,
             &static_module_environment,

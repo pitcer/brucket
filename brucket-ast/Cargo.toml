@@ -6,3 +6,8 @@ edition = "2018"
 
 [dependencies]
 maplit = "1.0.2"
+
+[dependencies.derive_more]
+version = "0.99.14"
+default-features = false
+features = ["constructor", "is_variant", "display"]
