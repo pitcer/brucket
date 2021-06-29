@@ -216,6 +216,7 @@ impl Evaluator {
         ))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn evaluate_let(
         &mut self,
         identifier: &str,
@@ -257,6 +258,7 @@ impl Evaluator {
         result
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn evaluate_if(
         &mut self,
         condition: &Node,
@@ -425,6 +427,7 @@ impl Evaluator {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn evaluate_closure_application(
         &mut self,
         application_strategy: ApplicationStrategy,

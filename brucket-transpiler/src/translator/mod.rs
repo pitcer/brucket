@@ -268,22 +268,22 @@ impl Translator {
         Ok(FunctionParameter::new(parameter_type, parameter.name))
     }
 
-    fn translate_function(&self, function: Function) -> TranslatorResult<CExpression> {
+    fn translate_function(&self, _function: Function) -> TranslatorResult<CExpression> {
         unimplemented!("Function#translate()")
     }
 
     fn translate_internal_function(
         &self,
-        function: InternalFunction,
+        _function: InternalFunction,
     ) -> TranslatorResult<CExpression> {
         unimplemented!("InternalFunction#translate()")
     }
 
-    fn translate_constant(&self, constant: Constant) -> TranslatorResult<CExpression> {
+    fn translate_constant(&self, _constant: Constant) -> TranslatorResult<CExpression> {
         unimplemented!("Constant#translate()")
     }
 
-    fn translate_module(&self, module: Module) -> TranslatorResult<CExpression> {
+    fn translate_module(&self, _module: Module) -> TranslatorResult<CExpression> {
         unimplemented!("Module#translate()")
     }
 }
