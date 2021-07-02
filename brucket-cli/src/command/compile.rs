@@ -31,7 +31,7 @@ use std::io;
 #[derive(Clap)]
 #[clap(
     about = "Compiles Brucket code",
-    aliases = &["comp", "transpile"]
+    aliases = &["transpile"]
 )]
 pub struct Compile {}
 
@@ -42,7 +42,7 @@ impl Execute for Compile {
             .map_err(|error| format!("Cannot read syntax from standard input: {}", error))?;
         let transpiler = Transpiler::default();
         let transpiled = transpiler
-            .transpile(syntax.into())
+            .transpile(&syntax)
             .map_err(|error| format!("Cannot transpile the given syntax: {}", error))?;
         println!("{}", transpiled);
         Ok(())

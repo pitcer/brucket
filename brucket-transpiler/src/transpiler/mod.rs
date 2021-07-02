@@ -42,13 +42,12 @@ use c_generator::syntax::function::{
 use c_generator::syntax::instruction::Instruction;
 use c_generator::syntax::module::{Module, ModuleMember, ModuleMembers};
 use derive_more::Constructor;
-use std::borrow::Cow;
 
 #[derive(Default, Constructor)]
 pub struct Transpiler;
 
 impl Transpiler {
-    pub fn transpile(&self, syntax: Cow<str>) -> GeneratorResult {
+    pub fn transpile(&self, syntax: &str) -> GeneratorResult {
         let lexer = Lexer::default();
         let mut parser = Parser::default();
         let tokens = lexer.tokenize(syntax)?;

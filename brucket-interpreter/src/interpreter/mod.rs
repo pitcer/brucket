@@ -48,8 +48,8 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn interpret_with_modules(
         &mut self,
-        endpoint_syntax: Cow<str>,
-        modules_syntax: Vec<Cow<str>>,
+        endpoint_syntax: &str,
+        modules_syntax: Vec<&str>,
     ) -> ValueResult {
         for module_syntax in modules_syntax {
             let result = self.interpret_with_module_environment(module_syntax)?;
@@ -73,18 +73,18 @@ impl Interpreter {
         self.interpret_with_module_environment(endpoint_syntax)
     }
 
-    fn interpret_with_module_environment(&mut self, syntax: Cow<str>) -> ValueResult {
+    fn interpret_with_module_environment(&mut self, syntax: &str) -> ValueResult {
         let node = self.parse_syntax(syntax)?;
         let (_, variables) = self.variables_analyzer.analyze_variables(&node)?;
         let state = EvaluatorState::new(&variables);
         self.evaluator.evaluate(&node, &state)
     }
 
-    pub fn interpret(&mut self, syntax: Cow<str>) -> ValueResult {
+    pub fn interpret(&mut self, syntax: &str) -> ValueResult {
         self.interpret_with_module_environment(syntax)
     }
 
-    fn parse_syntax(&mut self, syntax: Cow<str>) -> Result<Node, Cow<'static, str>> {
+    fn parse_syntax(&mut self, syntax: &str) -> Result<Node, Cow<'static, str>> {
         let tokens = self.lexer.tokenize(syntax)?;
         self.parser.parse(tokens)
     }
@@ -107,18 +107,22 @@ impl Interpreter {
             .collect::<Vec<_>>();
         paths.sort_by(|first, second| first.cmp(second).reverse());
         use std::io::Read;
-        let mut modules_vec: Vec<Cow<str>> = Vec::new();
+        let mut modules_vec = Vec::new();
         for path in paths {
             let mut library_file = std::fs::File::open(path).expect("Cannot open library file");
             let mut library_syntax = String::new();
             library_file
                 .read_to_string(&mut library_syntax)
                 .expect("Cannot read library file");
-            modules_vec.push(library_syntax.into());
+            modules_vec.push(library_syntax);
         }
+        let mut modules_vec = modules_vec
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<&str>>();
         for module in modules {
-            modules_vec.push(module.into())
+            modules_vec.push(module);
         }
-        self.interpret_with_modules(syntax.into(), modules_vec)
+        self.interpret_with_modules(syntax, modules_vec)
     }
 }

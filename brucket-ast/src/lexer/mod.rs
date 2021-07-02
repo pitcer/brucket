@@ -132,7 +132,7 @@ impl Default for Lexer {
 }
 
 impl Lexer {
-    pub fn tokenize(&self, syntax: Cow<str>) -> Result<Vec<Token>, TokenError> {
+    pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, TokenError> {
         let mut result = Vec::new();
         let mut characters = syntax.chars().peekable();
         while let Some(current) = characters.next() {

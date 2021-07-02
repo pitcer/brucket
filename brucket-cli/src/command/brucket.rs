@@ -30,10 +30,14 @@ use clap::Clap;
 
 #[derive(Clap)]
 #[clap(
-    name = "brucket",
     version = "0.1.0",
     about = "Brucket command line interface",
-    global_setting = AppSettings::ColoredHelp
+    setting = AppSettings::DisableHelpSubcommand,
+    setting = AppSettings::InferSubcommands,
+    setting = AppSettings::SubcommandRequiredElseHelp,
+    global_setting = AppSettings::ColoredHelp,
+    global_setting = AppSettings::UnifiedHelpMessage,
+    global_setting = AppSettings::VersionlessSubcommands
 )]
 pub enum Brucket {
     Interpret(Interpret),
