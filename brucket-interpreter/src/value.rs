@@ -28,6 +28,8 @@ use brucket_ast::ast::function::ApplicationStrategy;
 use brucket_ast::ast::lambda::Parameter;
 use brucket_ast::ast::Node;
 use derive_more::Constructor;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -44,10 +46,37 @@ pub enum Value {
     Module(bool, String, Environment),
 }
 
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Unit => write!(f, "()"),
+            Value::Null => write!(f, "null"),
+            Value::Numeric(numeric) => numeric.fmt(f),
+            Value::Textual(text) => write!(f, "\"{}\"", text),
+            Value::Boolean(boolean) => write!(f, "{}", boolean),
+            Value::Pair(left, right) => write!(f, "({}, {})", left, right),
+            Value::Closure(_) => write!(f, "(<Closure>)"),
+            Value::FunctionClosure(_, _) => write!(f, "(<Closure>)"),
+            Value::InternalFunctionClosure(_) => write!(f, "(<Closure>)"),
+            Value::Thunk(_, _) => write!(f, "(<Thunk>)"),
+            Value::Module(_, _, _) => write!(f, "(<Module>)"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Numeric {
     Integer(i32),
     FloatingPoint(f64),
+}
+
+impl Display for Numeric {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Numeric::Integer(number) => write!(f, "{}", number),
+            Numeric::FloatingPoint(number) => write!(f, "{}", number),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Constructor)]
