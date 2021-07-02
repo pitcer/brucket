@@ -22,36 +22,29 @@
  * SOFTWARE.
  */
 
-#![forbid(unsafe_code)]
+use crate::command;
+use crate::command::{CommandResult, Execute};
+use brucket_transpiler::transpiler::Transpiler;
+use clap::Clap;
+use std::io;
 
-use brucket_interpreter::interpreter::Interpreter;
-use std::fs::File;
-use std::io::Read;
-use std::{env, io};
+#[derive(Clap)]
+#[clap(
+    about = "Compiles Brucket code",
+    aliases = &["comp", "transpile"]
+)]
+pub struct Compile {}
 
-fn main() {
-    let mut stdin = io::stdin();
-    let input_syntax = read(&mut stdin).expect("Cannot read syntax from stdin");
-    let mut args = env::args();
-    args.next();
-    let modules = args
-        .map(|argument| {
-            let mut file =
-                File::open(&argument).unwrap_or_else(|_| panic!("Cannot open file {}", argument));
-            read(&mut file)
-                .unwrap_or_else(|_| panic!("Cannot read file {}", argument))
-                .into()
-        })
-        .collect();
-    let mut interpreter = Interpreter::default();
-    let result = interpreter
-        .interpret_with_modules(input_syntax.into(), modules)
-        .expect("Cannot interpret input program");
-    println!("Result: {:?}", result);
-}
-
-fn read(input: &mut impl Read) -> io::Result<String> {
-    let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
+impl Execute for Compile {
+    fn execute(self) -> CommandResult {
+        let mut standard_input = io::stdin();
+        let syntax = command::read(&mut standard_input)
+            .map_err(|error| format!("Cannot read syntax from standard input: {}", error))?;
+        let transpiler = Transpiler::default();
+        let transpiled = transpiler
+            .transpile(syntax.into())
+            .map_err(|error| format!("Cannot transpile the given syntax: {}", error))?;
+        println!("{}", transpiled);
+        Ok(())
+    }
 }

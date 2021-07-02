@@ -22,9 +22,29 @@
  * SOFTWARE.
  */
 
-#![forbid(unsafe_code)]
+use crate::command::compile::Compile;
+use crate::command::interpret::Interpret;
+use crate::command::{CommandResult, Execute};
+use clap::AppSettings;
+use clap::Clap;
 
-#[macro_use]
-mod evaluator;
-pub mod interpreter;
-pub mod value;
+#[derive(Clap)]
+#[clap(
+    name = "brucket",
+    version = "0.1.0",
+    about = "Brucket command line interface",
+    global_setting = AppSettings::ColoredHelp
+)]
+pub enum Brucket {
+    Interpret(Interpret),
+    Compile(Compile),
+}
+
+impl Execute for Brucket {
+    fn execute(self) -> CommandResult {
+        match self {
+            Brucket::Interpret(interpret) => interpret.execute(),
+            Brucket::Compile(compile) => compile.execute(),
+        }
+    }
+}

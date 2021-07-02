@@ -1,0 +1,10 @@
+[package]
+name = "brucket-cli"
+version = "0.1.0"
+authors = ["Piotr Dobiech"]
+edition = "2018"
+
+[dependencies]
+brucket-interpreter = { path = "../brucket-interpreter" }
+brucket-transpiler = { path = "../brucket-transpiler" }
+clap = "3.0.0-beta.2"

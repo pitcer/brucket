@@ -22,9 +22,13 @@
  * SOFTWARE.
  */
 
-#![forbid(unsafe_code)]
+use crate::command::brucket::Brucket;
+use crate::command::{CommandResult, Execute};
+use clap::Clap;
 
-#[macro_use]
-mod evaluator;
-pub mod interpreter;
-pub mod value;
+mod command;
+
+fn main() -> CommandResult {
+    let brucket = Brucket::parse();
+    brucket.execute()
+}

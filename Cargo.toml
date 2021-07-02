@@ -2,6 +2,7 @@
 members = [
     "brucket-ast",
     "brucket-analyzer",
+    "brucket-cli",
     "brucket-interpreter",
     "brucket-transpiler",
     "c-generator"

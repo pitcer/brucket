@@ -22,26 +22,22 @@
  * SOFTWARE.
  */
 
-#![forbid(unsafe_code)]
-
-use crate::transpiler::Transpiler;
+use std::borrow::Cow;
 use std::io;
 use std::io::Read;
 
-mod translator;
-mod transpiler;
+pub mod brucket;
+pub mod compile;
+pub mod interpret;
 
-fn main() {
-    let mut standard_input = io::stdin();
-    let syntax = read(&mut standard_input).expect("Cannot read syntax from standard input");
-    let transpiler = Transpiler::default();
-    let transpiled = transpiler
-        .transpile(syntax.into())
-        .expect("Cannot transpile the given syntax");
-    println!("{}", transpiled);
+pub type CommandResult = Result<(), CommandError>;
+type CommandError = Cow<'static, str>;
+
+pub trait Execute {
+    fn execute(self) -> CommandResult;
 }
 
-fn read(input: &mut impl Read) -> io::Result<String> {
+pub fn read(input: &mut impl Read) -> io::Result<String> {
     let mut result = String::new();
     input.read_to_string(&mut result)?;
     Ok(result)

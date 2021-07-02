@@ -24,7 +24,5 @@
 
 #![forbid(unsafe_code)]
 
-#[macro_use]
-mod evaluator;
-pub mod interpreter;
-pub mod value;
+pub mod translator;
+pub mod transpiler;
