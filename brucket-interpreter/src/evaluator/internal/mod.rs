@@ -47,7 +47,7 @@ macro_rules! internal_environment_map {
 pub type InternalFunction = fn(HashMap<String, Value>) -> ValueResult;
 pub type InternalEnvironmentMap = HashMap<&'static str, InternalFunction>;
 
-#[derive(Constructor)]
+#[derive(Clone, Constructor)]
 pub struct InternalEnvironment {
     map: InternalEnvironmentMap,
 }

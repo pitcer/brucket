@@ -24,15 +24,14 @@
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalEnvironment;
-use crate::interpreter::ModuleEnvironment;
 use crate::value::{Closure, InternalFunctionClosure, Numeric, Value};
 use brucket_analyzer::variables_analyzer::{Variables, VariablesError};
 use brucket_ast::ast::constant_value::{Boolean, ConstantVariant, Number};
 use brucket_ast::ast::function::{ApplicationStrategy, InternalFunction};
 use brucket_ast::ast::lambda::{Arity, Lambda};
 use brucket_ast::ast::path::Path;
-use brucket_ast::ast::Module;
-use brucket_ast::ast::Node;
+use brucket_ast::ast::{Application, If, Node};
+use brucket_ast::ast::{Let, Module};
 use derive_more::Constructor;
 use std::borrow::{Borrow, Cow};
 use std::collections::{HashMap, HashSet};
@@ -43,159 +42,113 @@ use std::slice::Iter;
 #[macro_use]
 pub mod environment;
 pub mod internal;
-
 #[cfg(test)]
 mod test;
 
+pub type ModuleEnvironment = HashMap<String, Environment>;
 type ValueError = Cow<'static, str>;
 type ValueResult = Result<Value, ValueError>;
 
-#[derive(Default, Constructor)]
+#[derive(Constructor)]
+pub struct EvaluatorState<'a> {
+    pub variables: &'a Variables,
+}
+
+#[derive(Clone, Default, Constructor)]
 pub struct Evaluator {
-    internal_environment: InternalEnvironment,
+    pub internal_environment: InternalEnvironment,
+    pub static_module_environment: Environment,
+    pub module_environment: ModuleEnvironment,
 }
 
 impl Evaluator {
     #[cfg(test)]
-    fn evaluate(&mut self, expression: &Node) -> ValueResult {
+    fn evaluate_with_default_state(&mut self, node: &Node) -> ValueResult {
         let variables = Variables::default();
-        let module_environment = ModuleEnvironment::default();
-        let static_module_environment = Environment::default();
-        self.evaluate_with_module_environment(
-            expression,
-            &variables,
-            &static_module_environment,
-            &module_environment,
-        )
+        let state = EvaluatorState::new(&variables);
+        self.evaluate(node, &state)
     }
 
     #[cfg(test)]
-    fn evaluate_with_variables(&mut self, variables: Variables, expression: &Node) -> ValueResult {
-        let module_environment = ModuleEnvironment::default();
-        let static_module_environment = Environment::default();
-        self.evaluate_with_module_environment(
-            expression,
-            &variables,
-            &static_module_environment,
-            &module_environment,
-        )
+    fn evaluate_with_variables(&mut self, variables: Variables, node: &Node) -> ValueResult {
+        let state = EvaluatorState::new(&variables);
+        self.evaluate(node, &state)
     }
 
-    pub fn evaluate_with_module_environment(
-        &mut self,
-        expression: &Node,
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
-    ) -> ValueResult {
+    pub fn evaluate(&mut self, node: &Node, state: &EvaluatorState) -> ValueResult {
         let environment = Environment::default();
-        self.evaluate_environment(
-            expression,
-            variables,
-            static_module_environment,
-            module_environment,
-            &environment,
-        )
+        self.evaluate_environment(node, &environment, state)
     }
 
     fn evaluate_environment(
         &mut self,
-        expression: &Node,
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
+        node: &Node,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
-        match expression {
-            Node::ConstantValue(value) => match &value.variant {
-                ConstantVariant::Unit => Ok(Value::Unit),
-                ConstantVariant::Null => Ok(Value::Null),
-                ConstantVariant::Numeric(value) => {
-                    let value = match value {
-                        Number::Integer(value) => Numeric::Integer(
-                            value
-                                .parse::<i32>()
-                                .map_err(|_| "Error while parsing to i32".to_string())?,
-                        ),
-                        Number::FloatingPoint(value) => Numeric::FloatingPoint(
-                            value
-                                .parse::<f64>()
-                                .map_err(|_| "Error while parsing to f64".to_string())?,
-                        ),
-                    };
-                    Ok(Value::Numeric(value))
-                }
-                ConstantVariant::Boolean(value) => match value {
-                    Boolean::True => Ok(Value::Boolean(true)),
-                    Boolean::False => Ok(Value::Boolean(false)),
-                },
-                ConstantVariant::String(value) => Ok(Value::Textual(value.clone())),
-            },
-            Node::Identifier(identifier) => Self::get_from_environment(
-                static_module_environment,
-                module_environment,
-                environment,
-                &identifier.path,
-            ),
-            Node::Application(application) => self.evaluate_application(
-                &application.identifier,
-                &application.arguments,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
-            Node::Let(let_expression) => self.evaluate_let(
-                &let_expression.name,
-                &let_expression.value,
-                &let_expression.then,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
-            Node::If(if_expression) => self.evaluate_if(
-                &if_expression.condition,
-                &*if_expression.if_true,
-                &*if_expression.if_false,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
-            Node::Lambda(lambda) => Ok(Value::Closure(Self::evaluate_lambda(
+        match node {
+            Node::ConstantValue(value) => self.evaluate_constant_value(&value.variant),
+            Node::Identifier(identifier) => {
+                self.get_from_environment(&identifier.path, environment, state)
+            }
+            Node::Application(application) => {
+                self.evaluate_application(application, environment, state)
+            }
+            Node::Let(let_node) => self.evaluate_let(let_node, environment, state),
+            Node::If(if_node) => self.evaluate_if(if_node, environment, state),
+            Node::Lambda(lambda) => Ok(Value::Closure(self.evaluate_lambda(
                 lambda,
-                variables,
                 environment,
+                state,
             )?)),
-            Node::Module(module) => self.evaluate_module(
-                module,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
+            Node::Module(module) => self.evaluate_module(module, environment, state),
             Node::Function(function) => Ok(Value::FunctionClosure(
                 function.application_strategy.clone(),
-                Self::evaluate_lambda(&function.body, variables, environment)?,
+                self.evaluate_lambda(&function.body, environment, state)?,
             )),
             Node::InternalFunction(internal_function) => {
-                self.evaluate_internal_function(environment, internal_function)
+                self.evaluate_internal_function(internal_function, environment)
             }
-            Node::Constant(constant) => self.evaluate_environment(
-                &constant.value,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-            ),
+            Node::Constant(constant) => {
+                self.evaluate_environment(&constant.value, environment, state)
+            }
+        }
+    }
+
+    fn evaluate_constant_value(&self, variant: &ConstantVariant) -> ValueResult {
+        match variant {
+            ConstantVariant::Unit => Ok(Value::Unit),
+            ConstantVariant::Null => Ok(Value::Null),
+            ConstantVariant::Numeric(value) => {
+                let value = self.evaluate_number(value)?;
+                Ok(Value::Numeric(value))
+            }
+            ConstantVariant::Boolean(value) => match value {
+                Boolean::True => Ok(Value::Boolean(true)),
+                Boolean::False => Ok(Value::Boolean(false)),
+            },
+            ConstantVariant::String(value) => Ok(Value::Textual(value.clone())),
+        }
+    }
+
+    fn evaluate_number(&self, value: &Number) -> Result<Numeric, ValueError> {
+        match value {
+            Number::Integer(value) => value
+                .parse::<i32>()
+                .map(Numeric::Integer)
+                .map_err(|_| Cow::from("Error while parsing to i32")),
+
+            Number::FloatingPoint(value) => value
+                .parse::<f64>()
+                .map(Numeric::FloatingPoint)
+                .map_err(|_| Cow::from("Error while parsing to f64")),
         }
     }
 
     fn evaluate_internal_function(
         &mut self,
-        environment: &Environment,
         internal_function: &InternalFunction,
+        environment: &Environment,
     ) -> ValueResult {
         let env = Environment::default();
         env.insert_all_weak(environment);
@@ -216,29 +169,20 @@ impl Evaluator {
         ))
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn evaluate_let(
         &mut self,
-        identifier: &str,
-        value: &Node,
-        then: &Node,
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
+        let_node: &Let,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
-        let evaluated_value = self.evaluate_environment(
-            value,
-            variables,
-            static_module_environment,
-            module_environment,
-            environment,
-        )?;
+        let value = &*let_node.value;
+        let evaluated_value = self.evaluate_environment(value, environment, state)?;
         let evaluated_value = Rc::new(evaluated_value);
-        let identifier = Path::Simple(identifier.to_string());
+        let name = &let_node.name;
+        let identifier = Path::Simple(name.to_owned());
         if let Node::Lambda(_) = value {
             if let Value::Closure(closure) = evaluated_value.borrow() {
-                let used_variables = &variables.get(value)?.used_variables;
+                let used_variables = &state.variables.get(value)?.used_variables;
                 if used_variables.contains(&identifier) {
                     let closure_environment = &closure.environment;
                     closure_environment
@@ -247,55 +191,39 @@ impl Evaluator {
             }
         }
         environment.insert(identifier.clone(), evaluated_value);
-        let result = self.evaluate_environment(
-            then,
-            variables,
-            static_module_environment,
-            module_environment,
-            environment,
-        );
+        let then = &let_node.then;
+        let result = self.evaluate_environment(then, environment, state);
         environment.remove(&identifier);
         result
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn evaluate_if(
         &mut self,
-        condition: &Node,
-        if_true_then: &Node,
-        if_false_then: &Node,
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
+        if_node: &If,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
-        let condition = self.evaluate_environment(
-            condition,
-            variables,
-            static_module_environment,
-            module_environment,
-            environment,
-        )?;
+        let condition = &*if_node.condition;
+        let condition = self.evaluate_environment(condition, environment, state)?;
         if let Value::Boolean(value) = condition {
-            let body = if value { if_true_then } else { if_false_then };
-            self.evaluate_environment(
-                body,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-            )
+            let body = if value {
+                &if_node.if_true
+            } else {
+                &if_node.if_false
+            };
+            self.evaluate_environment(body, environment, state)
         } else {
             Err(Cow::from("Invalid condition type"))
         }
     }
 
     fn evaluate_lambda(
+        &mut self,
         lambda: &Lambda,
-        variables: &Variables,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> Result<Closure, VariablesError> {
-        let environment = Self::get_optimized_lambda_environment(lambda, variables, environment)?;
+        let environment = self.get_optimized_lambda_environment(lambda, environment, state)?;
         Ok(Closure::new(
             lambda.parameters.clone(),
             lambda.body.clone(),
@@ -304,11 +232,12 @@ impl Evaluator {
     }
 
     fn get_optimized_lambda_environment(
+        &mut self,
         lambda: &Lambda,
-        variables: &Variables,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> Result<Environment, ValueError> {
-        let identifiers = &variables.get(lambda)?.used_variables;
+        let identifiers = &state.variables.get(lambda)?.used_variables;
         let new_env: Environment = identifiers
             .iter()
             .filter_map(|identifier| {
@@ -321,10 +250,10 @@ impl Evaluator {
     }
 
     fn get_from_environment(
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
-        environment: &Environment,
+        &self,
         path: &Path,
+        environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
         match path {
             Path::Simple(identifier) => {
@@ -335,8 +264,8 @@ impl Evaluator {
                     let value: &Value = &value;
                     Ok(value.clone())
                 } else {
-                    let value = static_module_environment.get(path).or_else(|| {
-                        static_module_environment
+                    let value = self.static_module_environment.get(path).or_else(|| {
+                        self.static_module_environment
                             .get_weak(path)
                             .and_then(|value| value.upgrade())
                     });
@@ -351,13 +280,12 @@ impl Evaluator {
             Path::Complex(path) => {
                 let first_path = path.path.get(0);
                 if let Some(first_path) = first_path {
-                    let module_env = module_environment.get(first_path);
+                    let module_env = self.module_environment.get(first_path);
                     if let Some(module_env) = module_env {
-                        Self::get_from_environment(
-                            static_module_environment,
-                            module_environment,
-                            module_env,
+                        self.get_from_environment(
                             &Path::Simple(path.identifier.clone()),
+                            module_env,
+                            state,
                         )
                     } else {
                         Err(Cow::from(format!("Undefined environment: {}", first_path)))
@@ -371,55 +299,35 @@ impl Evaluator {
 
     fn evaluate_application(
         &mut self,
-        identifier: &Node,
-        arguments: &[Node],
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
+        application: &Application,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
-        let identifier = self.evaluate_environment(
-            identifier,
-            variables,
-            static_module_environment,
-            module_environment,
-            environment,
-        )?;
+        let identifier = &*application.identifier;
+        let identifier = self.evaluate_environment(identifier, environment, state)?;
+        let arguments = &*application.arguments;
         match identifier {
             Value::Closure(closure) => self.evaluate_closure_application(
+                closure,
                 ApplicationStrategy::Eager,
                 arguments,
-                variables,
-                static_module_environment,
-                module_environment,
                 environment,
-                closure,
+                state,
             ),
             Value::FunctionClosure(application_strategy, closure) => self
                 .evaluate_closure_application(
+                    closure,
                     application_strategy,
                     arguments,
-                    variables,
-                    static_module_environment,
-                    module_environment,
                     environment,
-                    closure,
+                    state,
                 ),
-            Value::InternalFunctionClosure(closure) => self.evaluate_internal_closure_application(
-                arguments,
-                variables,
-                static_module_environment,
-                module_environment,
-                environment,
-                closure,
-            ),
-            Value::Thunk(body, environment) => self.evaluate_environment(
-                &body,
-                variables,
-                static_module_environment,
-                module_environment,
-                &environment,
-            ),
+            Value::InternalFunctionClosure(closure) => {
+                self.evaluate_internal_closure_application(closure, arguments, environment, state)
+            }
+            Value::Thunk(body, environment) => {
+                self.evaluate_environment(&body, &environment, state)
+            }
             _ => Err(Cow::from(format!(
                 "Invalid identifier type. Expected: Closure or Thunk, Actual: {:?}",
                 identifier
@@ -427,16 +335,13 @@ impl Evaluator {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn evaluate_closure_application(
         &mut self,
+        closure: Closure,
         application_strategy: ApplicationStrategy,
         arguments: &[Node],
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
         environment: &Environment,
-        closure: Closure,
+        state: &EvaluatorState,
     ) -> ValueResult {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
@@ -450,13 +355,7 @@ impl Evaluator {
                         .next()
                         .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
                     let argument = if application_strategy.is_eager() {
-                        self.evaluate_environment(
-                            argument,
-                            variables,
-                            static_module_environment,
-                            module_environment,
-                            environment,
-                        )
+                        self.evaluate_environment(argument, environment, state)
                     } else {
                         Ok(Value::Thunk(
                             Box::new(argument.clone()),
@@ -469,10 +368,8 @@ impl Evaluator {
                     let list = self.create_pair_list(
                         application_strategy,
                         arguments_iterator,
-                        variables,
-                        static_module_environment,
-                        module_environment,
                         environment,
+                        state,
                     )?;
                     closure_environment.insert(Path::Simple(name.clone()), Rc::new(list));
                     has_variadic_parameter = true;
@@ -489,13 +386,7 @@ impl Evaluator {
                 parameters_length, arguments_length
             )));
         }
-        let result = self.evaluate_environment(
-            &closure.body,
-            variables,
-            static_module_environment,
-            module_environment,
-            closure_environment,
-        );
+        let result = self.evaluate_environment(&closure.body, closure_environment, state);
         for parameter in parameters {
             let name = &parameter.name;
             closure_environment.remove(&Path::Simple(name.clone()));
@@ -505,12 +396,10 @@ impl Evaluator {
 
     fn evaluate_internal_closure_application(
         &mut self,
-        arguments: &[Node],
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
-        environment: &Environment,
         closure: InternalFunctionClosure,
+        arguments: &[Node],
+        environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
@@ -524,13 +413,7 @@ impl Evaluator {
                         .next()
                         .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
                     let argument = if closure.application_strategy.is_eager() {
-                        self.evaluate_environment(
-                            argument,
-                            variables,
-                            static_module_environment,
-                            module_environment,
-                            environment,
-                        )
+                        self.evaluate_environment(argument, environment, state)
                     } else {
                         Ok(Value::Thunk(
                             Box::new(argument.clone()),
@@ -543,10 +426,8 @@ impl Evaluator {
                     let list = self.create_pair_list(
                         closure.application_strategy,
                         arguments_iterator,
-                        variables,
-                        static_module_environment,
-                        module_environment,
                         environment,
+                        state,
                     )?;
                     closure_environment.insert(name.clone(), list);
                     has_variadic_parameter = true;
@@ -571,21 +452,13 @@ impl Evaluator {
         &mut self,
         application_strategy: ApplicationStrategy,
         arguments: Iter<Node>,
-        variables: &Variables,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
         let mut result = Value::Null;
         for argument in arguments.rev() {
             let argument = if application_strategy.is_eager() {
-                self.evaluate_environment(
-                    argument,
-                    variables,
-                    static_module_environment,
-                    module_environment,
-                    environment,
-                )
+                self.evaluate_environment(argument, environment, state)
             } else {
                 Ok(Value::Thunk(
                     Box::new(argument.clone()),
@@ -600,10 +473,8 @@ impl Evaluator {
     fn evaluate_module(
         &mut self,
         module: &Module,
-        variables: &Variables,
-        static_module_environment: &Environment,
-        global_module_environment: &ModuleEnvironment,
         environment: &Environment,
+        state: &EvaluatorState,
     ) -> ValueResult {
         let module_environment = Environment::default();
         let constants_environment = environment.clone();
@@ -615,14 +486,14 @@ impl Evaluator {
             let identifier = &function.name;
             let identifier_path = Path::Simple(identifier.clone());
             let lambda = &function.body;
-            let closure = Self::evaluate_lambda(lambda, variables, environment)?;
+            let closure = self.evaluate_lambda(lambda, environment, state)?;
             let closure = Value::FunctionClosure(application_strategy.clone(), closure);
             let closure = Rc::new(closure);
             if visibility.is_public() {
                 module_environment.insert(identifier_path.clone(), Rc::clone(&closure));
             }
             constants_environment.insert(identifier_path.clone(), Rc::clone(&closure));
-            let used_identifiers = &variables.get(lambda)?.used_variables;
+            let used_identifiers = &state.variables.get(lambda)?.used_variables;
             closures.push((
                 identifier_path.clone(),
                 Rc::clone(&closure),
@@ -636,7 +507,7 @@ impl Evaluator {
             let visibility = &internal_function.visibility;
             let identifier = &internal_function.name;
             let identifier_path = Path::Simple(identifier.clone());
-            let closure = self.evaluate_internal_function(environment, internal_function)?;
+            let closure = self.evaluate_internal_function(internal_function, environment)?;
             let closure = Rc::new(closure);
             if visibility.is_public() {
                 module_environment.insert(identifier_path.clone(), Rc::clone(&closure));
@@ -651,13 +522,7 @@ impl Evaluator {
             let identifier = &constant.name;
             let identifier_path = Path::Simple(identifier.clone());
             let value = &constant.value;
-            let value = self.evaluate_environment(
-                value,
-                variables,
-                static_module_environment,
-                global_module_environment,
-                &constants_environment,
-            )?;
+            let value = self.evaluate_environment(value, &constants_environment, state)?;
             let value = Rc::new(value);
             if visibility.is_public() {
                 module_environment.insert(identifier_path.clone(), Rc::clone(&value));

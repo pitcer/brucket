@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use brucket_analyzer::variables_analyzer::NodeVariables;
+use brucket_analyzer::variables_analyzer::{NodeVariables, Variables};
 use brucket_ast::ast::ast_type::Type;
 use brucket_ast::ast::constant_value::{Boolean, ConstantValue};
 use brucket_ast::ast::function::Function;
@@ -37,10 +37,11 @@ type TestResult = Result<(), ValueError>;
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate(&Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-    )))?;
+    let actual =
+        evaluator.evaluate_with_default_state(&Node::ConstantValue(ConstantValue::new(
+            NodeId(0),
+            ConstantVariant::Numeric(Number::Integer("42".to_string())),
+        )))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -49,10 +50,9 @@ fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
 fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Boolean(true);
-    let actual = evaluator.evaluate(&Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::Boolean(Boolean::True),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
+        ConstantValue::new(NodeId(0), ConstantVariant::Boolean(Boolean::True)),
+    ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -61,10 +61,9 @@ fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
 fn test_evaluated_string_expression_is_textual_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Textual("foobar".to_string());
-    let actual = evaluator.evaluate(&Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::String("foobar".to_string()),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
+        ConstantValue::new(NodeId(0), ConstantVariant::String("foobar".to_string())),
+    ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -73,10 +72,9 @@ fn test_evaluated_string_expression_is_textual_value() -> TestResult {
 fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Unit;
-    let actual = evaluator.evaluate(&Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::Unit,
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
+        ConstantValue::new(NodeId(0), ConstantVariant::Unit),
+    ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -85,10 +83,9 @@ fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
 fn test_evaluated_null_expression_is_null_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Null;
-    let actual = evaluator.evaluate(&Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::Null,
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
+        ConstantValue::new(NodeId(0), ConstantVariant::Null),
+    ))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -97,7 +94,7 @@ fn test_evaluated_null_expression_is_null_value() -> TestResult {
 fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate(&Node::Let(Let::new(
+    let actual = evaluator.evaluate_with_default_state(&Node::Let(Let::new(
         NodeId(0),
         "x".to_string(),
         Type::Any,
@@ -118,7 +115,7 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
 fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(40));
-    let actual = evaluator.evaluate(&Node::Let(Let::new(
+    let actual = evaluator.evaluate_with_default_state(&Node::Let(Let::new(
         NodeId(0),
         "x".to_string(),
         Type::Any,
@@ -148,7 +145,7 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
 fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(2));
-    let actual = evaluator.evaluate(&Node::Let(Let::new(
+    let actual = evaluator.evaluate_with_default_state(&Node::Let(Let::new(
         NodeId(0),
         "x".to_string(),
         Type::Any,
@@ -178,7 +175,7 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 fn test_evaluated_if_expression_has_correct_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate(&Node::If(If::new(
+    let actual = evaluator.evaluate_with_default_state(&Node::If(If::new(
         NodeId(0),
         Box::new(Node::ConstantValue(ConstantValue::new(
             NodeId(0),
@@ -875,7 +872,7 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
 fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Module(true, "foo".to_string(), Environment::default());
-    let actual = evaluator.evaluate(&Node::Module(Module::new(
+    let actual = evaluator.evaluate_with_default_state(&Node::Module(Module::new(
         NodeId(0),
         true,
         "foo".to_string(),

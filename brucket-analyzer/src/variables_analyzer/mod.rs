@@ -41,7 +41,7 @@ mod test;
 pub type VariablesError = Cow<'static, str>;
 pub type VariablesResult = Result<NodeVariables, VariablesError>;
 
-#[derive(Debug, PartialEq, Default, Constructor)]
+#[derive(Clone, Debug, PartialEq, Default, Constructor)]
 pub struct Variables(pub HashMap<NodeId, NodeVariables>);
 
 impl Variables {

@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-use crate::evaluator::environment::Environment;
+use crate::evaluator::EvaluatorState;
 use crate::evaluator::Evaluator;
 use crate::value::Value;
 use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
@@ -31,12 +31,10 @@ use brucket_ast::lexer::Lexer;
 use brucket_ast::parser::Parser;
 use derive_more::Constructor;
 use std::borrow::Cow;
-use std::collections::HashMap;
 
 #[cfg(test)]
 mod test;
 
-pub type ModuleEnvironment = HashMap<String, Environment>;
 type ValueResult = Result<Value, Cow<'static, str>>;
 
 #[derive(Default, Constructor)]
@@ -53,20 +51,18 @@ impl Interpreter {
         endpoint_syntax: Cow<str>,
         modules_syntax: Vec<Cow<str>>,
     ) -> ValueResult {
-        let static_module_environment = Environment::default();
-        let mut module_environment = ModuleEnvironment::new();
         for module_syntax in modules_syntax {
-            let result = self.interpret_with_module_environment(
-                module_syntax,
-                &static_module_environment,
-                &module_environment,
-            )?;
+            let result = self.interpret_with_module_environment(module_syntax)?;
             if let Value::Module(is_static, name, environment) = result {
                 if is_static {
-                    static_module_environment.insert_all(&environment);
-                    static_module_environment.insert_all_weak(&environment);
+                    self.evaluator
+                        .static_module_environment
+                        .insert_all(&environment);
+                    self.evaluator
+                        .static_module_environment
+                        .insert_all_weak(&environment);
                 } else {
-                    module_environment.insert(name, environment);
+                    self.evaluator.module_environment.insert(name, environment);
                 }
             } else {
                 return Err(Cow::from(
@@ -74,37 +70,18 @@ impl Interpreter {
                 ));
             }
         }
-        self.interpret_with_module_environment(
-            endpoint_syntax,
-            &static_module_environment,
-            &module_environment,
-        )
+        self.interpret_with_module_environment(endpoint_syntax)
     }
 
-    fn interpret_with_module_environment(
-        &mut self,
-        syntax: Cow<str>,
-        static_module_environment: &Environment,
-        module_environment: &ModuleEnvironment,
-    ) -> ValueResult {
+    fn interpret_with_module_environment(&mut self, syntax: Cow<str>) -> ValueResult {
         let node = self.parse_syntax(syntax)?;
         let (_, variables) = self.variables_analyzer.analyze_variables(&node)?;
-        self.evaluator.evaluate_with_module_environment(
-            &node,
-            &variables,
-            static_module_environment,
-            module_environment,
-        )
+        let state = EvaluatorState::new(&variables);
+        self.evaluator.evaluate(&node, &state)
     }
 
     pub fn interpret(&mut self, syntax: Cow<str>) -> ValueResult {
-        let module_environment = ModuleEnvironment::new();
-        let static_module_environment = Environment::default();
-        self.interpret_with_module_environment(
-            syntax,
-            &static_module_environment,
-            &module_environment,
-        )
+        self.interpret_with_module_environment(syntax)
     }
 
     fn parse_syntax(&mut self, syntax: Cow<str>) -> Result<Node, Cow<'static, str>> {

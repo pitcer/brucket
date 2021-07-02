@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use crate::evaluator::environment::Environment;
 use crate::value::Value;
 use crate::value::{Closure, Numeric};
 use brucket_ast::ast::ast_type::Type;
