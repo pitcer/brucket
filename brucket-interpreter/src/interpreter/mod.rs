@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-use crate::evaluator::EvaluatorState;
 use crate::evaluator::Evaluator;
+use crate::evaluator::EvaluatorState;
 use crate::value::Value;
 use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
 use brucket_ast::ast::Node;
