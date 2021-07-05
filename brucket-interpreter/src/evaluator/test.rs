@@ -522,7 +522,10 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(Node::ConstantValue(ConstantValue::new(NodeId(0),ConstantVariant::Numeric(Number::Integer("42".to_string()))))),
+                    Box::new(Node::ConstantValue(ConstantValue::new(
+                        NodeId(0),
+                        ConstantVariant::Numeric(Number::Integer("42".to_string()))
+                    ))),
                     Environment::default(),
             ))
         },
@@ -710,7 +713,10 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(Node::ConstantValue(ConstantValue::new(NodeId(0),ConstantVariant::Numeric(Number::Integer("42".to_string()))))),
+                    Box::new(Node::ConstantValue(ConstantValue::new(
+                        NodeId(0),
+                        ConstantVariant::Numeric(Number::Integer("42".to_string()))
+                    ))),
                     Environment::default(),
             )),
             "baar" => Value::Numeric(Numeric::Integer(42))

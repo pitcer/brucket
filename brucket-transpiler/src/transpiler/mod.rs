@@ -59,7 +59,7 @@ impl Transpiler {
         let translator_environment = translator::Environment::new(node_types, state);
         let mut translator = Translator::new(translator_environment);
         let expression = translator.translate(node)?;
-        let expression_members = translator.get_state().get_members();
+        let expression_members = translator.environment.state.all_members();
         let members = self.create_module_members(expression, expression_members);
         let module = Module::new(members);
         let generator_state = GeneratorState::default();

@@ -48,20 +48,16 @@ pub type TranslatorError = Cow<'static, str>;
 
 #[derive(Default, Constructor)]
 pub struct Environment {
-    types: NodeTypes,
-    state: TranslationState,
+    pub types: NodeTypes,
+    pub state: TranslationState,
 }
 
 #[derive(Default, Constructor)]
 pub struct Translator {
-    environment: Environment,
+    pub environment: Environment,
 }
 
 impl Translator {
-    pub fn get_state(&mut self) -> &mut TranslationState {
-        &mut self.environment.state
-    }
-
     pub fn translate(&mut self, node: Node) -> TranslatorResult<CExpression> {
         self.translate_node(node)
     }

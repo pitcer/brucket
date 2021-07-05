@@ -8,10 +8,10 @@
       numbers
     (if (= (list::get_length numbers) 1)
       numbers
-    (let splitted_list (split numbers)
+    (let split_list (split numbers)
     (merge
-      (merge_sort (pair::first splitted_list))
-      (merge_sort (pair::second splitted_list)))))))
+      (merge_sort (pair::first split_list))
+      (merge_sort (pair::second split_list)))))))
 
   (fun merge [first_list second_list]
     (if (list::is_empty first_list)

@@ -232,7 +232,7 @@ impl Evaluator {
     }
 
     fn get_optimized_lambda_environment(
-        &mut self,
+        &self,
         lambda: &Lambda,
         environment: &Environment,
         state: &EvaluatorState,
