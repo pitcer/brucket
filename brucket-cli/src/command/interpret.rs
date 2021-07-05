@@ -23,12 +23,10 @@
  */
 
 use crate::command;
-use crate::command::{CommandError, CommandResult, Execute};
+use crate::command::{CommandResult, Execute};
 use brucket_interpreter::interpreter::Interpreter;
 use clap::{AppSettings, Clap};
 use std::borrow::Cow;
-use std::fs::File;
-use std::io;
 
 #[derive(Clap)]
 #[clap(
@@ -37,7 +35,7 @@ use std::io;
     setting = AppSettings::ArgRequiredElseHelp
 )]
 pub struct Interpret {
-    #[clap(long = "stdin", about = "Get expression from standard input")]
+    #[clap(short = 'i', long = "stdin", about = "Get expression from standard input")]
     input_from_stdin: bool,
     #[clap(short, long, about = "Expression to interpret")]
     expression: Option<String>,
@@ -49,34 +47,11 @@ pub struct Interpret {
 
 impl Execute for Interpret {
     fn execute(self) -> CommandResult {
-        fn read_syntax_from_stdin() -> Result<String, CommandError> {
-            let mut standard_input = io::stdin();
-            command::read(&mut standard_input).map_err(|error| {
-                Cow::from(format!("Cannot read syntax from standard input: {}", error))
-            })
-        }
-
-        fn read_syntax_from_file(name: String) -> Result<String, CommandError> {
-            File::open(&name)
-                .map_err(|error| Cow::from(format!("Cannot open file {}: {}", name, error)))
-                .and_then(|mut file| {
-                    command::read(&mut file)
-                        .map_err(|error| Cow::from(format!("Cannot read file {}: {}", name, error)))
-                })
-        }
-
-        fn read_modules_from_files(names: Vec<String>) -> Result<Vec<String>, CommandError> {
-            names
-                .into_iter()
-                .map(read_syntax_from_file)
-                .collect::<Result<Vec<String>, CommandError>>()
-        }
-
         let syntax = if self.input_from_stdin {
-            read_syntax_from_stdin()?
+            command::read_syntax_from_stdin()?.0
         } else {
             self.file
-                .map(read_syntax_from_file)
+                .map(command::read_syntax_from_file)
                 .transpose()?
                 .or(self.expression)
                 .ok_or_else(|| Cow::from("Expression is not provided"))?
@@ -84,7 +59,7 @@ impl Execute for Interpret {
 
         let modules = self
             .modules
-            .map(read_modules_from_files)
+            .map(command::read_syntax_from_files)
             .transpose()?
             .unwrap_or_default();
         let modules = modules.iter().map(String::as_str).collect();

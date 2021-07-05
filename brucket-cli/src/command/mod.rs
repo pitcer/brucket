@@ -23,6 +23,7 @@
  */
 
 use std::borrow::Cow;
+use std::fs::File;
 use std::io;
 use std::io::Read;
 
@@ -37,8 +38,29 @@ pub trait Execute {
     fn execute(self) -> CommandResult;
 }
 
-pub fn read(input: &mut impl Read) -> io::Result<String> {
+fn read_syntax_from_stdin() -> Result<(String, usize), CommandError> {
+    let mut standard_input = io::stdin();
+    read(&mut standard_input)
+        .map_err(|error| Cow::from(format!("Cannot read syntax from standard input: {}", error)))
+}
+
+fn read_syntax_from_file(name: String) -> Result<String, CommandError> {
+    let mut file = File::open(&name)
+        .map_err(|error| Cow::from(format!("Cannot open file {}: {}", name, error)))?;
+    read(&mut file)
+        .map(|result| result.0)
+        .map_err(|error| Cow::from(format!("Cannot read file {}: {}", name, error)))
+}
+
+fn read_syntax_from_files(names: Vec<String>) -> Result<Vec<String>, CommandError> {
+    names
+        .into_iter()
+        .map(read_syntax_from_file)
+        .collect::<Result<Vec<String>, CommandError>>()
+}
+
+fn read(input: &mut impl Read) -> io::Result<(String, usize)> {
     let mut result = String::new();
-    input.read_to_string(&mut result)?;
-    Ok(result)
+    let bytes_read = input.read_to_string(&mut result)?;
+    Ok((result, bytes_read))
 }
