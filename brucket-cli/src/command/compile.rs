@@ -39,7 +39,11 @@ use std::process::{Command, Stdio};
     setting = AppSettings::ArgRequiredElseHelp
 )]
 pub struct Compile {
-    #[clap(short = 'i', long = "stdin", about = "Get code from standard input")]
+    #[clap(
+        short = 'i',
+        long = "stdin",
+        about = "Get expression from standard input"
+    )]
     input_from_stdin: bool,
     #[clap(short, long, about = "Expression to compile")]
     expression: Option<String>,

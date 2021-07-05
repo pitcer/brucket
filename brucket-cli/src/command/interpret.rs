@@ -35,7 +35,11 @@ use std::borrow::Cow;
     setting = AppSettings::ArgRequiredElseHelp
 )]
 pub struct Interpret {
-    #[clap(short = 'i', long = "stdin", about = "Get expression from standard input")]
+    #[clap(
+        short = 'i',
+        long = "stdin",
+        about = "Get expression from standard input"
+    )]
     input_from_stdin: bool,
     #[clap(short, long, about = "Expression to interpret")]
     expression: Option<String>,
