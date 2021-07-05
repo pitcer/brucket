@@ -80,6 +80,7 @@ impl Execute for Compile {
         if self.save_intermediate_code {
             let mut file = File::create("output.c").map_err(|error| error.to_string())?;
             file.write_all(bytes).map_err(|error| error.to_string())?;
+            return Ok(());
         }
 
         let compiler = self.compiler.unwrap_or_else(|| "gcc".to_owned());
