@@ -8,6 +8,7 @@ edition = "2018"
 brucket-ast = { path = "../brucket-ast" }
 brucket-analyzer = { path = "../brucket-analyzer" }
 c-generator = { path = "../c-generator" }
+maplit = "1.0.2"
 
 [dependencies.derive_more]
 version = "0.99.14"

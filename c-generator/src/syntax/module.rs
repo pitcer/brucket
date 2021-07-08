@@ -53,7 +53,7 @@ impl IndentedGenerator for ModuleMembers {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ModuleMember {
     Macro(Macro),
     FunctionDeclaration(FunctionDeclaration),

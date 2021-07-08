@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+use c_generator::syntax::c_struct::CStruct;
 use c_generator::syntax::c_type::CType;
 use c_generator::syntax::function::{FunctionDeclaration, FunctionDefinition, FunctionHeader};
 use c_generator::syntax::instruction::Instructions;
@@ -31,14 +32,15 @@ use derive_more::Constructor;
 
 #[derive(Debug, Default)]
 pub struct TranslationState {
-    let_count: usize,
-    if_count: usize,
-    lambda_count: usize,
-    typedef_count: usize,
-    variables: Vec<Variable>,
-    typedefs: ModuleMembers,
-    declarations: ModuleMembers,
-    members: ModuleMembers,
+    pub let_count: usize,
+    pub if_count: usize,
+    pub lambda_count: usize,
+    pub typedef_count: usize,
+    pub variables: Vec<Variable>,
+    pub typedefs: ModuleMembers,
+    pub declarations: ModuleMembers,
+    pub members: ModuleMembers,
+    pub structs: ModuleMembers,
 }
 
 impl TranslationState {
@@ -54,6 +56,11 @@ impl TranslationState {
             ModuleMember::FunctionDefinition(FunctionDefinition::new(header, body));
         self.declarations.push(function_declaration);
         self.members.push(function_definition);
+    }
+
+    pub fn add_struct(&mut self, c_struct: CStruct) {
+        let c_struct = ModuleMember::Struct(c_struct);
+        self.structs.push(c_struct);
     }
 
     pub fn push_variable(&mut self, variable: Variable) {
@@ -85,9 +92,11 @@ impl TranslationState {
     }
 
     pub fn all_members(&mut self) -> ModuleMembers {
-        let length = self.declarations.len() + self.members.len() + self.typedefs.len();
+        let length =
+            self.declarations.len() + self.members.len() + self.typedefs.len() + self.structs.len();
         let mut members = Vec::with_capacity(length);
         members.append(&mut self.typedefs);
+        members.append(&mut self.structs);
         members.append(&mut self.declarations);
         members.append(&mut self.members);
         members

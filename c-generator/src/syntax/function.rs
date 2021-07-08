@@ -29,7 +29,7 @@ use crate::syntax::c_type::CType;
 use crate::syntax::instruction::Instructions;
 use derive_more::Constructor;
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct FunctionDeclaration {
     header: FunctionHeader,
 }
@@ -40,7 +40,7 @@ impl IndentedGenerator for FunctionDeclaration {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct FunctionDefinition {
     header: FunctionHeader,
     body: Instructions,
@@ -61,7 +61,7 @@ impl IndentedGenerator for FunctionDefinition {
     }
 }
 
-#[derive(Debug, Clone, Constructor)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct FunctionHeader {
     return_type: CType,
     name: String,
@@ -91,10 +91,10 @@ impl Generator for Parameters {
     }
 }
 
-#[derive(Debug, Clone, Constructor)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct FunctionParameter {
-    parameter_type: CType,
-    name: String,
+    pub parameter_type: CType,
+    pub name: String,
 }
 
 impl Generator for FunctionParameter {

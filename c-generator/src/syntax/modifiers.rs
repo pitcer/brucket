@@ -36,7 +36,7 @@ impl Generator for Modifiers {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Modifier {
     Const,
     Static,

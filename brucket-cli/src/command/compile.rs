@@ -85,7 +85,7 @@ impl Execute for Compile {
 
         let compiler = self.compiler.unwrap_or_else(|| "gcc".to_owned());
         let flags = self.compiler_flags.unwrap_or_default().into_iter();
-        let output = self.output.unwrap_or_else(|| "output".to_owned());
+        let output = self.output.unwrap_or_else(|| "b.out".to_owned());
         let mut compiler_process = Command::new(compiler)
             .stdin(Stdio::piped())
             .arg("-x")

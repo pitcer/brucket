@@ -26,7 +26,7 @@ use crate::generator::{GeneratorError, GeneratorResult, GeneratorState, Indented
 use crate::syntax::instruction::VariableDeclaration;
 use derive_more::Constructor;
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct CStruct {
     name: String,
     fields: Fields,

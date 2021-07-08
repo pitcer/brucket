@@ -28,6 +28,8 @@ use derive_more::Constructor;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CType {
     Primitive(CPrimitiveType),
+    Closure(String, Box<CType>, Vec<String>),
+    Struct(String),
     Custom(String),
 }
 
@@ -35,7 +37,9 @@ impl Generator for CType {
     fn generate(self) -> GeneratorResult {
         match self {
             CType::Primitive(primitive) => primitive.generate(),
-            CType::Custom(custom) => Ok(custom),
+            CType::Struct(name) => Ok(format!("struct {}", name)),
+            CType::Custom(name) => Ok(name),
+            CType::Closure(name, _, _) => Ok(format!("struct {}", name)),
         }
     }
 }
@@ -115,6 +119,10 @@ mod test {
     fn test_types_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!("int", CType::Primitive(CPrimitiveType::Int).generate()?);
         assert_eq!("FooBar", CType::Custom("FooBar".to_string()).generate()?);
+        assert_eq!(
+            "struct FooBar",
+            CType::Struct("FooBar".to_owned()).generate()?
+        );
         Ok(())
     }
 }

@@ -25,7 +25,7 @@
 use crate::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
 use derive_more::Constructor;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Macro {
     Include(String),
     Define(DefineMacro),
@@ -40,7 +40,7 @@ impl IndentedGenerator for Macro {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct DefineMacro {
     name: String,
     value: String,

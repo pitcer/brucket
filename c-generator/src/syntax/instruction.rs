@@ -31,7 +31,7 @@ use crate::syntax::modifiers::Modifiers;
 use crate::syntax::typedef::Typedef;
 use derive_more::Constructor;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Instruction {
     Expression(CExpression),
     VariableDeclaration(VariableDeclaration),
@@ -65,11 +65,11 @@ impl IndentedGenerator for Instruction {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct VariableDeclaration {
-    modifiers: Modifiers,
-    variable_type: CType,
-    name: String,
+    pub modifiers: Modifiers,
+    pub variable_type: CType,
+    pub name: String,
 }
 
 impl IndentedGenerator for VariableDeclaration {
@@ -88,7 +88,7 @@ impl IndentedGenerator for VariableDeclaration {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct VariableDefinition {
     name: String,
     value: CExpression,
@@ -105,7 +105,7 @@ impl IndentedGenerator for VariableDefinition {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct VariableInstruction {
     modifiers: Modifiers,
     variable_type: CType,
@@ -130,7 +130,7 @@ impl IndentedGenerator for VariableInstruction {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct IfInstruction {
     condition: CExpression,
     body: Instructions,
@@ -151,7 +151,7 @@ impl IndentedGenerator for IfInstruction {
     }
 }
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct IfElseInstruction {
     condition: CExpression,
     if_body: Instructions,

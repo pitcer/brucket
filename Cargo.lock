@@ -69,6 +69,7 @@ dependencies = [
  "brucket-ast",
  "c-generator",
  "derive_more",
+ "maplit",
 ]
 
 [[package]]

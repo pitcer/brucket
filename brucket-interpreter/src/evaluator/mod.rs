@@ -179,21 +179,19 @@ impl Evaluator {
         let evaluated_value = self.evaluate_environment(value, environment, state)?;
         let evaluated_value = Rc::new(evaluated_value);
         let name = &let_node.name;
-        let identifier = Path::Simple(name.to_owned());
         if let Node::Lambda(_) = value {
             if let Value::Closure(closure) = evaluated_value.borrow() {
                 let used_variables = &state.variables.get(value)?.used_variables;
-                if used_variables.contains(&identifier) {
+                if used_variables.contains(name) {
                     let closure_environment = &closure.environment;
-                    closure_environment
-                        .insert_weak(identifier.clone(), Rc::downgrade(&evaluated_value));
+                    closure_environment.insert_weak(name.clone(), Rc::downgrade(&evaluated_value));
                 }
             }
         }
-        environment.insert(identifier.clone(), evaluated_value);
+        environment.insert(name.clone(), evaluated_value);
         let then = &let_node.then;
         let result = self.evaluate_environment(then, environment, state);
-        environment.remove(&identifier);
+        environment.remove(name);
         result
     }
 
@@ -237,8 +235,9 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState,
     ) -> Result<Environment, ValueError> {
-        let identifiers = &state.variables.get(lambda)?.used_variables;
-        let new_env: Environment = identifiers
+        let variables = &state.variables.get(lambda)?;
+        let free_variables = &variables.free_variables;
+        let new_env: Environment = free_variables
             .iter()
             .filter_map(|identifier| {
                 let value = environment.get(identifier)?;
@@ -257,16 +256,18 @@ impl Evaluator {
     ) -> ValueResult {
         match path {
             Path::Simple(identifier) => {
-                let value = environment
-                    .get(path)
-                    .or_else(|| environment.get_weak(path).and_then(|value| value.upgrade()));
+                let value = environment.get(identifier).or_else(|| {
+                    environment
+                        .get_weak(identifier)
+                        .and_then(|value| value.upgrade())
+                });
                 if let Some(value) = value {
                     let value: &Value = &value;
                     Ok(value.clone())
                 } else {
-                    let value = self.static_module_environment.get(path).or_else(|| {
+                    let value = self.static_module_environment.get(identifier).or_else(|| {
                         self.static_module_environment
-                            .get_weak(path)
+                            .get_weak(identifier)
                             .and_then(|value| value.upgrade())
                     });
                     if let Some(value) = value {
@@ -362,7 +363,7 @@ impl Evaluator {
                             environment.clone(),
                         ))
                     }?;
-                    closure_environment.insert(Path::Simple(name.clone()), Rc::new(argument));
+                    closure_environment.insert(name.clone(), Rc::new(argument));
                 }
                 Arity::Variadic => {
                     let list = self.create_pair_list(
@@ -371,7 +372,7 @@ impl Evaluator {
                         environment,
                         state,
                     )?;
-                    closure_environment.insert(Path::Simple(name.clone()), Rc::new(list));
+                    closure_environment.insert(name.clone(), Rc::new(list));
                     has_variadic_parameter = true;
                     break;
                 }
@@ -389,7 +390,7 @@ impl Evaluator {
         let result = self.evaluate_environment(&closure.body, closure_environment, state);
         for parameter in parameters {
             let name = &parameter.name;
-            closure_environment.remove(&Path::Simple(name.clone()));
+            closure_environment.remove(name);
         }
         result
     }
@@ -484,51 +485,44 @@ impl Evaluator {
             let visibility = &function.visibility;
             let application_strategy = &function.application_strategy;
             let identifier = &function.name;
-            let identifier_path = Path::Simple(identifier.clone());
             let lambda = &function.body;
             let closure = self.evaluate_lambda(lambda, environment, state)?;
             let closure = Value::FunctionClosure(application_strategy.clone(), closure);
             let closure = Rc::new(closure);
             if visibility.is_public() {
-                module_environment.insert(identifier_path.clone(), Rc::clone(&closure));
+                module_environment.insert(identifier.clone(), Rc::clone(&closure));
             }
-            constants_environment.insert(identifier_path.clone(), Rc::clone(&closure));
-            let used_identifiers = &state.variables.get(lambda)?.used_variables;
-            closures.push((
-                identifier_path.clone(),
-                Rc::clone(&closure),
-                used_identifiers,
-            ));
-            evaluated_closures.insert(identifier_path, closure);
+            constants_environment.insert(identifier.clone(), Rc::clone(&closure));
+            let used_identifiers = &state.variables.get(lambda)?.free_variables;
+            closures.push((identifier, Rc::clone(&closure), used_identifiers));
+            evaluated_closures.insert(identifier.clone(), closure);
         }
         Self::fill_closures(&closures, &evaluated_closures);
         let mut evaluated_internal_functions = HashMap::new();
         for internal_function in &module.internal_functions {
             let visibility = &internal_function.visibility;
             let identifier = &internal_function.name;
-            let identifier_path = Path::Simple(identifier.clone());
             let closure = self.evaluate_internal_function(internal_function, environment)?;
             let closure = Rc::new(closure);
             if visibility.is_public() {
-                module_environment.insert(identifier_path.clone(), Rc::clone(&closure));
+                module_environment.insert(identifier.clone(), Rc::clone(&closure));
             }
-            constants_environment.insert(identifier_path.clone(), Rc::clone(&closure));
-            evaluated_internal_functions.insert(identifier_path, closure);
+            constants_environment.insert(identifier.clone(), Rc::clone(&closure));
+            evaluated_internal_functions.insert(identifier.clone(), closure);
         }
         Self::fill_closures(&closures, &evaluated_internal_functions);
         let mut evaluated_constants = HashMap::new();
         for constant in &module.constants {
             let visibility = &constant.visibility;
             let identifier = &constant.name;
-            let identifier_path = Path::Simple(identifier.clone());
             let value = &constant.value;
             let value = self.evaluate_environment(value, &constants_environment, state)?;
             let value = Rc::new(value);
             if visibility.is_public() {
-                module_environment.insert(identifier_path.clone(), Rc::clone(&value));
+                module_environment.insert(identifier.clone(), Rc::clone(&value));
             }
-            constants_environment.insert(identifier_path.clone(), Rc::clone(&value));
-            evaluated_constants.insert(identifier_path, value);
+            constants_environment.insert(identifier.clone(), Rc::clone(&value));
+            evaluated_constants.insert(identifier.clone(), value);
         }
         Self::fill_closures(&closures, &evaluated_constants);
         let identifier = &module.identifier;
@@ -540,15 +534,15 @@ impl Evaluator {
     }
 
     fn fill_closures(
-        closures: &[(Path, Rc<Value>, &HashSet<Path>)],
-        values: &HashMap<Path, Rc<Value>>,
+        closures: &[(&String, Rc<Value>, &HashSet<String>)],
+        values: &HashMap<String, Rc<Value>>,
     ) {
         for (identifier, closure, used_identifiers) in closures {
             if let Value::FunctionClosure(_, closure) = closure.borrow() {
                 let environment = &closure.environment;
                 for used_identifier in used_identifiers.iter() {
                     if let Some(evaluated_value) = values.get(used_identifier) {
-                        if *used_identifier == *identifier {
+                        if &used_identifier == identifier {
                             let value = Rc::downgrade(evaluated_value);
                             environment.insert_weak(used_identifier.clone(), value);
                         } else {

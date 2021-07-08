@@ -23,15 +23,17 @@
  */
 
 use crate::generator::{Generator, GeneratorError, GeneratorResult};
+use crate::syntax::c_type::CType;
 use derive_more::Constructor;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CExpression {
     Empty,
     Number(NumberExpression),
     String(String),
     NamedReference(String),
     FunctionCall(FunctionCallExpression),
+    CompoundLiteral(CompoundLiteral),
 }
 
 impl Generator for CExpression {
@@ -42,11 +44,12 @@ impl Generator for CExpression {
             CExpression::String(string) => Ok(format!("\"{}\"", string)),
             CExpression::NamedReference(name) => Ok(name),
             CExpression::FunctionCall(call) => call.generate(),
+            CExpression::CompoundLiteral(literal) => literal.generate(),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum NumberExpression {
     Integer(String),
     FloatingPoint(String),
@@ -61,7 +64,7 @@ impl Generator for NumberExpression {
     }
 }
 
-#[derive(Debug, Clone, Constructor)]
+#[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct FunctionCallExpression {
     identifier: FunctionIdentifier,
     arguments: Arguments,
@@ -77,7 +80,7 @@ impl Generator for FunctionCallExpression {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionIdentifier {
     NamedReference(String),
     FunctionCall(Box<FunctionCallExpression>),
@@ -101,6 +104,25 @@ impl Generator for Arguments {
             .map(Generator::generate)
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join(", "))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Constructor)]
+pub struct CompoundLiteral {
+    cast_type: CType,
+    initializers: Vec<CExpression>,
+}
+
+impl Generator for CompoundLiteral {
+    fn generate(self) -> GeneratorResult {
+        let cast_type = self.cast_type.generate()?;
+        let initializers = self
+            .initializers
+            .into_iter()
+            .map(|initializer| initializer.generate())
+            .collect::<Result<Vec<String>, GeneratorError>>()?
+            .join(", ");
+        Ok(format!("(({}) {{{}}})", cast_type, initializers))
     }
 }
 
@@ -168,6 +190,23 @@ mod test {
     }
 
     #[test]
+    fn compound_literal_is_converted_to_c_syntax_correctly() -> TestResult {
+        assert_eq!(
+            "((struct foobar) {1, 4.2, foo})",
+            CompoundLiteral::new(
+                CType::Struct("foobar".to_owned()),
+                vec![
+                    CExpression::Number(NumberExpression::Integer("1".to_string())),
+                    CExpression::Number(NumberExpression::FloatingPoint("4.2".to_string())),
+                    CExpression::NamedReference("foo".to_string())
+                ]
+            )
+            .generate()?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_expressions_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!("", CExpression::Empty.generate()?);
         assert_eq!(
@@ -195,6 +234,18 @@ mod test {
                     CExpression::NamedReference("foo".to_string()),
                     CExpression::NamedReference("bar".to_string()),
                     CExpression::NamedReference("foobar".to_string())
+                ]
+            ))
+            .generate()?
+        );
+        assert_eq!(
+            "((struct foobar) {1, 4.2, foo})",
+            CExpression::CompoundLiteral(CompoundLiteral::new(
+                CType::Struct("foobar".to_owned()),
+                vec![
+                    CExpression::Number(NumberExpression::Integer("1".to_string())),
+                    CExpression::Number(NumberExpression::FloatingPoint("4.2".to_string())),
+                    CExpression::NamedReference("foo".to_string())
                 ]
             ))
             .generate()?

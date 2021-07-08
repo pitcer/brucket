@@ -45,12 +45,12 @@ pub type VariablesResult = Result<NodeVariables, VariablesError>;
 pub struct Variables(pub HashMap<NodeId, NodeVariables>);
 
 impl Variables {
-    pub fn insert(&mut self, node: &dyn NodeIdHolder, node_variables: NodeVariables) {
+    pub fn insert(&mut self, node: &impl NodeIdHolder, node_variables: NodeVariables) {
         let node_id = node.node_id();
         self.0.insert(node_id, node_variables);
     }
 
-    pub fn get(&self, node: &dyn NodeIdHolder) -> Result<&NodeVariables, VariablesError> {
+    pub fn get(&self, node: &impl NodeIdHolder) -> Result<&NodeVariables, VariablesError> {
         let node_id = node.node_id();
         self.0
             .get(&node_id)
@@ -65,25 +65,29 @@ pub struct Environment {
 
 #[derive(Debug, Clone, PartialEq, Default, Constructor)]
 pub struct NodeVariables {
-    pub variables: HashSet<Variable>,
-    pub used_variables: HashSet<Path>,
+    pub variables: HashMap<String, Variable>,
+    pub used_variables: HashSet<String>,
+    pub free_variables: HashSet<String>,
 }
 
 impl NodeVariables {
     fn append(&mut self, node_variables: NodeVariables) {
         for variable in node_variables.variables {
-            self.variables.insert(variable);
+            self.variables.insert(variable.0, variable.1);
         }
         for used_variable in node_variables.used_variables {
             self.used_variables.insert(used_variable);
+        }
+        for free_variable in node_variables.free_variables {
+            self.free_variables.insert(free_variable);
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Constructor)]
 pub struct Variable {
-    name: String,
-    expected_type: Type,
+    pub name: String,
+    pub expected_type: Type,
 }
 
 #[derive(Default, Constructor)]
@@ -130,8 +134,11 @@ impl VariablesAnalyzer {
     fn analyze_identifier_variables(&mut self, identifier: &Identifier) -> VariablesResult {
         let mut node_variables = NodeVariables::default();
 
-        let path = identifier.path.clone();
-        node_variables.used_variables.insert(path);
+        let path = &identifier.path;
+        if let Path::Simple(name) = path {
+            node_variables.used_variables.insert(name.clone());
+            node_variables.free_variables.insert(name.clone());
+        }
 
         self.environment
             .variables
@@ -163,10 +170,10 @@ impl VariablesAnalyzer {
     fn analyze_let_variables(&mut self, let_node: &Let) -> VariablesResult {
         let mut node_variables = NodeVariables::default();
 
-        let name = let_node.name.clone();
+        let name = &let_node.name;
         let value_type = let_node.value_type.clone();
-        let variable = Variable::new(name, value_type);
-        node_variables.variables.insert(variable);
+        let variable = Variable::new(name.clone(), value_type);
+        node_variables.variables.insert(name.clone(), variable);
 
         let value = &let_node.value;
         let value_variables = self.analyze_node_variables(value)?;
@@ -175,6 +182,8 @@ impl VariablesAnalyzer {
         let then = &let_node.then;
         let then_variables = self.analyze_node_variables(then)?;
         node_variables.append(then_variables);
+
+        node_variables.free_variables.remove(name);
 
         self.environment
             .variables
@@ -212,9 +221,8 @@ impl VariablesAnalyzer {
 
         let parameters = &lambda.parameters;
         for parameter in parameters {
-            let name = parameter.name.clone();
-            let path = Path::Simple(name);
-            node_variables.used_variables.remove(&path);
+            let name = &parameter.name;
+            node_variables.free_variables.remove(name);
         }
 
         self.environment

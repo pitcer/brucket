@@ -25,7 +25,7 @@
 use crate::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
 use derive_more::Constructor;
 
-#[derive(Debug, Constructor)]
+#[derive(Debug, PartialEq, Constructor)]
 pub struct Typedef {
     value: String,
 }

@@ -23,7 +23,6 @@
  */
 
 use crate::value::Value;
-use brucket_ast::ast::path::Path;
 use derive_more::Constructor;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -39,7 +38,7 @@ macro_rules! environment {
             let environment = Environment::default();
             $(
                 environment.insert(
-                    Path::Simple($identifier.to_string()),
+                    $identifier.to_owned(),
                     std::rc::Rc::new($value)
                 );
             )*
@@ -78,8 +77,8 @@ impl<T> WeakWrapper<T> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Environment {
-    map: RefCell<HashMap<Path, Rc<Value>>>,
-    weak_map: RefCell<HashMap<Path, WeakWrapper<Value>>>,
+    map: RefCell<HashMap<String, Rc<Value>>>,
+    weak_map: RefCell<HashMap<String, WeakWrapper<Value>>>,
 }
 
 impl Default for Environment {
@@ -88,21 +87,21 @@ impl Default for Environment {
     }
 }
 
-impl FromIterator<(Path, Rc<Value>)> for Environment {
-    fn from_iter<T: IntoIterator<Item = (Path, Rc<Value>)>>(iter: T) -> Self {
+impl FromIterator<(String, Rc<Value>)> for Environment {
+    fn from_iter<T: IntoIterator<Item = (String, Rc<Value>)>>(iter: T) -> Self {
         let map = HashMap::from_iter(iter);
         Self::from_map(map)
     }
 }
 
 impl Environment {
-    fn from_map(map: HashMap<Path, Rc<Value>>) -> Self {
+    fn from_map(map: HashMap<String, Rc<Value>>) -> Self {
         let map = RefCell::new(map);
         let weak_map = RefCell::new(HashMap::new());
         Self { map, weak_map }
     }
 
-    pub fn insert(&self, key: Path, value: Rc<Value>) {
+    pub fn insert(&self, key: String, value: Rc<Value>) {
         self.map.borrow_mut().insert(key, value);
     }
 
@@ -112,7 +111,7 @@ impl Environment {
         }
     }
 
-    pub fn insert_weak(&self, key: Path, value: Weak<Value>) {
+    pub fn insert_weak(&self, key: String, value: Weak<Value>) {
         self.weak_map
             .borrow_mut()
             .insert(key, WeakWrapper::new(value));
@@ -124,18 +123,18 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, key: &Path) -> Option<Rc<Value>> {
+    pub fn get(&self, key: &str) -> Option<Rc<Value>> {
         self.map.borrow().get(key).map(|value| Rc::clone(value))
     }
 
-    pub fn get_weak(&self, key: &Path) -> Option<Weak<Value>> {
+    pub fn get_weak(&self, key: &str) -> Option<Weak<Value>> {
         self.weak_map
             .borrow()
             .get(key)
             .map(|value| WeakWrapper::clone(value))
     }
 
-    pub fn remove(&self, key: &Path) {
+    pub fn remove(&self, key: &str) {
         self.map.borrow_mut().remove(key);
     }
 }

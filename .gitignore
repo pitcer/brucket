@@ -3,3 +3,4 @@ target/
 *.iml
 *.out
 *.c
+.gdb_history

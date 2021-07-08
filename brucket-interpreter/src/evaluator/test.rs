@@ -208,8 +208,9 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::new(
-                HashSet::default(),
-                maplit::hashset![Path::Simple("x".to_owned())]
+                HashMap::default(),
+                maplit::hashset!["x".to_owned()],
+                maplit::hashset!["x".to_owned()]
             )
         }),
         &Node::Let(Let::new(
@@ -228,7 +229,6 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
                     NodeId(0),
                     Path::Simple("x".to_string()),
                 ))),
-                // maplit::hashset!("x".to_string()),
             ))),
         )),
     )?;
@@ -267,7 +267,6 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
                     NodeId(0),
                     Path::Simple("y".to_string()),
                 ))),
-                // HashSet::new(),
             ))),
         )),
     )?;
@@ -314,7 +313,6 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
                     NodeId(0),
                     Path::Simple("y".to_string()),
                 ))),
-                // HashSet::new(),
             ))),
         )),
     )?;
@@ -329,8 +327,9 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::new(
-                HashSet::default(),
-                maplit::hashset![Path::Simple("x".to_owned())]
+                HashMap::default(),
+                maplit::hashset!["x".to_owned()],
+                maplit::hashset!["x".to_owned()]
             )
         }),
         &Node::Let(Let::new(
@@ -351,7 +350,6 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
                         NodeId(0),
                         Path::Simple("x".to_string()),
                     ))),
-                    // maplit::hashset!("x".to_string()),
                 ))),
                 Vec::new(),
             ))),
@@ -429,7 +427,6 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
                         NodeId(0),
                         Path::Simple("y".to_string()),
                     ))),
-                    // HashSet::new(),
                 ))),
                 vec![
                     Node::ConstantValue(ConstantValue::new(
@@ -459,8 +456,9 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::new(
-                HashSet::default(),
-                maplit::hashset![Path::Simple("z".to_owned())]
+                HashMap::default(),
+                maplit::hashset!["z".to_owned()],
+                maplit::hashset!["z".to_owned()]
             )
         }),
         &Node::Let(Let::new(
@@ -483,7 +481,6 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
                         NodeId(0),
                         Path::Simple("z".to_string()),
                     ))),
-                    // maplit::hashset!("z".to_string()),
                 ))),
                 Box::new(Node::Let(Let::new(
                     NodeId(0),
@@ -551,7 +548,6 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                         NodeId(0),
                         ConstantVariant::Numeric(Number::Integer("42".to_string())),
                     ))),
-                    // HashSet::new(),
                 ),
             )],
             Vec::new(),
@@ -589,13 +585,10 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
                 NodeId(1),
                 vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
                 Type::Any,
-                Box::new(
-                    Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                    )),
-                    // HashSet::new(),
-                ),
+                Box::new(Node::ConstantValue(ConstantValue::new(
+                    NodeId(0),
+                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
+                ))),
             ),
         )),
     )?;
@@ -634,7 +627,6 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
                 NodeId(0),
                 Path::Simple("x".to_string()),
             ))),
-            // HashSet::new(),
         )),
     )?;
     assert_eq!(expected, actual);
@@ -672,7 +664,6 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
                     NodeId(0),
                     Path::Simple("z".to_string()),
                 ))),
-                // HashSet::new(),
             ))),
             vec![
                 Node::ConstantValue(ConstantValue::new(
@@ -745,7 +736,6 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                             NodeId(0),
                             ConstantVariant::Numeric(Number::Integer("42".to_string())),
                         ))),
-                        // HashSet::new(),
                     ),
                 ),
                 Function::new(
@@ -761,7 +751,6 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                             NodeId(0),
                             ConstantVariant::Numeric(Number::Integer("42".to_string())),
                         ))),
-                        // HashSet::new(),
                     ),
                 ),
             ],
@@ -819,13 +808,10 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
                 NodeId(1),
                 Vec::new(),
                 Type::Any,
-                Box::new(
-                    Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                    )),
-                    // HashSet::new(),
-                ),
+                Box::new(Node::ConstantValue(ConstantValue::new(
+                    NodeId(0),
+                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
+                ))),
             ),
         )),
     )?;
@@ -858,10 +844,10 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
                     NodeId(1),
                     vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
                     Type::Any,
-                    Box::new(
-                        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_string()))),
-                        // HashSet::new(),
-                    ),
+                    Box::new(Node::Identifier(Identifier::new(
+                        NodeId(0),
+                        Path::Simple("x".to_string()),
+                    ))),
                 ),
             ))),
             vec![Node::ConstantValue(ConstantValue::new(

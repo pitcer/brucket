@@ -24,8 +24,9 @@
 
 use crate::translator;
 use crate::translator::state::TranslationState;
-use crate::translator::Translator;
+use crate::translator::{Translation, Translator};
 use brucket_analyzer::type_analyzer::{Environment, TypeAnalyzer};
+use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
 use brucket_ast::ast::ast_type::{LambdaType, Type};
 use brucket_ast::ast::path::Path;
 use brucket_ast::lexer::Lexer;
@@ -54,12 +55,14 @@ impl Transpiler {
         let node = parser.parse(tokens)?;
         let environment = self.create_type_analyzer_environment();
         let mut type_analyzer = TypeAnalyzer::new(environment);
-        let (_node_type, node_types) = type_analyzer.analyze_types(&node)?;
+        let (_, node_types) = type_analyzer.analyze_types(&node)?;
+        let mut variable_analyzer = VariablesAnalyzer::default();
+        let (_, variables) = variable_analyzer.analyze_variables(&node)?;
         let state = TranslationState::default();
-        let translator_environment = translator::Environment::new(node_types, state);
-        let mut translator = Translator::new(translator_environment);
-        let expression = translator.translate(node)?;
-        let expression_members = translator.environment.state.all_members();
+        let mut translator_environment = translator::Environment::new(node_types, variables, state);
+        let translator = Translator::default();
+        let expression = translator.translate(node, &mut translator_environment)?;
+        let expression_members = translator_environment.state.all_members();
         let members = self.create_module_members(expression, expression_members);
         let module = Module::new(members);
         let generator_state = GeneratorState::default();
@@ -82,7 +85,7 @@ impl Transpiler {
 
     fn create_module_members(
         &self,
-        expression: CExpression,
+        expression: Translation,
         mut expression_members: ModuleMembers,
     ) -> Vec<ModuleMember> {
         let include_stdio_macro = ModuleMember::Macro(Macro::Include("stdio.h".to_string()));
@@ -119,22 +122,30 @@ impl Transpiler {
         members
     }
 
-    fn create_main_function(&self, expression: CExpression) -> ModuleMember {
+    fn create_main_function(&self, translation: Translation) -> ModuleMember {
+        let print_result_instruction =
+            Instruction::Expression(CExpression::FunctionCall(FunctionCallExpression::new(
+                FunctionIdentifier::NamedReference("printf".to_string()),
+                vec![
+                    CExpression::String("%d\\n".to_string()),
+                    translation.result_expression,
+                ],
+            )));
+        let return_instruction = Instruction::Return(CExpression::Number(
+            NumberExpression::Integer("0".to_string()),
+        ));
+
+        let mut instructions = translation.preceding_instructions;
+        instructions.push(print_result_instruction);
+        instructions.push(return_instruction);
+
         ModuleMember::FunctionDefinition(FunctionDefinition::new(
             FunctionHeader::new(
                 CType::Primitive(CPrimitiveType::Int),
                 "main".to_string(),
                 Parameters::default(),
             ),
-            vec![
-                Instruction::Expression(CExpression::FunctionCall(FunctionCallExpression::new(
-                    FunctionIdentifier::NamedReference("printf".to_string()),
-                    vec![CExpression::String("%d\\n".to_string()), expression],
-                ))),
-                Instruction::Return(CExpression::Number(NumberExpression::Integer(
-                    "0".to_string(),
-                ))),
-            ],
+            instructions,
         ))
     }
 
