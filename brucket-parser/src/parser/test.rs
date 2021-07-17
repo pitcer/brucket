@@ -218,21 +218,14 @@ fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Module(Module::new(
-        NodeId(0),
-        false,
-        "foo".to_string(),
-        vec![brucket!((function x [] 42))],
-        vec![InternalFunction::new(
-            NodeId(0),
-            Visibility::Private,
-            ApplicationStrategy::Eager,
-            "z".to_string(),
-            Vec::new(),
-            Type::Any,
-        )],
-        vec![brucket!((constant y 42))],
-    ));
+    let expected = brucket! {
+        @node Module
+        (module foo
+            ((function x [] 42))
+            ((internal_function z []))
+            ((constant y 42))
+        )
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Module),
@@ -265,33 +258,10 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
 #[test]
 fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Function(Function::new(
-        NodeId(0),
-        Visibility::Private,
-        ApplicationStrategy::Eager,
-        "foo".to_string(),
-        Lambda::new(
-            NodeId(0),
-            vec![
-                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-                Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-                Parameter::new("z".to_string(), Type::Any, Arity::Unary),
-            ],
-            Type::Any,
-            Box::new(Node::Application(Application::new(
-                NodeId(0),
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("bar".to_string()),
-                ))),
-                vec![Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                ))],
-            ))),
-            // maplit::hashset!("bar".to_string()),
-        ),
-    ));
+    let expected = brucket! {
+        @node Function
+        (function foo [x y z] (bar 42))
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
@@ -314,15 +284,10 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
 #[test]
 fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Constant(Constant::new(
-        NodeId(0),
-        Visibility::Private,
-        "foo".to_string(),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-    ));
+    let expected = brucket! {
+        @node Constant
+        (constant foo 42)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Constant),
@@ -337,16 +302,9 @@ fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Lambda(Lambda::new(
-        NodeId(0),
-        vec![Parameter::new("xs".to_string(), Type::Any, Arity::Variadic)],
-        Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-        // maplit::hashset!("x".to_string()),
-    ));
+    let expected = brucket! {
+        (lambda [(xs: any...)] x)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -364,22 +322,10 @@ fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> 
 #[test]
 fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Function(Function::new(
-        NodeId(0),
-        Visibility::Public,
-        ApplicationStrategy::Eager,
-        "foo".to_string(),
-        Lambda::new(
-            NodeId(0),
-            Vec::new(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            // HashSet::new(),
-        ),
-    ));
+    let expected = brucket! {
+        @node Function
+        (0: public eager function foo [] -> any 42)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
@@ -397,15 +343,10 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
 #[test]
 fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Constant(Constant::new(
-        NodeId(0),
-        Visibility::Public,
-        "foo".to_string(),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-    ));
+    let expected = brucket! {
+        @node Constant
+        (0: public constant foo 42)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
@@ -421,22 +362,10 @@ fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Function(Function::new(
-        NodeId(0),
-        Visibility::Private,
-        ApplicationStrategy::Lazy,
-        "foo".to_string(),
-        Lambda::new(
-            NodeId(0),
-            Vec::new(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            // HashSet::new(),
-        ),
-    ));
+    let expected = brucket! {
+        @node Function
+        (0: private lazy function foo [] -> any 42)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Lazy),
@@ -454,22 +383,10 @@ fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
 #[test]
 fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Function(Function::new(
-        NodeId(0),
-        Visibility::Public,
-        ApplicationStrategy::Lazy,
-        "foo".to_string(),
-        Lambda::new(
-            NodeId(0),
-            Vec::new(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            // HashSet::new(),
-        ),
-    ));
+    let expected = brucket! {
+        @node Function
+        (0: public lazy function foo [] -> any 42)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
@@ -488,22 +405,10 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
 #[test]
 fn test_parsed_internal_function_tokens_are_internal_function() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::InternalFunction(InternalFunction::new(
-        NodeId(0),
-        Visibility::Public,
-        ApplicationStrategy::Lazy,
-        "foobar".to_string(),
-        vec![
-            Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-            Parameter::new(
-                "y".to_string(),
-                Type::Symbol("Bar".to_string()),
-                Arity::Unary,
-            ),
-            Parameter::new("z".to_string(), Type::Integer, Arity::Variadic),
-        ],
-        Type::Boolean,
-    ));
+    let expected = brucket! {
+        @node InternalFunction
+        (0: public lazy internal_function foobar [(x: any) (y: Bar) (z: int...)] -> bool)
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
@@ -535,17 +440,9 @@ fn test_parsed_internal_function_tokens_are_internal_function() -> TestResult {
 fn test_parsed_application_simple_path_identifier_tokens_are_application_expression() -> TestResult
 {
     let mut parser = Parser::default();
-    let expected = Node::Application(Application::new(
-        NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Complex(vec!["foo".to_string(), "foobar".to_string()]),
-        ))),
-        vec![Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::String("foo".to_string()),
-        ))],
-    ));
+    let expected = brucket! {
+        ((foo::foobar) "foo")
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foo".to_string()),
@@ -562,19 +459,9 @@ fn test_parsed_application_simple_path_identifier_tokens_are_application_express
 fn test_parsed_application_complex_path_identifier_tokens_are_application_expression() -> TestResult
 {
     let mut parser = Parser::default();
-    let expected = Node::Application(Application::new(
-        NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Complex(vec![
-                "foo".to_string(),
-                "bar".to_string(),
-                "foobar".to_string(),
-                "barfoo".to_string(),
-            ]),
-        ))),
-        Vec::new(),
-    ));
+    let expected = brucket! {
+        ((foo::bar::foobar::barfoo))
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foo".to_string()),
@@ -593,14 +480,10 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
 #[test]
 fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Module(Module::new(
-        NodeId(0),
-        true,
-        "foo".to_string(),
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
-    ));
+    let expected = brucket! {
+        @node Module
+        (0: static module foo () () ())
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Static),
@@ -615,37 +498,11 @@ fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
 #[test]
 fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Function(Function::new(
-        NodeId(0),
-        Visibility::Private,
-        ApplicationStrategy::Eager,
-        "foo".to_string(),
-        Lambda::new(
-            NodeId(0),
-            vec![
-                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-                Parameter::new(
-                    "y".to_string(),
-                    Type::Symbol("Bar".to_string()),
-                    Arity::Unary,
-                ),
-                Parameter::new("z".to_string(), Type::Integer, Arity::Variadic),
-            ],
-            Type::Boolean,
-            Box::new(Node::Application(Application::new(
-                NodeId(0),
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("bar".to_string()),
-                ))),
-                vec![Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                ))],
-            ))),
-            // maplit::hashset!("bar".to_string()),
-        ),
-    ));
+    let expected = brucket! {
+        @node Function
+        (0: private eager function foo [(x: any) (y: Bar) (z: int...)] -> bool
+            (bar 42))
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
@@ -677,40 +534,12 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
 #[test]
 fn test_parse_function_with_lambda_type() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Function(Function::new(
-        NodeId(0),
-        Visibility::Private,
-        ApplicationStrategy::Eager,
-        "foobar".to_string(),
-        Lambda::new(
-            NodeId(0),
-            vec![
-                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-                Parameter::new(
-                    "y".to_string(),
-                    Type::Lambda(LambdaType::new(
-                        vec![Type::Integer, Type::Boolean],
-                        Type::Symbol("Test".to_owned()).into(),
-                    )),
-                    Arity::Unary,
-                ),
-                Parameter::new("z".to_string(), Type::Integer, Arity::Variadic),
-            ],
-            Type::Lambda(LambdaType::new(vec![], Type::Integer.into())),
-            Box::new(Node::Application(Application::new(
-                NodeId(0),
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("bar".to_string()),
-                ))),
-                vec![Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                ))],
-            ))),
-            // maplit::hashset!("bar".to_string()),
-        ),
-    ));
+    let expected = brucket! {
+        @node Function
+        (0: private eager function foobar
+            [(x: any) (y: (int bool -> Test)) (z: int...)] -> (-> int)
+            (bar 42))
+    };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
@@ -751,7 +580,7 @@ fn test_parse_function_with_lambda_type() -> TestResult {
 fn test_lambda_type_is_parsed_correctly() -> TestResult {
     let parser = Parser::default();
     assert_eq!(
-        Type::Lambda(LambdaType::new(vec![], Type::Integer.into())),
+        brucket!(@type (-> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -764,7 +593,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
         )?,
     );
     assert_eq!(
-        Type::Lambda(LambdaType::new(vec![Type::Integer], Type::Integer.into())),
+        brucket!(@type (int -> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -778,10 +607,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
         )?,
     );
     assert_eq!(
-        Type::Lambda(LambdaType::new(
-            vec![Type::Integer, Type::Integer],
-            Type::Integer.into()
-        )),
+        brucket!(@type (int int -> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -796,13 +622,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
         )?,
     );
     assert_eq!(
-        Type::Lambda(LambdaType::new(
-            vec![
-                Type::Integer,
-                Type::Lambda(LambdaType::new(vec![Type::Integer], Type::Integer.into()))
-            ],
-            Type::Integer.into()
-        )),
+        brucket!(@type ((int (int -> int)) -> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -826,19 +646,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
 #[test]
 fn test_typed_let_is_let_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Let(Let::new(
-        NodeId(0),
-        "x".to_string(),
-        Type::Integer,
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-    ));
+    let expected = brucket!((let x: int 42 x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),

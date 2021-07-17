@@ -82,16 +82,17 @@ macro_rules! brucket {
     };
 
     ((internal_function $name:ident $parameters:tt)) => {
-        brucket!((private eager internal_function $name $parameters -> any))
+        brucket!((0: private eager internal_function $name $parameters -> any))
     };
-    (($visibility:ident
+    (($node_id:literal:
+        $visibility:ident
         $strategy:ident
         internal_function
         $name:ident
         $parameters:tt -> $return_type:tt
     )) => {
         InternalFunction::new(
-            NodeId(0),
+            NodeId($node_id),
             brucket!(@visibility $visibility),
             brucket!(@strategy $strategy),
             stringify!($name).to_owned(),

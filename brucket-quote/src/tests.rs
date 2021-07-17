@@ -543,7 +543,7 @@ fn quoted_internal_function_is_internal_function_node() {
     ));
     let actual = brucket! {
         @node InternalFunction
-        (public lazy internal_function foobar [(x: any) (y: Bar) (z: int...)] -> bool)
+        (0: public lazy internal_function foobar [(x: any) (y: Bar) (z: int...)] -> bool)
     };
     assert_eq!(expected, actual);
 }
