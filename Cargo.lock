@@ -30,6 +30,7 @@ name = "brucket-analyzer"
 version = "0.1.0"
 dependencies = [
  "brucket-ast",
+ "brucket-parser",
  "derive_more",
  "maplit",
 ]
@@ -57,8 +58,26 @@ version = "0.1.0"
 dependencies = [
  "brucket-analyzer",
  "brucket-ast",
+ "brucket-parser",
  "derive_more",
  "maplit",
+]
+
+[[package]]
+name = "brucket-parser"
+version = "0.1.0"
+dependencies = [
+ "brucket-ast",
+ "brucket-quote",
+ "derive_more",
+ "maplit",
+]
+
+[[package]]
+name = "brucket-quote"
+version = "0.1.0"
+dependencies = [
+ "brucket-ast",
 ]
 
 [[package]]
@@ -67,6 +86,7 @@ version = "0.1.0"
 dependencies = [
  "brucket-analyzer",
  "brucket-ast",
+ "brucket-parser",
  "c-generator",
  "derive_more",
  "maplit",

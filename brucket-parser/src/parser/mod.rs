@@ -22,15 +22,17 @@
  * SOFTWARE.
  */
 
-use crate::ast::ast_type::{LambdaType, Type};
-use crate::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
-use crate::ast::function::{ApplicationStrategy, Function, InternalFunction};
-use crate::ast::lambda::{Arity, Lambda, Parameter};
-use crate::ast::path::{ComplexPath, Path};
-use crate::ast::{Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility};
 use crate::token::{
     Boolean as BooleanToken, Keyword, Modifier, Number as NumberToken, Operator, Parenthesis,
     PrimitiveType, Token,
+};
+use brucket_ast::ast::ast_type::{LambdaType, Type};
+use brucket_ast::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
+use brucket_ast::ast::function::{ApplicationStrategy, Function, InternalFunction};
+use brucket_ast::ast::lambda::{Arity, Lambda, Parameter};
+use brucket_ast::ast::path::Path;
+use brucket_ast::ast::{
+    Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility,
 };
 use derive_more::Constructor;
 use std::borrow::Cow;
@@ -488,11 +490,10 @@ impl Parser {
             }
         }
         let length = path.len();
-        let identifier = path.swap_remove(length - 1);
         if length == 1 {
-            Ok(Path::Simple(identifier))
+            Ok(Path::Simple(path.remove(0)))
         } else {
-            Ok(Path::Complex(ComplexPath::new(identifier, path)))
+            Ok(Path::Complex(path))
         }
     }
 

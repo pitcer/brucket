@@ -207,11 +207,7 @@ impl Translator {
                 .replace("*", "__$internal_multiply")
                 .replace("/", "__$internal_divide")
                 .replace("%", "__$internal_remainder")),
-            Path::Complex(complex_path) => Ok(format!(
-                "{}_{}",
-                complex_path.path.join("_"),
-                &complex_path.identifier
-            )),
+            Path::Complex(complex_path) => Ok(complex_path.join("_")),
         }
     }
 

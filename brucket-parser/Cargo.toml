@@ -1,16 +1,17 @@
 [package]
-name = "brucket-interpreter"
+name = "brucket-parser"
 version = "0.1.0"
 authors = ["Piotr Dobiech"]
 edition = "2018"
 
 [dependencies]
 brucket-ast = { path = "../brucket-ast" }
-brucket-analyzer = { path = "../brucket-analyzer" }
-brucket-parser = { path = "../brucket-parser" }
 maplit = "1.0.2"
 
 [dependencies.derive_more]
 version = "0.99.14"
 default-features = false
 features = ["constructor"]
+
+[dev-dependencies]
+brucket-quote = { path = "../brucket-quote" }

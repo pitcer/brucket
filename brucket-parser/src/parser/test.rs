@@ -22,9 +22,10 @@
  * SOFTWARE.
  */
 
-use crate::ast::constant_value::{Boolean, ConstantValue};
-use crate::ast::function::Function;
-use crate::ast::{Constant, Identifier, If, Let};
+use brucket_ast::ast::constant_value::ConstantValue;
+use brucket_ast::ast::function::Function;
+use brucket_ast::ast::{Constant, Identifier, If, Let};
+use brucket_quote::brucket;
 
 use super::*;
 
@@ -33,11 +34,8 @@ type TestResult = Result<(), Cow<'static, str>>;
 #[test]
 fn test_parsed_number_token_is_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-    ));
-    let actual = parser.parse(vec![Token::Number(NumberToken::Integer("42".to_string()))])?;
+    let expected = brucket!(42);
+    let actual = parser.parse(vec![Token::Number(NumberToken::Integer("42".to_owned()))])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -45,10 +43,7 @@ fn test_parsed_number_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_boolean_token_is_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::Boolean(Boolean::True),
-    ));
+    let expected = brucket!(true);
     let actual = parser.parse(vec![Token::Boolean(BooleanToken::True)])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -57,11 +52,8 @@ fn test_parsed_boolean_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_string_token_is_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::ConstantValue(ConstantValue::new(
-        NodeId(0),
-        ConstantVariant::String("foobar".to_string()),
-    ));
-    let actual = parser.parse(vec![Token::String("foobar".to_string())])?;
+    let expected = brucket!("foobar");
+    let actual = parser.parse(vec![Token::String("foobar".to_owned())])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -69,11 +61,8 @@ fn test_parsed_string_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Identifier(Identifier::new(
-        NodeId(0),
-        Path::Simple("foobar".to_string()),
-    ));
-    let actual = parser.parse(vec![Token::Symbol("foobar".to_string())])?;
+    let expected = brucket!(foobar);
+    let actual = parser.parse(vec![Token::Symbol("foobar".to_owned())])?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -81,7 +70,7 @@ fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
 #[test]
 fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::ConstantValue(ConstantValue::new(NodeId(0), ConstantVariant::Unit));
+    let expected = brucket!(());
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Parenthesis(Parenthesis::Close(')')),
@@ -93,7 +82,7 @@ fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
 #[test]
 fn test_parsed_null_token_is_null_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::ConstantValue(ConstantValue::new(NodeId(0), ConstantVariant::Null));
+    let expected = brucket!(null);
     let actual = parser.parse(vec![Token::Null])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -102,17 +91,10 @@ fn test_parsed_null_token_is_null_expression() -> TestResult {
 #[test]
 fn test_parsed_constant_function_tokens_are_application_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Application(Application::new(
-        NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("foobar".to_string()),
-        ))),
-        Vec::new(),
-    ));
+    let expected = brucket!((foobar));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("foobar".to_string()),
+        Token::Symbol("foobar".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -122,21 +104,11 @@ fn test_parsed_constant_function_tokens_are_application_expression() -> TestResu
 #[test]
 fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Application(Application::new(
-        NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("foobar".to_string()),
-        ))),
-        vec![Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))],
-    ));
+    let expected = brucket!((foobar 42));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("foobar".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("foobar".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -146,33 +118,13 @@ fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult 
 #[test]
 fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Application(Application::new(
-        NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("foobar".to_string()),
-        ))),
-        vec![
-            Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            )),
-            Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("24".to_string())),
-            )),
-            Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("0".to_string())),
-            )),
-        ],
-    ));
+    let expected = brucket!((foobar 42 24 0));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("foobar".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
-        Token::Number(NumberToken::Integer("24".to_string())),
-        Token::Number(NumberToken::Integer("0".to_string())),
+        Token::Symbol("foobar".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
+        Token::Number(NumberToken::Integer("24".to_owned())),
+        Token::Number(NumberToken::Integer("0".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -182,19 +134,7 @@ fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> T
 #[test]
 fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Let(Let::new(
-        NodeId(0),
-        "x".to_string(),
-        Type::Any,
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-    ));
+    let expected = brucket!((let x 42 x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
@@ -210,21 +150,7 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 #[test]
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::If(If::new(
-        NodeId(0),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Boolean(Boolean::True),
-        ))),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("24".to_string())),
-        ))),
-    ));
+    let expected = brucket!((if true 42 24));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::If),
@@ -240,16 +166,7 @@ fn test_parsed_if_tokens_are_if_expression() -> TestResult {
 #[test]
 fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Lambda(Lambda::new(
-        NodeId(0),
-        Vec::new(),
-        Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-        // maplit::hashset!("x".to_string()),
-    ));
+    let expected = brucket!((lambda [] x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -265,16 +182,7 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Lambda(Lambda::new(
-        NodeId(0),
-        vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-        Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-        // HashSet::new(),
-    ));
+    let expected = brucket!((lambda [x] x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -291,20 +199,7 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = Node::Lambda(Lambda::new(
-        NodeId(0),
-        vec![
-            Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-            Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-            Parameter::new("z".to_string(), Type::Any, Arity::Unary),
-        ],
-        Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-        // HashSet::new(),
-    ));
+    let expected = brucket!((lambda [x y z] x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -327,22 +222,7 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
         NodeId(0),
         false,
         "foo".to_string(),
-        vec![Function::new(
-            NodeId(0),
-            Visibility::Private,
-            ApplicationStrategy::Eager,
-            "x".to_string(),
-            Lambda::new(
-                NodeId(0),
-                Vec::new(),
-                Type::Any,
-                Box::new(Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                ))),
-                // HashSet::new(),
-            ),
-        )],
+        vec![brucket!((function x [] 42))],
         vec![InternalFunction::new(
             NodeId(0),
             Visibility::Private,
@@ -351,15 +231,7 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
             Vec::new(),
             Type::Any,
         )],
-        vec![Constant::new(
-            NodeId(0),
-            Visibility::Private,
-            "y".to_string(),
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-        )],
+        vec![brucket!((constant y 42))],
     ));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -667,10 +539,7 @@ fn test_parsed_application_simple_path_identifier_tokens_are_application_express
         NodeId(0),
         Box::new(Node::Identifier(Identifier::new(
             NodeId(0),
-            Path::Complex(ComplexPath::new(
-                "foobar".to_string(),
-                vec!["foo".to_string()],
-            )),
+            Path::Complex(vec!["foo".to_string(), "foobar".to_string()]),
         ))),
         vec![Node::ConstantValue(ConstantValue::new(
             NodeId(0),
@@ -697,10 +566,12 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
         NodeId(0),
         Box::new(Node::Identifier(Identifier::new(
             NodeId(0),
-            Path::Complex(ComplexPath::new(
+            Path::Complex(vec![
+                "foo".to_string(),
+                "bar".to_string(),
+                "foobar".to_string(),
                 "barfoo".to_string(),
-                vec!["foo".to_string(), "bar".to_string(), "foobar".to_string()],
-            )),
+            ]),
         ))),
         Vec::new(),
     ));

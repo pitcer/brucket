@@ -4,6 +4,8 @@ members = [
     "brucket-analyzer",
     "brucket-cli",
     "brucket-interpreter",
+    "brucket-parser",
+    "brucket-quote",
     "brucket-transpiler",
     "c-generator"
 ]

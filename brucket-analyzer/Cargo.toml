@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 brucket-ast = { path = "../brucket-ast" }
+brucket-parser = { path = "../brucket-parser" }
 maplit = "1.0.2"
 
 [dependencies.derive_more]

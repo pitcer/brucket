@@ -279,15 +279,19 @@ impl Evaluator {
                 }
             }
             Path::Complex(path) => {
-                let first_path = path.path.get(0);
+                let first_path = path.get(0);
                 if let Some(first_path) = first_path {
                     let module_env = self.module_environment.get(first_path);
                     if let Some(module_env) = module_env {
-                        self.get_from_environment(
-                            &Path::Simple(path.identifier.clone()),
-                            module_env,
-                            state,
-                        )
+                        if let Some(identifier) = path.last() {
+                            self.get_from_environment(
+                                &Path::Simple(identifier.clone()),
+                                module_env,
+                                state,
+                            )
+                        } else {
+                            Err(Cow::from("Path is empty"))
+                        }
                     } else {
                         Err(Cow::from(format!("Undefined environment: {}", first_path)))
                     }
