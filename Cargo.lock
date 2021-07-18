@@ -31,6 +31,7 @@ version = "0.1.0"
 dependencies = [
  "brucket-ast",
  "brucket-parser",
+ "brucket-quote",
  "derive_more",
  "maplit",
 ]
@@ -59,6 +60,7 @@ dependencies = [
  "brucket-analyzer",
  "brucket-ast",
  "brucket-parser",
+ "brucket-quote",
  "derive_more",
  "maplit",
 ]

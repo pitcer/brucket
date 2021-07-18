@@ -341,6 +341,52 @@ fn quoted_lambda_with_variadic_parameter_is_lambda_node() {
 }
 
 #[test]
+fn quoted_lambda_application_is_application_node() {
+    let expected = Node::Application(Application::new(
+        NodeId(0),
+        Box::new(Node::Lambda(Lambda::new(
+            NodeId(1),
+            vec![
+                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
+                Parameter::new("y".to_string(), Type::Any, Arity::Unary),
+                Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
+            ],
+            Type::Any,
+            Box::new(Node::Identifier(Identifier::new(
+                NodeId(0),
+                Path::Simple("z".to_string()),
+            ))),
+        ))),
+        vec![
+            Node::ConstantValue(ConstantValue::new(
+                NodeId(0),
+                ConstantVariant::Numeric(Number::Integer("1".to_string())),
+            )),
+            Node::ConstantValue(ConstantValue::new(
+                NodeId(0),
+                ConstantVariant::Numeric(Number::Integer("2".to_string())),
+            )),
+            Node::ConstantValue(ConstantValue::new(
+                NodeId(0),
+                ConstantVariant::Numeric(Number::Integer("3".to_string())),
+            )),
+            Node::ConstantValue(ConstantValue::new(
+                NodeId(0),
+                ConstantVariant::Numeric(Number::Integer("4".to_string())),
+            )),
+            Node::ConstantValue(ConstantValue::new(
+                NodeId(0),
+                ConstantVariant::Numeric(Number::Integer("5".to_string())),
+            )),
+        ],
+    ));
+    let actual = brucket! {
+        ((1: lambda [(x: any) (y: any) (z: any...)] -> any z) 1 2 3 4 5)
+    };
+    assert_eq!(expected, actual);
+}
+
+#[test]
 fn quoted_function_is_function_node() {
     let expected = Node::Function(Function::new(
         NodeId(0),
@@ -406,7 +452,7 @@ fn quoted_function_with_types_is_function_node() {
     let actual = brucket! {
         @node Function
         (0: private eager function foo [(x: any) (y: Bar) (z: int...)] -> bool
-            (bar 42))
+            0: (bar 42))
     };
     assert_eq!(expected, actual);
 }
@@ -430,7 +476,7 @@ fn quoted_public_function_is_function_node() {
     ));
     let actual = brucket! {
         @node Function
-        (0: public eager function foo [] -> any 42)
+        (0: public eager function foo [] -> any 0: 42)
     };
     assert_eq!(expected, actual);
 }
@@ -474,7 +520,7 @@ fn quoted_function_with_lambda_type_is_function_node() {
         @node Function
         (0: private eager function foobar
             [(x: any) (y: (int bool -> Test)) (z: int...)] -> (-> int)
-            (bar 42))
+            0: (bar 42))
     };
     assert_eq!(expected, actual);
 }
@@ -498,7 +544,7 @@ fn quoted_lazy_function_is_function_node() {
     ));
     let actual = brucket! {
         @node Function
-        (0: private lazy function foo [] -> any 42)
+        (0: private lazy function foo [] -> any 0: 42)
     };
     assert_eq!(expected, actual);
 }
@@ -522,7 +568,37 @@ fn quoted_public_lazy_function_is_function_node() {
     ));
     let actual = brucket! {
         @node Function
-        (0: public lazy function foo [] -> any 42)
+        (0: public lazy function foo [] -> any 0: 42)
+    };
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn quoted_function_application_is_application_node() {
+    let expected = Node::Application(Application::new(
+        NodeId(0),
+        Box::new(Node::Function(Function::new(
+            NodeId(0),
+            Visibility::Private,
+            ApplicationStrategy::Lazy,
+            "foo".to_string(),
+            Lambda::new(
+                NodeId(1),
+                vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+                Type::Any,
+                Box::new(Node::Identifier(Identifier::new(
+                    NodeId(0),
+                    Path::Simple("x".to_string()),
+                ))),
+            ),
+        ))),
+        vec![Node::ConstantValue(ConstantValue::new(
+            NodeId(0),
+            ConstantVariant::Numeric(Number::Integer("42".to_string())),
+        ))],
+    ));
+    let actual = brucket! {
+        ((@node Function (0: private lazy function foo [x] -> any 1: x)) 42)
     };
     assert_eq!(expected, actual);
 }

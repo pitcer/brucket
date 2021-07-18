@@ -22,6 +22,8 @@
  * SOFTWARE.
  */
 
+use brucket_quote::brucket;
+
 use super::*;
 
 type TestResult = Result<(), TestError>;
@@ -29,28 +31,11 @@ type TestError = Cow<'static, str>;
 
 #[test]
 fn test_let_types_are_evaluated_correctly() -> TestResult {
-    let node = Node::Let(Let::new(
-        NodeId(0),
-        "foo".to_owned(),
-        Type::Any,
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(1),
-            ConstantVariant::Numeric(Number::Integer("1".to_owned())),
-        ))),
-        Box::new(Node::Let(Let::new(
-            NodeId(2),
-            "bar".to_owned(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(3),
-                ConstantVariant::Numeric(Number::FloatingPoint("1.1".to_owned())),
-            ))),
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(4),
-                Path::Simple("foo".to_owned()),
-            ))),
-        ))),
-    ));
+    let node = brucket! {
+        (0: let foo: any (1: 1)
+            (2: let bar: any (3: 1.1)
+                (4: foo)))
+    };
     let expected = NodeTypes(maplit::hashmap! {
         NodeId(0) => Type::Integer,
         NodeId(1) => Type::Integer,

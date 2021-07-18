@@ -24,10 +24,11 @@
 
 use brucket_analyzer::variables_analyzer::{NodeVariables, Variables};
 use brucket_ast::ast::ast_type::Type;
-use brucket_ast::ast::constant_value::{Boolean, ConstantValue};
+use brucket_ast::ast::constant_value::ConstantValue;
 use brucket_ast::ast::function::Function;
 use brucket_ast::ast::lambda::Parameter;
 use brucket_ast::ast::{Application, Constant, Identifier, If, Let, NodeId, Visibility};
+use brucket_quote::brucket;
 
 use super::*;
 
@@ -37,11 +38,7 @@ type TestResult = Result<(), ValueError>;
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual =
-        evaluator.evaluate_with_default_state(&Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        )))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket!(42))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -50,9 +47,7 @@ fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
 fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Boolean(true);
-    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
-        ConstantValue::new(NodeId(0), ConstantVariant::Boolean(Boolean::True)),
-    ))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket!(true))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -61,9 +56,7 @@ fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
 fn test_evaluated_string_expression_is_textual_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Textual("foobar".to_string());
-    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
-        ConstantValue::new(NodeId(0), ConstantVariant::String("foobar".to_string())),
-    ))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket!("foobar"))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -72,9 +65,7 @@ fn test_evaluated_string_expression_is_textual_value() -> TestResult {
 fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Unit;
-    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
-        ConstantValue::new(NodeId(0), ConstantVariant::Unit),
-    ))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket!(()))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -83,9 +74,7 @@ fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
 fn test_evaluated_null_expression_is_null_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Null;
-    let actual = evaluator.evaluate_with_default_state(&Node::ConstantValue(
-        ConstantValue::new(NodeId(0), ConstantVariant::Null),
-    ))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket!(null))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -94,19 +83,10 @@ fn test_evaluated_null_expression_is_null_value() -> TestResult {
 fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate_with_default_state(&Node::Let(Let::new(
-        NodeId(0),
-        "x".to_string(),
-        Type::Any,
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket! {
+        (let x 42
+            x)
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -115,28 +95,11 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
 fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(40));
-    let actual = evaluator.evaluate_with_default_state(&Node::Let(Let::new(
-        NodeId(0),
-        "x".to_string(),
-        Type::Any,
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("40".to_string())),
-        ))),
-        Box::new(Node::Let(Let::new(
-            NodeId(0),
-            "y".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("2".to_string())),
-            ))),
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(0),
-                Path::Simple("x".to_string()),
-            ))),
-        ))),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket! {
+        (let x 40
+            (let y 2
+                x))
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -145,28 +108,11 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
 fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(2));
-    let actual = evaluator.evaluate_with_default_state(&Node::Let(Let::new(
-        NodeId(0),
-        "x".to_string(),
-        Type::Any,
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("40".to_string())),
-        ))),
-        Box::new(Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("2".to_string())),
-            ))),
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(0),
-                Path::Simple("x".to_string()),
-            ))),
-        ))),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket! {
+        (let x 40
+            (let x 2
+                x))
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -175,21 +121,9 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 fn test_evaluated_if_expression_has_correct_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate_with_default_state(&Node::If(If::new(
-        NodeId(0),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Boolean(Boolean::True),
-        ))),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-        Box::new(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("24".to_string())),
-        ))),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket! {
+        (if true 42 24)
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -199,10 +133,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         Vec::new(),
-        Box::from(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
+        Box::new(brucket!(x)),
         environment!("x" => Value::Numeric(Numeric::Integer(42))),
     ));
     let actual = evaluator.evaluate_with_variables(
@@ -213,24 +144,10 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
                 maplit::hashset!["x".to_owned()]
             )
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Lambda(Lambda::new(
-                NodeId(1),
-                Vec::new(),
-                Type::Any,
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("x".to_string()),
-                ))),
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                (1: lambda [] -> any x))
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -240,35 +157,18 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
 fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
-        Box::from(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("y".to_string()),
-        ))),
+        brucket!(@parameters [y]),
+        Box::new(brucket!(y)),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Lambda(Lambda::new(
-                NodeId(1),
-                vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
-                Type::Any,
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("y".to_string()),
-                ))),
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                (1: lambda [y] -> any y))
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -278,43 +178,18 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
 fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        vec![
-            Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-            Parameter::new("z".to_string(), Type::Any, Arity::Unary),
-            Parameter::new("a".to_string(), Type::Any, Arity::Unary),
-        ],
-        Box::from(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("y".to_string()),
-        ))),
+        brucket!(@parameters [y z a]),
+        Box::new(brucket!(y)),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Lambda(Lambda::new(
-                NodeId(1),
-                vec![
-                    Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-                    Parameter::new("z".to_string(), Type::Any, Arity::Unary),
-                    Parameter::new("a".to_string(), Type::Any, Arity::Unary),
-                ],
-                Type::Any,
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("y".to_string()),
-                ))),
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                (1: lambda [y z a] -> any y))
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -332,28 +207,10 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
                 maplit::hashset!["x".to_owned()]
             )
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Application(Application::new(
-                NodeId(0),
-                Box::new(Node::Lambda(Lambda::new(
-                    NodeId(1),
-                    Vec::new(),
-                    Type::Any,
-                    Box::new(Node::Identifier(Identifier::new(
-                        NodeId(0),
-                        Path::Simple("x".to_string()),
-                    ))),
-                ))),
-                Vec::new(),
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                ((1: lambda [] -> any x)))
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -367,31 +224,10 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Application(Application::new(
-                NodeId(0),
-                Box::new(Node::Lambda(Lambda::new(
-                    NodeId(1),
-                    vec![Parameter::new("y".to_string(), Type::Any, Arity::Unary)],
-                    Type::Any,
-                    Box::new(Node::Identifier(Identifier::new(
-                        NodeId(0),
-                        Path::Simple("y".to_string()),
-                    ))),
-                ))),
-                vec![Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("24".to_string())),
-                ))],
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                ((1: lambda [y] -> any y) 24))
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -405,45 +241,10 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Application(Application::new(
-                NodeId(0),
-                Box::new(Node::Lambda(Lambda::new(
-                    NodeId(1),
-                    vec![
-                        Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-                        Parameter::new("z".to_string(), Type::Any, Arity::Unary),
-                        Parameter::new("a".to_string(), Type::Any, Arity::Unary),
-                    ],
-                    Type::Any,
-                    Box::new(Node::Identifier(Identifier::new(
-                        NodeId(0),
-                        Path::Simple("y".to_string()),
-                    ))),
-                ))),
-                vec![
-                    Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("24".to_string())),
-                    )),
-                    Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("4".to_string())),
-                    )),
-                    Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("2".to_string())),
-                    )),
-                ],
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                ((1: lambda [y z a] -> any y) 24 4 2))
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -461,49 +262,12 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
                 maplit::hashset!["z".to_owned()]
             )
         }),
-        &Node::Let(Let::new(
-            NodeId(0),
-            "x".to_string(),
-            Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Box::new(Node::Let(Let::new(
-                NodeId(0),
-                "y".to_string(),
-                Type::Any,
-                Box::new(Node::Lambda(Lambda::new(
-                    NodeId(1),
-                    vec![Parameter::new("a".to_string(), Type::Any, Arity::Unary)],
-                    Type::Any,
-                    Box::new(Node::Identifier(Identifier::new(
-                        NodeId(0),
-                        Path::Simple("z".to_string()),
-                    ))),
-                ))),
-                Box::new(Node::Let(Let::new(
-                    NodeId(0),
-                    "z".to_string(),
-                    Type::Any,
-                    Box::new(Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("24".to_string())),
-                    ))),
-                    Box::new(Node::Application(Application::new(
-                        NodeId(0),
-                        Box::new(Node::Identifier(Identifier::new(
-                            NodeId(0),
-                            Path::Simple("y".to_string()),
-                        ))),
-                        vec![Node::ConstantValue(ConstantValue::new(
-                            NodeId(0),
-                            ConstantVariant::Numeric(Number::Integer("12".to_string())),
-                        ))],
-                    ))),
-                ))),
-            ))),
-        )),
+        &brucket! {
+            (let x 42
+                (let y (1: lambda [a] -> any z)
+                    (let z 24
+                        (y 12))))
+        },
     );
     assert_eq!(expected, actual);
 }
@@ -519,10 +283,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string()))
-                    ))),
+                    Box::new(brucket!(42)),
                     Environment::default(),
             ))
         },
@@ -531,28 +292,10 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Module(Module::new(
-            NodeId(0),
-            false,
-            "foo".to_string(),
-            vec![Function::new(
-                NodeId(0),
-                Visibility::Public,
-                ApplicationStrategy::Eager,
-                "bar".to_string(),
-                Lambda::new(
-                    NodeId(1),
-                    Vec::new(),
-                    Type::Any,
-                    Box::new(Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                    ))),
-                ),
-            )],
-            Vec::new(),
-            Vec::new(),
-        )),
+        &brucket! {
+            @node Module
+            (module foo ((0: public eager function bar [] -> any 1: 42)) () ())
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -564,11 +307,8 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
-            vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-            Box::from(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
+            brucket!(@parameters [x]),
+            Box::new(brucket!(42)),
             Environment::default(),
         ),
     );
@@ -576,21 +316,10 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Function(Function::new(
-            NodeId(0),
-            Visibility::Private,
-            ApplicationStrategy::Eager,
-            "foo".to_string(),
-            Lambda::new(
-                NodeId(1),
-                vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-                Type::Any,
-                Box::new(Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                ))),
-            ),
-        )),
+        &brucket! {
+            @node Function
+            (0: public eager function foo [x] -> any 1: 42)
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -600,34 +329,17 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
 fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        vec![
-            Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-            Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-            Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
-        ],
-        Box::from(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_string()),
-        ))),
+        brucket!(@parameters [(x: any) (y: any) (z: any...)]),
+        Box::new(brucket!(x)),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Lambda(Lambda::new(
-            NodeId(1),
-            vec![
-                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-                Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-                Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
-            ],
-            Type::Any,
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(0),
-                Path::Simple("x".to_string()),
-            ))),
-        )),
+        &brucket! {
+            (1: lambda [(x: any) (y: any) (z: any...)] -> any x)
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -650,44 +362,9 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &Node::Application(Application::new(
-            NodeId(0),
-            Box::new(Node::Lambda(Lambda::new(
-                NodeId(1),
-                vec![
-                    Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-                    Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-                    Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
-                ],
-                Type::Any,
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("z".to_string()),
-                ))),
-            ))),
-            vec![
-                Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("1".to_string())),
-                )),
-                Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("2".to_string())),
-                )),
-                Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("3".to_string())),
-                )),
-                Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("4".to_string())),
-                )),
-                Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("5".to_string())),
-                )),
-            ],
-        )),
+        &brucket! {
+            ((1: lambda [(x: any) (y: any) (z: any...)] -> any z) 1 2 3 4 5)
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -704,10 +381,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string()))
-                    ))),
+                    Box::new(brucket!(42)),
                     Environment::default(),
             )),
             "baar" => Value::Numeric(Numeric::Integer(42))
@@ -718,64 +392,20 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
             NodeId(1) => NodeVariables::default(),
             NodeId(2) => NodeVariables::default()
         }),
-        &Node::Module(Module::new(
-            NodeId(0),
-            false,
-            "foo".to_string(),
-            vec![
-                Function::new(
-                    NodeId(0),
-                    Visibility::Public,
-                    ApplicationStrategy::Eager,
-                    "bar".to_string(),
-                    Lambda::new(
-                        NodeId(1),
-                        Vec::new(),
-                        Type::Any,
-                        Box::new(Node::ConstantValue(ConstantValue::new(
-                            NodeId(0),
-                            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                        ))),
-                    ),
-                ),
-                Function::new(
-                    NodeId(0),
-                    Visibility::Private,
-                    ApplicationStrategy::Eager,
-                    "fooo".to_string(),
-                    Lambda::new(
-                        NodeId(2),
-                        Vec::new(),
-                        Type::Any,
-                        Box::new(Node::ConstantValue(ConstantValue::new(
-                            NodeId(0),
-                            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                        ))),
-                    ),
-                ),
-            ],
-            vec![],
-            vec![
-                Constant::new(
-                    NodeId(0),
-                    Visibility::Public,
-                    "baar".to_string(),
-                    Box::new(Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                    ))),
-                ),
-                Constant::new(
-                    NodeId(0),
-                    Visibility::Private,
-                    "barr".to_string(),
-                    Box::new(Node::ConstantValue(ConstantValue::new(
-                        NodeId(0),
-                        ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                    ))),
-                ),
-            ],
-        )),
+        &brucket! {
+            @node Module
+            (module foo
+                (
+                    (0: public eager function bar [] -> any 1: 42)
+                    (0: private eager function fooo [] -> any 2: 42)
+                )
+                ()
+                (
+                    (0: public constant baar 42)
+                    (0: private constant barr 42)
+                )
+            )
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -786,34 +416,16 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
     let mut evaluator = Evaluator::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Lazy,
-        Closure::new(
-            Vec::new(),
-            Box::from(Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))),
-            Environment::default(),
-        ),
+        Closure::new(Vec::new(), Box::new(brucket!(42)), Environment::default()),
     );
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
         }),
-        &Node::Function(Function::new(
-            NodeId(0),
-            Visibility::Private,
-            ApplicationStrategy::Lazy,
-            "foo".to_string(),
-            Lambda::new(
-                NodeId(1),
-                Vec::new(),
-                Type::Any,
-                Box::new(Node::ConstantValue(ConstantValue::new(
-                    NodeId(0),
-                    ConstantVariant::Numeric(Number::Integer("42".to_string())),
-                ))),
-            ),
-        )),
+        &brucket! {
+            @node Function
+            (0: private lazy function foo [] -> any 1: 42)
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -822,39 +434,14 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
 #[test]
 fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value() -> TestResult {
     let mut evaluator = Evaluator::default();
-    let expected = Value::Thunk(
-        Box::from(Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
-        ))),
-        Environment::default(),
-    );
+    let expected = Value::Thunk(Box::new(brucket!(42)), Environment::default());
     let actual = evaluator.evaluate_with_variables(
         Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
         }),
-        &Node::Application(Application::new(
-            NodeId(0),
-            Box::new(Node::Function(Function::new(
-                NodeId(0),
-                Visibility::Private,
-                ApplicationStrategy::Lazy,
-                "foo".to_string(),
-                Lambda::new(
-                    NodeId(1),
-                    vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
-                    Type::Any,
-                    Box::new(Node::Identifier(Identifier::new(
-                        NodeId(0),
-                        Path::Simple("x".to_string()),
-                    ))),
-                ),
-            ))),
-            vec![Node::ConstantValue(ConstantValue::new(
-                NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("42".to_string())),
-            ))],
-        )),
+        &brucket! {
+            ((@node Function (0: private lazy function foo [x] -> any 1: x)) 42)
+        },
     )?;
     assert_eq!(expected, actual);
     Ok(())
@@ -864,14 +451,10 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
 fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Module(true, "foo".to_string(), Environment::default());
-    let actual = evaluator.evaluate_with_default_state(&Node::Module(Module::new(
-        NodeId(0),
-        true,
-        "foo".to_string(),
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
-    )))?;
+    let actual = evaluator.evaluate_with_default_state(&brucket! {
+        @node Module
+        (0: static module foo () () ())
+    })?;
     assert_eq!(expected, actual);
     Ok(())
 }

@@ -13,3 +13,6 @@ maplit = "1.0.2"
 version = "0.99.14"
 default-features = false
 features = ["constructor"]
+
+[dev-dependencies]
+brucket-quote = { path = "../brucket-quote" }

@@ -30,7 +30,7 @@ mod tests;
 #[macro_export]
 macro_rules! brucket {
     ((module $name:ident $functions:tt $internal_functions:tt $constants:tt)) => {
-        brucket!((0: module $name $functions $internal_functions $constants))
+        brucket!(@module 0 false $name $functions $internal_functions $constants)
     };
     (($node_id:literal:
         module
@@ -63,16 +63,19 @@ macro_rules! brucket {
             NodeId($node_id),
             $static,
             stringify!($name).to_owned(),
-            vec![$(brucket!($function))*],
-            vec![$(brucket!($internal_function))*],
-            vec![$(brucket!($constant))*],
+            vec![$(brucket!($function),)*],
+            vec![$(brucket!($internal_function),)*],
+            vec![$(brucket!($constant),)*],
         )
     };
 
     ((constant $name:ident $value:tt)) => {
-        brucket!((0: private constant $name $value))
+        brucket!(@constant 0 private $name $value)
     };
     (($node_id:literal: $visibility:ident constant $name:ident $value:tt)) => {
+        brucket!(@constant $node_id $visibility $name $value)
+    };
+    (@constant $node_id:literal $visibility:ident $name:ident $value:tt) => {
         Constant::new(
             NodeId($node_id),
             brucket!(@visibility $visibility),
@@ -82,7 +85,7 @@ macro_rules! brucket {
     };
 
     ((internal_function $name:ident $parameters:tt)) => {
-        brucket!((0: private eager internal_function $name $parameters -> any))
+        brucket!(@internal_function 0 private eager $name $parameters any)
     };
     (($node_id:literal:
         $visibility:ident
@@ -91,6 +94,16 @@ macro_rules! brucket {
         $name:ident
         $parameters:tt -> $return_type:tt
     )) => {
+        brucket!(@internal_function $node_id $visibility $strategy $name $parameters $return_type)
+    };
+    (@internal_function
+        $node_id:literal
+        $visibility:ident
+        $strategy:ident
+        $name:ident
+        $parameters:tt
+        $return_type:tt
+    ) => {
         InternalFunction::new(
             NodeId($node_id),
             brucket!(@visibility $visibility),
@@ -102,9 +115,7 @@ macro_rules! brucket {
     };
 
     ((function $name:ident $parameters:tt $body:tt)) => {
-        brucket!(
-            (0: private eager function $name $parameters -> any $body)
-        )
+        brucket!(@function 0 private eager $name $parameters any 0 $body)
     };
     (($node_id:literal:
         $visibility:ident
@@ -112,17 +123,36 @@ macro_rules! brucket {
         function
         $name:ident
         $parameters:tt -> $return_type:tt
+        $body_node_id:literal:
         $body:tt
     )) => {
+        brucket!(
+            @function $node_id $visibility $strategy $name $parameters $return_type $body_node_id
+            $body
+        )
+    };
+    (@function
+        $node_id:literal
+        $visibility:ident
+        $strategy:ident
+        $name:ident
+        $parameters:tt
+        $return_type:tt
+        $body_node_id:literal
+        $body:tt
+    ) => {
         Function::new(
             NodeId($node_id),
             brucket!(@visibility $visibility),
             brucket!(@strategy $strategy),
             stringify!($name).to_owned(),
-            brucket!(@lambda $parameters -> $return_type $body),
+            brucket!(@lambda $body_node_id $parameters $return_type $body),
         )
     };
 
+    ((@node $node_type:ident $node:tt)) => {
+        brucket!(@node $node_type $node)
+    };
     (@node $node_type:ident $node:tt) => {
         Node::$node_type(brucket!($node))
     };
@@ -134,11 +164,14 @@ macro_rules! brucket {
     (@strategy lazy) => { ApplicationStrategy::Lazy };
 
     ((lambda $parameters:tt $body:tt)) => {
-        Node::Lambda(brucket!(@lambda $parameters -> any $body))
+        Node::Lambda(brucket!(@lambda 0 $parameters any $body))
     };
-    (@lambda $parameters:tt -> $return_type:tt $body:tt) => {
+    (($node_id:literal: lambda $parameters:tt -> $return_type:tt $body:tt)) => {
+        Node::Lambda(brucket!(@lambda $node_id $parameters $return_type $body))
+    };
+    (@lambda $node_id:literal $parameters:tt $return_type:tt $body:tt) => {
         Lambda::new(
-            NodeId(0),
+            NodeId($node_id),
             brucket!(@parameters $parameters),
             brucket!(@type $return_type),
             Box::new(brucket!($body)),
@@ -243,8 +276,11 @@ macro_rules! brucket {
     };
 
     ($constant_value:literal) => {
+        brucket!((0: $constant_value))
+    };
+    (($node_id:literal: $constant_value:literal)) => {
         Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
+            NodeId($node_id),
             ConstantVariant::from($constant_value),
         ))
     };
@@ -262,9 +298,20 @@ macro_rules! brucket {
     };
 
     ($identifier:ident) => {
+        brucket!((0: $identifier))
+    };
+    (($node_id:literal: $identifier:ident)) => {
         Node::Identifier(Identifier::new(
-            NodeId(0),
+            NodeId($node_id),
             Path::Simple(stringify!($identifier).to_owned()),
+        ))
+    };
+
+    (($identifier:tt $($argument:tt)*)) => {
+        Node::Application(Application::new(
+            NodeId(0),
+            Box::new(brucket!($identifier)),
+            vec![$(brucket!($argument),)*],
         ))
     };
 }

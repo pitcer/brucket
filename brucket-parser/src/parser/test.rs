@@ -324,7 +324,7 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
     let mut parser = Parser::default();
     let expected = brucket! {
         @node Function
-        (0: public eager function foo [] -> any 42)
+        (0: public eager function foo [] -> any 0: 42)
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -364,7 +364,7 @@ fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
     let mut parser = Parser::default();
     let expected = brucket! {
         @node Function
-        (0: private lazy function foo [] -> any 42)
+        (0: private lazy function foo [] -> any 0: 42)
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -385,7 +385,7 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
     let mut parser = Parser::default();
     let expected = brucket! {
         @node Function
-        (0: public lazy function foo [] -> any 42)
+        (0: public lazy function foo [] -> any 0: 42)
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -501,7 +501,7 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
     let expected = brucket! {
         @node Function
         (0: private eager function foo [(x: any) (y: Bar) (z: int...)] -> bool
-            (bar 42))
+            0: (bar 42))
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
@@ -538,7 +538,7 @@ fn test_parse_function_with_lambda_type() -> TestResult {
         @node Function
         (0: private eager function foobar
             [(x: any) (y: (int bool -> Test)) (z: int...)] -> (-> int)
-            (bar 42))
+            0: (bar 42))
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
