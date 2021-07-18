@@ -22,23 +22,39 @@
  * SOFTWARE.
  */
 
-#![warn(clippy::pedantic)]
-#![allow(
-    clippy::module_name_repetitions,
-    clippy::missing_errors_doc,
-    clippy::missing_panics_doc
-)]
-#![warn(clippy::cargo)]
-#![allow(clippy::cargo_common_metadata)]
-#![forbid(unsafe_code)]
+use crate::evaluator::ValueResult;
+use crate::value::Value;
+use std::borrow::Cow;
+use std::collections::HashMap;
 
-use crate::command::brucket::Brucket;
-use crate::command::{CommandResult, Execute};
-use clap::Clap;
+pub fn new(mut environment: HashMap<String, Value>) -> ValueResult {
+    let first = environment
+        .remove("first")
+        .ok_or("[pair_new] Unknown variable: first")?;
+    let second = environment
+        .remove("second")
+        .ok_or("[pair_new] Unknown variable: second")?;
+    Ok(Value::Pair(Box::new(first), Box::new(second)))
+}
 
-mod command;
+pub fn first(mut environment: HashMap<String, Value>) -> ValueResult {
+    let pair = environment
+        .remove("pair")
+        .ok_or("[pair_first] Unknown variable: pair")?;
+    if let Value::Pair(first, _) = pair {
+        Ok(*first)
+    } else {
+        Err(Cow::from("Invalid type of argument, expected: Pair"))
+    }
+}
 
-fn main() -> CommandResult {
-    let brucket = Brucket::parse();
-    brucket.execute()
+pub fn second(mut environment: HashMap<String, Value>) -> ValueResult {
+    let pair = environment
+        .remove("pair")
+        .ok_or("[pair_second] Unknown variable: pair")?;
+    if let Value::Pair(_, second) = pair {
+        Ok(*second)
+    } else {
+        Err(Cow::from("Invalid type of argument, expected: Pair"))
+    }
 }

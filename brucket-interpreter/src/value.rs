@@ -56,8 +56,9 @@ impl Display for Value {
             Value::Boolean(boolean) => write!(f, "{}", boolean),
             Value::Pair(left, right) => write!(f, "({}, {})", left, right),
             Value::Closure(_) => write!(f, "(<Closure>)"),
-            Value::FunctionClosure(_, _) => write!(f, "(<Closure>)"),
-            Value::InternalFunctionClosure(_) => write!(f, "(<Closure>)"),
+            Value::FunctionClosure(_, _) | Value::InternalFunctionClosure(_) => {
+                write!(f, "(<Closure>)")
+            }
             Value::Thunk(_, _) => write!(f, "(<Thunk>)"),
             Value::Module(_, _, _) => write!(f, "(<Module>)"),
         }

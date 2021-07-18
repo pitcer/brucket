@@ -22,9 +22,6 @@
  * SOFTWARE.
  */
 
-use brucket_ast::constant_value::ConstantValue;
-use brucket_ast::function::Function;
-use brucket_ast::{Constant, Identifier, If, Let};
 use brucket_quote::brucket;
 
 use super::*;

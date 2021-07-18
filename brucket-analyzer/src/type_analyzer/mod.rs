@@ -70,6 +70,7 @@ impl Environment {
         self.variables.remove(path)
     }
 
+    #[must_use]
     pub fn get_variable(&self, path: &Path) -> Option<&Type> {
         self.variables.get(path)
     }
@@ -87,9 +88,10 @@ impl TypeAnalyzer {
         Ok((node_type, node_types))
     }
 
+    #[allow(clippy::match_same_arms)]
     fn analyze_node_types(&mut self, node: &Node) -> TypedResult {
         let node_type = match node {
-            Node::ConstantValue(value) => self.analyze_constant_value_types(value)?,
+            Node::ConstantValue(value) => self.analyze_constant_value_types(value),
             Node::Identifier(identifier) => self.analyze_identifier_types(identifier)?,
             Node::Application(application) => self.analyze_application_types(application)?,
             Node::Let(let_node) => self.analyze_let_types(let_node)?,
@@ -103,7 +105,7 @@ impl TypeAnalyzer {
         Ok(node_type)
     }
 
-    fn analyze_constant_value_types(&mut self, value: &ConstantValue) -> TypedResult {
+    fn analyze_constant_value_types(&mut self, value: &ConstantValue) -> Type {
         let value_type = match &value.variant {
             ConstantVariant::Unit => Type::Unit,
             ConstantVariant::Null => Type::Any,
@@ -117,7 +119,7 @@ impl TypeAnalyzer {
         self.environment
             .node_types
             .insert(value, value_type.clone());
-        Ok(value_type)
+        value_type
     }
 
     fn analyze_identifier_types(&mut self, identifier: &Identifier) -> TypedResult {

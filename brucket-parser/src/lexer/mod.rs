@@ -170,11 +170,7 @@ impl Lexer {
             _ => {
                 let symbol = Self::tokenize_symbol(current, characters);
                 let token = self.symbol_map.get(symbol.as_str());
-                if let Some(token) = token {
-                    Ok(Some(token.clone()))
-                } else {
-                    Ok(Some(Token::Symbol(symbol)))
-                }
+                Ok(Some(token.map_or(Token::Symbol(symbol), Clone::clone)))
             }
         }
     }

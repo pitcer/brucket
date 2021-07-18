@@ -87,7 +87,7 @@ impl Translator {
     ) -> TranslatorResult<Translation> {
         match node {
             Node::ConstantValue(value) => self.translate_constant_value(value, environment),
-            Node::Identifier(identifier) => self.translate_identifier(identifier, environment),
+            Node::Identifier(identifier) => self.translate_identifier(&identifier, environment),
             Node::Application(application) => self.translate_application(application, environment),
             Node::Let(let_expression) => self.translate_let(let_expression, environment),
             Node::If(if_expression) => self.translate_if(if_expression, environment),
@@ -129,7 +129,7 @@ impl Translator {
             .iter()
             .map(|parameter_type| self.translate_type(&parameter_type, state))
             .collect::<Result<Vec<CType>, TranslatorError>>()?;
-        let typedef_count = state.typedef_count();
+        let typedef_count = state.typedef_count;
         let type_name = format!("__$type_{}", typedef_count);
         state.increment_typedef();
         let function_pointer =
@@ -146,7 +146,7 @@ impl Translator {
     ) -> TranslatorResult<Translation> {
         let value_type = environment.types.get(&value)?;
         let c_type = self.translate_type(value_type, &mut environment.state)?;
-        let expression = self.translate_constant_variant(value.variant)?;
+        let expression = Self::translate_constant_variant(value.variant);
         Ok(Translation::new(
             Instructions::default(),
             expression,
@@ -154,11 +154,8 @@ impl Translator {
         ))
     }
 
-    fn translate_constant_variant(
-        &self,
-        variant: ConstantVariant,
-    ) -> TranslatorResult<CExpression> {
-        let expression = match variant {
+    fn translate_constant_variant(variant: ConstantVariant) -> CExpression {
+        match variant {
             ConstantVariant::Unit => CExpression::Empty,
             ConstantVariant::Null => CExpression::NamedReference("NULL".to_string()),
             ConstantVariant::Numeric(numeric) => match numeric {
@@ -172,26 +169,23 @@ impl Translator {
                 Boolean::False => CExpression::NamedReference("FALSE".to_string()),
             },
             ConstantVariant::String(string) => CExpression::String(string),
-        };
-        Ok(expression)
+        }
     }
 
     fn translate_identifier(
         &self,
-        identifier: Identifier,
+        identifier: &Identifier,
         environment: &mut Environment,
     ) -> TranslatorResult<Translation> {
-        let identifier_type = environment.types.get(&identifier)?;
+        let identifier_type = environment.types.get(identifier)?;
         let c_type = self.translate_type(identifier_type, &mut environment.state)?;
-        let path = self.translate_path(&identifier.path)?;
+        let path = Self::translate_path(&identifier.path);
         let variable = environment
             .state
             .variables
             .iter()
             .find(|variable| variable.name == path);
-        let c_type = variable
-            .map(|variable| variable.variable_type.clone())
-            .unwrap_or(c_type);
+        let c_type = variable.map_or(c_type, |variable| variable.variable_type.clone());
         Ok(Translation::new(
             Instructions::default(),
             CExpression::NamedReference(path),
@@ -199,15 +193,15 @@ impl Translator {
         ))
     }
 
-    fn translate_path(&self, path: &Path) -> TranslatorResult<String> {
+    fn translate_path(path: &Path) -> String {
         match path {
-            Path::Simple(path) => Ok(path
+            Path::Simple(path) => path
                 .replace("+", "__$internal_add")
                 .replace("-", "__$internal_subtract")
                 .replace("*", "__$internal_multiply")
                 .replace("/", "__$internal_divide")
-                .replace("%", "__$internal_remainder")),
-            Path::Complex(complex_path) => Ok(complex_path.join("_")),
+                .replace("%", "__$internal_remainder"),
+            Path::Complex(complex_path) => complex_path.join("_"),
         }
     }
 
@@ -275,26 +269,26 @@ impl Translator {
         let variable = Variable::new(let_node.name.clone(), value.result_type.clone());
 
         let variable_defined = environment.state.contains_variable(&variable);
-        let mut then = if !variable_defined {
+        let mut then = if variable_defined {
+            self.translate_node(*let_node.then, environment)?
+        } else {
             environment.state.push_variable(variable);
             let next = self.translate_node(*let_node.then, environment)?;
             environment.state.pop_variable();
             next
-        } else {
-            self.translate_node(*let_node.then, environment)?
         };
-        let let_count = environment.state.let_count();
+        let let_count = environment.state.let_count;
         let function_name = format!("__$let_{}_{}", let_count, let_node.name);
         environment.state.increment_let();
         let arguments = environment
             .state
-            .variables()
+            .variables
             .iter()
             .map(|variable| CExpression::NamedReference(variable.name.to_string()))
             .collect::<Arguments>();
         let parameters = environment
             .state
-            .variables()
+            .variables
             .iter()
             .map(|variable| {
                 FunctionParameter::new(variable.variable_type.clone(), variable.name.to_string())
@@ -342,20 +336,20 @@ impl Translator {
         let if_body_translation = self.translate_node(*if_node.if_true, environment)?;
         let else_body_translation = self.translate_node(*if_node.if_false, environment)?;
 
-        let if_count = environment.state.if_count();
+        let if_count = environment.state.if_count;
         let function_name = format!("__$if_{}", if_count);
         environment.state.increment_if();
 
         let arguments = environment
             .state
-            .variables()
+            .variables
             .iter()
             .map(|variable| CExpression::NamedReference(variable.name.clone()))
             .collect::<Arguments>();
 
         let parameters = environment
             .state
-            .variables()
+            .variables
             .iter()
             .map(|variable| {
                 FunctionParameter::new(variable.variable_type.clone(), variable.name.clone())
@@ -398,7 +392,7 @@ impl Translator {
         lambda: Lambda,
         environment: &mut Environment,
     ) -> TranslatorResult<Translation> {
-        let lambda_count = environment.state.lambda_count();
+        let lambda_count = environment.state.lambda_count;
         let function_name = format!("__$lambda_{}", lambda_count);
         environment.state.increment_lambda();
 
@@ -451,7 +445,7 @@ impl Translator {
                 .map(|parameter_type| self.translate_type(&parameter_type, state))
                 .collect::<Result<Vec<CType>, TranslatorError>>()?;
             parameters_types.append(&mut parameters);
-            let typedef_count = state.typedef_count();
+            let typedef_count = state.typedef_count;
             let type_name = format!("__$type_{}", typedef_count);
             state.increment_typedef();
             let function_pointer =
@@ -522,6 +516,8 @@ impl Translator {
         Ok(FunctionParameter::new(parameter_type, parameter.name))
     }
 
+    #[allow(clippy::unused_self)]
+    #[allow(clippy::needless_pass_by_value)]
     fn translate_function(
         &self,
         _function: Function,
@@ -530,6 +526,8 @@ impl Translator {
         unimplemented!("Function#translate()")
     }
 
+    #[allow(clippy::unused_self)]
+    #[allow(clippy::needless_pass_by_value)]
     fn translate_internal_function(
         &self,
         _function: InternalFunction,
@@ -538,6 +536,8 @@ impl Translator {
         unimplemented!("InternalFunction#translate()")
     }
 
+    #[allow(clippy::unused_self)]
+    #[allow(clippy::needless_pass_by_value)]
     fn translate_constant(
         &self,
         _constant: Constant,
@@ -546,6 +546,8 @@ impl Translator {
         unimplemented!("Constant#translate()")
     }
 
+    #[allow(clippy::unused_self)]
+    #[allow(clippy::needless_pass_by_value)]
     fn translate_module(
         &self,
         _module: Module,

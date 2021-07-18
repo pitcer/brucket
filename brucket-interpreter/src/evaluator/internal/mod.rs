@@ -28,6 +28,7 @@ use derive_more::Constructor;
 use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
+mod pair;
 #[cfg(test)]
 mod tests;
 
@@ -228,43 +229,6 @@ fn is_less_or_equal(mut environment: HashMap<String, Value>) -> ValueResult {
         .ok_or("[is_less_or_equal] Unknown variable: second")?
         .into_numeric()?;
     Ok(Value::Boolean(first <= second))
-}
-
-mod pair {
-    use super::*;
-    use std::borrow::Cow;
-
-    pub fn new(mut environment: HashMap<String, Value>) -> ValueResult {
-        let first = environment
-            .remove("first")
-            .ok_or("[pair_new] Unknown variable: first")?;
-        let second = environment
-            .remove("second")
-            .ok_or("[pair_new] Unknown variable: second")?;
-        Ok(Value::Pair(Box::new(first), Box::new(second)))
-    }
-
-    pub fn first(mut environment: HashMap<String, Value>) -> ValueResult {
-        let pair = environment
-            .remove("pair")
-            .ok_or("[pair_first] Unknown variable: pair")?;
-        if let Value::Pair(first, _) = pair {
-            Ok(*first)
-        } else {
-            Err(Cow::from("Invalid type of argument, expected: Pair"))
-        }
-    }
-
-    pub fn second(mut environment: HashMap<String, Value>) -> ValueResult {
-        let pair = environment
-            .remove("pair")
-            .ok_or("[pair_second] Unknown variable: pair")?;
-        if let Value::Pair(_, second) = pair {
-            Ok(*second)
-        } else {
-            Err(Cow::from("Invalid type of argument, expected: Pair"))
-        }
-    }
 }
 
 impl Value {

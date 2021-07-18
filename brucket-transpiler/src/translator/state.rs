@@ -71,6 +71,7 @@ impl TranslationState {
         self.variables.pop();
     }
 
+    #[must_use]
     pub fn contains_variable(&self, variable: &Variable) -> bool {
         self.variables.contains(variable)
     }
@@ -100,26 +101,6 @@ impl TranslationState {
         members.append(&mut self.declarations);
         members.append(&mut self.members);
         members
-    }
-
-    pub fn let_count(&self) -> usize {
-        self.let_count
-    }
-
-    pub fn if_count(&self) -> usize {
-        self.if_count
-    }
-
-    pub fn lambda_count(&self) -> usize {
-        self.lambda_count
-    }
-
-    pub fn typedef_count(&self) -> usize {
-        self.typedef_count
-    }
-
-    pub fn variables(&self) -> &Vec<Variable> {
-        &self.variables
     }
 }
 

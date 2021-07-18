@@ -48,12 +48,13 @@ use derive_more::Constructor;
 pub struct Transpiler;
 
 impl Transpiler {
+    #[allow(clippy::unused_self)]
     pub fn transpile(&self, syntax: &str) -> GeneratorResult {
         let lexer = Lexer::default();
         let mut parser = Parser::default();
         let tokens = lexer.tokenize(syntax)?;
         let node = parser.parse(tokens)?;
-        let environment = self.create_type_analyzer_environment();
+        let environment = Self::create_type_analyzer_environment();
         let mut type_analyzer = TypeAnalyzer::new(environment);
         let (_, node_types) = type_analyzer.analyze_types(&node)?;
         let mut variable_analyzer = VariablesAnalyzer::default();
@@ -63,13 +64,13 @@ impl Transpiler {
         let translator = Translator::default();
         let expression = translator.translate(node, &mut translator_environment)?;
         let expression_members = translator_environment.state.all_members();
-        let members = self.create_module_members(expression, expression_members);
+        let members = Self::create_module_members(expression, expression_members);
         let module = Module::new(members);
         let generator_state = GeneratorState::default();
         module.generate_indented(&generator_state)
     }
 
-    fn create_type_analyzer_environment(&self) -> Environment {
+    fn create_type_analyzer_environment() -> Environment {
         let mut environment = Environment::default();
         let binary_int_lambda_type = Type::Lambda(LambdaType::new(
             vec![Type::Integer, Type::Integer],
@@ -84,7 +85,6 @@ impl Transpiler {
     }
 
     fn create_module_members(
-        &self,
         expression: Translation,
         mut expression_members: ModuleMembers,
     ) -> Vec<ModuleMember> {
@@ -101,12 +101,13 @@ impl Transpiler {
             "FALSE".to_string(),
             "0".to_string(),
         )));
-        let plus_function = self.create_binary_operator_function("__$internal_add", '+');
-        let minus_function = self.create_binary_operator_function("__$internal_subtract", '-');
-        let times_function = self.create_binary_operator_function("__$internal_multiply", '*');
-        let divide_function = self.create_binary_operator_function("__$internal_divide", '/');
-        let remainder_function = self.create_binary_operator_function("__$internal_remainder", '%');
-        let main_function = self.create_main_function(expression);
+        let plus_function = Self::create_binary_operator_function("__$internal_add", '+');
+        let minus_function = Self::create_binary_operator_function("__$internal_subtract", '-');
+        let times_function = Self::create_binary_operator_function("__$internal_multiply", '*');
+        let divide_function = Self::create_binary_operator_function("__$internal_divide", '/');
+        let remainder_function =
+            Self::create_binary_operator_function("__$internal_remainder", '%');
+        let main_function = Self::create_main_function(expression);
         let mut members = Vec::with_capacity(expression_members.len() + 10);
         members.push(include_stdio_macro);
         members.push(define_unit_macro);
@@ -122,7 +123,7 @@ impl Transpiler {
         members
     }
 
-    fn create_main_function(&self, translation: Translation) -> ModuleMember {
+    fn create_main_function(translation: Translation) -> ModuleMember {
         let print_result_instruction =
             Instruction::Expression(CExpression::FunctionCall(FunctionCallExpression::new(
                 FunctionIdentifier::NamedReference("printf".to_string()),
@@ -149,7 +150,7 @@ impl Transpiler {
         ))
     }
 
-    fn create_binary_operator_function(&self, name: &str, operator: char) -> ModuleMember {
+    fn create_binary_operator_function(name: &str, operator: char) -> ModuleMember {
         ModuleMember::FunctionDefinition(FunctionDefinition::new(
             FunctionHeader::new(
                 CType::Primitive(CPrimitiveType::Int),

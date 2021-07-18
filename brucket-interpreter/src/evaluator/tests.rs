@@ -23,11 +23,7 @@
  */
 
 use brucket_analyzer::variables_analyzer::{NodeVariables, Variables};
-use brucket_ast::ast_type::Type;
-use brucket_ast::constant_value::ConstantValue;
-use brucket_ast::function::Function;
-use brucket_ast::lambda::Parameter;
-use brucket_ast::{Application, Constant, Identifier, If, Let, NodeId, Visibility};
+use brucket_ast::NodeId;
 use brucket_quote::brucket;
 
 use super::*;
@@ -137,7 +133,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
         environment!("x" => Value::Numeric(Numeric::Integer(42))),
     ));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::new(
                 HashMap::default(),
                 maplit::hashset!["x".to_owned()],
@@ -162,7 +158,7 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -183,7 +179,7 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -200,7 +196,7 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::new(
                 HashMap::default(),
                 maplit::hashset!["x".to_owned()],
@@ -221,7 +217,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(24));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -238,7 +234,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(24));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -255,7 +251,7 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
     let mut evaluator = Evaluator::default();
     let expected = Err(Cow::from("Undefined variable: z"));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::new(
                 HashMap::default(),
                 maplit::hashset!["z".to_owned()],
@@ -289,7 +285,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
         },
     );
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -313,7 +309,7 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
         ),
     );
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -334,7 +330,7 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -359,7 +355,7 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
         )),
     );
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
         &brucket! {
@@ -388,7 +384,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
         },
     );
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
             NodeId(2) => NodeVariables::default()
         }),
@@ -419,7 +415,7 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
         Closure::new(Vec::new(), Box::new(brucket!(42)), Environment::default()),
     );
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
         }),
         &brucket! {
@@ -436,7 +432,7 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
     let mut evaluator = Evaluator::default();
     let expected = Value::Thunk(Box::new(brucket!(42)), Environment::default());
     let actual = evaluator.evaluate_with_variables(
-        Variables(maplit::hashmap! {
+        &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
         }),
         &brucket! {

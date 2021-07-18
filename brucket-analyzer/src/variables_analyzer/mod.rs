@@ -107,31 +107,29 @@ impl VariablesAnalyzer {
 
     fn analyze_node_variables(&mut self, node: &Node) -> VariablesResult {
         let node_variables = match node {
-            Node::ConstantValue(value) => self.analyze_constant_value_variables(value)?,
-            Node::Identifier(identifier) => self.analyze_identifier_variables(identifier)?,
+            Node::ConstantValue(value) => self.analyze_constant_value_variables(value),
+            Node::Identifier(identifier) => self.analyze_identifier_variables(identifier),
             Node::Application(application) => self.analyze_application_variables(application)?,
             Node::Let(let_node) => self.analyze_let_variables(let_node)?,
             Node::If(if_node) => self.analyze_if_variables(if_node)?,
             Node::Lambda(lambda) => self.analyze_lambda_variables(lambda)?,
             Node::Function(function) => self.analyze_function_variables(function)?,
-            Node::InternalFunction(function) => {
-                self.analyze_internal_function_variables(function)?
-            }
+            Node::InternalFunction(function) => self.analyze_internal_function_variables(function),
             Node::Constant(constant) => self.analyze_constant_variables(constant)?,
             Node::Module(module) => self.analyze_module_variables(module)?,
         };
         Ok(node_variables)
     }
 
-    fn analyze_constant_value_variables(&mut self, value: &ConstantValue) -> VariablesResult {
+    fn analyze_constant_value_variables(&mut self, value: &ConstantValue) -> NodeVariables {
         let node_variables = NodeVariables::default();
         self.environment
             .variables
             .insert(value, node_variables.clone());
-        Ok(node_variables)
+        node_variables
     }
 
-    fn analyze_identifier_variables(&mut self, identifier: &Identifier) -> VariablesResult {
+    fn analyze_identifier_variables(&mut self, identifier: &Identifier) -> NodeVariables {
         let mut node_variables = NodeVariables::default();
 
         let path = &identifier.path;
@@ -143,7 +141,7 @@ impl VariablesAnalyzer {
         self.environment
             .variables
             .insert(identifier, node_variables.clone());
-        Ok(node_variables)
+        node_variables
     }
 
     fn analyze_application_variables(&mut self, application: &Application) -> VariablesResult {
@@ -247,12 +245,12 @@ impl VariablesAnalyzer {
     fn analyze_internal_function_variables(
         &mut self,
         internal_function: &InternalFunction,
-    ) -> VariablesResult {
+    ) -> NodeVariables {
         let node_variables = NodeVariables::default();
         self.environment
             .variables
             .insert(internal_function, node_variables.clone());
-        Ok(node_variables)
+        node_variables
     }
 
     fn analyze_constant_variables(&mut self, constant: &Constant) -> VariablesResult {
@@ -283,7 +281,7 @@ impl VariablesAnalyzer {
             .internal_functions
             .iter()
             .map(|function| self.analyze_internal_function_variables(function))
-            .collect::<Result<Vec<NodeVariables>, VariablesError>>()?
+            .collect::<Vec<NodeVariables>>()
             .into_iter()
             .for_each(|function_variables| node_variables.append(function_variables));
 

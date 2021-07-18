@@ -119,7 +119,7 @@ impl Generator for CompoundLiteral {
         let initializers = self
             .initializers
             .into_iter()
-            .map(|initializer| initializer.generate())
+            .map(Generator::generate)
             .collect::<Result<Vec<String>, GeneratorError>>()?
             .join(", ");
         Ok(format!("(({}) {{{}}})", cast_type, initializers))

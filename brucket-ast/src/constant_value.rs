@@ -101,9 +101,10 @@ pub enum Boolean {
 
 impl From<bool> for Boolean {
     fn from(boolean: bool) -> Self {
-        match boolean {
-            true => Boolean::True,
-            false => Boolean::False,
+        if boolean {
+            Boolean::True
+        } else {
+            Boolean::False
         }
     }
 }

@@ -65,18 +65,18 @@ impl Execute for Compile {
             command::read_syntax_from_stdin()?.0
         } else {
             self.file
-                .map(command::read_syntax_from_file)
+                .map(|file| command::read_syntax_from_file(&file))
                 .transpose()?
                 .or(self.expression)
                 .ok_or_else(|| Cow::from("No expression is provided"))?
         };
 
         let transpiler = Transpiler::default();
-        let transpiled = transpiler
+        let transpiled_syntax = transpiler
             .transpile(&syntax)
             .map_err(|error| format!("Cannot transpile the given syntax: {}", error))?;
 
-        let bytes = transpiled.as_bytes();
+        let bytes = transpiled_syntax.as_bytes();
         if self.save_intermediate_code {
             let mut file = File::create("output.c").map_err(|error| error.to_string())?;
             file.write_all(bytes).map_err(|error| error.to_string())?;

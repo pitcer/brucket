@@ -44,18 +44,18 @@ fn read_syntax_from_stdin() -> Result<(String, usize), CommandError> {
         .map_err(|error| Cow::from(format!("Cannot read syntax from standard input: {}", error)))
 }
 
-fn read_syntax_from_file(name: String) -> Result<String, CommandError> {
-    let mut file = File::open(&name)
+fn read_syntax_from_file(name: &str) -> Result<String, CommandError> {
+    let mut file = File::open(name)
         .map_err(|error| Cow::from(format!("Cannot open file {}: {}", name, error)))?;
     read(&mut file)
         .map(|result| result.0)
         .map_err(|error| Cow::from(format!("Cannot read file {}: {}", name, error)))
 }
 
-fn read_syntax_from_files(names: Vec<String>) -> Result<Vec<String>, CommandError> {
+fn read_syntax_from_files(names: &[String]) -> Result<Vec<String>, CommandError> {
     names
-        .into_iter()
-        .map(read_syntax_from_file)
+        .iter()
+        .map(|name| read_syntax_from_file(&name))
         .collect::<Result<Vec<String>, CommandError>>()
 }
 

@@ -33,6 +33,9 @@ use derive_more::Constructor;
 use std::borrow::Cow;
 
 #[cfg(test)]
+use std::io::Read;
+
+#[cfg(test)]
 mod tests;
 
 type ValueResult = Result<Value, Cow<'static, str>>;
@@ -106,7 +109,6 @@ impl Interpreter {
             .map(|file| file.unwrap().path())
             .collect::<Vec<_>>();
         paths.sort_by(|first, second| first.cmp(second).reverse());
-        use std::io::Read;
         let mut modules_vec = Vec::new();
         for path in paths {
             let mut library_file = std::fs::File::open(path).expect("Cannot open library file");

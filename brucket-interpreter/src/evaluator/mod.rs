@@ -70,8 +70,8 @@ impl Evaluator {
     }
 
     #[cfg(test)]
-    fn evaluate_with_variables(&mut self, variables: Variables, node: &Node) -> ValueResult {
-        let state = EvaluatorState::new(&variables);
+    fn evaluate_with_variables(&mut self, variables: &Variables, node: &Node) -> ValueResult {
+        let state = EvaluatorState::new(variables);
         self.evaluate(node, &state)
     }
 
@@ -87,7 +87,7 @@ impl Evaluator {
         state: &EvaluatorState,
     ) -> ValueResult {
         match node {
-            Node::ConstantValue(value) => self.evaluate_constant_value(&value.variant),
+            Node::ConstantValue(value) => Self::evaluate_constant_value(&value.variant),
             Node::Identifier(identifier) => {
                 self.get_from_environment(&identifier.path, environment, state)
             }
@@ -96,7 +96,7 @@ impl Evaluator {
             }
             Node::Let(let_node) => self.evaluate_let(let_node, environment, state),
             Node::If(if_node) => self.evaluate_if(if_node, environment, state),
-            Node::Lambda(lambda) => Ok(Value::Closure(self.evaluate_lambda(
+            Node::Lambda(lambda) => Ok(Value::Closure(Self::evaluate_lambda(
                 lambda,
                 environment,
                 state,
@@ -104,7 +104,7 @@ impl Evaluator {
             Node::Module(module) => self.evaluate_module(module, environment, state),
             Node::Function(function) => Ok(Value::FunctionClosure(
                 function.application_strategy.clone(),
-                self.evaluate_lambda(&function.body, environment, state)?,
+                Self::evaluate_lambda(&function.body, environment, state)?,
             )),
             Node::InternalFunction(internal_function) => {
                 self.evaluate_internal_function(internal_function, environment)
@@ -115,12 +115,12 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_constant_value(&self, variant: &ConstantVariant) -> ValueResult {
+    fn evaluate_constant_value(variant: &ConstantVariant) -> ValueResult {
         match variant {
             ConstantVariant::Unit => Ok(Value::Unit),
             ConstantVariant::Null => Ok(Value::Null),
             ConstantVariant::Numeric(value) => {
-                let value = self.evaluate_number(value)?;
+                let value = Self::evaluate_number(value)?;
                 Ok(Value::Numeric(value))
             }
             ConstantVariant::Boolean(value) => match value {
@@ -131,7 +131,7 @@ impl Evaluator {
         }
     }
 
-    fn evaluate_number(&self, value: &Number) -> Result<Numeric, ValueError> {
+    fn evaluate_number(value: &Number) -> Result<Numeric, ValueError> {
         match value {
             Number::Integer(value) => value
                 .parse::<i32>()
@@ -216,12 +216,11 @@ impl Evaluator {
     }
 
     fn evaluate_lambda(
-        &mut self,
         lambda: &Lambda,
         environment: &Environment,
         state: &EvaluatorState,
     ) -> Result<Closure, VariablesError> {
-        let environment = self.get_optimized_lambda_environment(lambda, environment, state)?;
+        let environment = Self::create_optimized_lambda_environment(lambda, environment, state)?;
         Ok(Closure::new(
             lambda.parameters.clone(),
             lambda.body.clone(),
@@ -229,8 +228,7 @@ impl Evaluator {
         ))
     }
 
-    fn get_optimized_lambda_environment(
-        &self,
+    fn create_optimized_lambda_environment(
         lambda: &Lambda,
         environment: &Environment,
         state: &EvaluatorState,
@@ -283,15 +281,16 @@ impl Evaluator {
                 if let Some(first_path) = first_path {
                     let module_env = self.module_environment.get(first_path);
                     if let Some(module_env) = module_env {
-                        if let Some(identifier) = path.last() {
-                            self.get_from_environment(
-                                &Path::Simple(identifier.clone()),
-                                module_env,
-                                state,
-                            )
-                        } else {
-                            Err(Cow::from("Path is empty"))
-                        }
+                        path.last().map_or_else(
+                            || Err(Cow::from("Path is empty")),
+                            |identifier| {
+                                self.get_from_environment(
+                                    &Path::Simple(identifier.clone()),
+                                    module_env,
+                                    state,
+                                )
+                            },
+                        )
                     } else {
                         Err(Cow::from(format!("Undefined environment: {}", first_path)))
                     }
@@ -313,16 +312,16 @@ impl Evaluator {
         let arguments = &*application.arguments;
         match identifier {
             Value::Closure(closure) => self.evaluate_closure_application(
-                closure,
-                ApplicationStrategy::Eager,
+                &closure,
+                &ApplicationStrategy::Eager,
                 arguments,
                 environment,
                 state,
             ),
             Value::FunctionClosure(application_strategy, closure) => self
                 .evaluate_closure_application(
-                    closure,
-                    application_strategy,
+                    &closure,
+                    &application_strategy,
                     arguments,
                     environment,
                     state,
@@ -342,8 +341,8 @@ impl Evaluator {
 
     fn evaluate_closure_application(
         &mut self,
-        closure: Closure,
-        application_strategy: ApplicationStrategy,
+        closure: &Closure,
+        application_strategy: &ApplicationStrategy,
         arguments: &[Node],
         environment: &Environment,
         state: &EvaluatorState,
@@ -371,7 +370,7 @@ impl Evaluator {
                 }
                 Arity::Variadic => {
                     let list = self.create_pair_list(
-                        application_strategy,
+                        &application_strategy,
                         arguments_iterator,
                         environment,
                         state,
@@ -429,7 +428,7 @@ impl Evaluator {
                 }
                 Arity::Variadic => {
                     let list = self.create_pair_list(
-                        closure.application_strategy,
+                        &closure.application_strategy,
                         arguments_iterator,
                         environment,
                         state,
@@ -455,7 +454,7 @@ impl Evaluator {
 
     fn create_pair_list(
         &mut self,
-        application_strategy: ApplicationStrategy,
+        application_strategy: &ApplicationStrategy,
         arguments: Iter<Node>,
         environment: &Environment,
         state: &EvaluatorState,
@@ -490,7 +489,7 @@ impl Evaluator {
             let application_strategy = &function.application_strategy;
             let identifier = &function.name;
             let lambda = &function.body;
-            let closure = self.evaluate_lambda(lambda, environment, state)?;
+            let closure = Self::evaluate_lambda(lambda, environment, state)?;
             let closure = Value::FunctionClosure(application_strategy.clone(), closure);
             let closure = Rc::new(closure);
             if visibility.is_public() {

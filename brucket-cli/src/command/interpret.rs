@@ -55,7 +55,7 @@ impl Execute for Interpret {
             command::read_syntax_from_stdin()?.0
         } else {
             self.file
-                .map(command::read_syntax_from_file)
+                .map(|file| command::read_syntax_from_file(&file))
                 .transpose()?
                 .or(self.expression)
                 .ok_or_else(|| Cow::from("Expression is not provided"))?
@@ -63,7 +63,7 @@ impl Execute for Interpret {
 
         let modules = self
             .modules
-            .map(command::read_syntax_from_files)
+            .map(|module| command::read_syntax_from_files(&module))
             .transpose()?
             .unwrap_or_default();
         let modules = modules.iter().map(String::as_str).collect();

@@ -55,6 +55,7 @@ impl Default for Indentation {
 }
 
 impl Indentation {
+    #[must_use]
     pub fn to_incremented(&self) -> Indentation {
         let character = self.character.clone();
         Indentation::new(character, self.level + 1)

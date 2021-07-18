@@ -63,7 +63,7 @@ impl Display for LambdaType {
         let parameters = self
             .parameters_types
             .iter()
-            .map(|parameter| parameter.to_string())
+            .map(ToString::to_string)
             .collect::<Vec<_>>()
             .join(" ");
         write!(f, "({} -> {})", parameters, self.return_type)

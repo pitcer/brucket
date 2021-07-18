@@ -96,23 +96,23 @@ impl Parser {
 
     fn parse_first_token(&mut self, token: Token, tokens: &mut Tokens) -> NodeResult {
         match token {
-            Token::Parenthesis(parenthesis) => self.parse_parenthesis(parenthesis, tokens),
-            Token::Operator(operator) => self.parse_operator(operator),
+            Token::Parenthesis(parenthesis) => self.parse_parenthesis(&parenthesis, tokens),
+            Token::Operator(operator) => Self::parse_operator(&operator),
             Token::Null => Ok(self.create_constant_value(ConstantVariant::Null)),
             Token::String(value) => Ok(self.create_constant_value(ConstantVariant::String(value))),
             Token::Number(value) => {
-                let number = self.parse_number(value);
+                let number = Self::parse_number(value);
                 let variant = ConstantVariant::Numeric(number);
                 Ok(self.create_constant_value(variant))
             }
             Token::Boolean(value) => {
-                let boolean = self.parse_boolean(value);
+                let boolean = Self::parse_boolean(&value);
                 let variant = ConstantVariant::Boolean(boolean);
                 Ok(self.create_constant_value(variant))
             }
             Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword).into()),
             Token::Symbol(symbol) => {
-                let path = self.parse_path_symbol(symbol, tokens)?;
+                let path = Self::parse_path_symbol(symbol, tokens)?;
                 Ok(self.create_identifier(path))
             }
             Token::Modifier(modifier) => Err(format!("Unexpected token: {:?}", modifier).into()),
@@ -122,14 +122,14 @@ impl Parser {
         }
     }
 
-    fn parse_parenthesis(&mut self, parenthesis: Parenthesis, tokens: &mut Tokens) -> NodeResult {
+    fn parse_parenthesis(&mut self, parenthesis: &Parenthesis, tokens: &mut Tokens) -> NodeResult {
         match parenthesis {
             Parenthesis::Open(_) => self.parse_section(tokens),
             Parenthesis::Close(_) => Err("Unexpected close parenthesis".into()),
         }
     }
 
-    fn parse_operator(&self, operator: Operator) -> NodeResult {
+    fn parse_operator(operator: &Operator) -> NodeResult {
         match operator {
             Operator::Variadic => Err("Unexpected variadic operator".into()),
             Operator::Path => Err("Unexpected path operator".into()),
@@ -145,14 +145,14 @@ impl Parser {
         Node::ConstantValue(constant_value)
     }
 
-    fn parse_number(&self, token: NumberToken) -> Number {
+    fn parse_number(token: NumberToken) -> Number {
         match token {
             NumberToken::Integer(value) => Number::Integer(value),
             NumberToken::FloatingPoint(value) => Number::FloatingPoint(value),
         }
     }
 
-    fn parse_boolean(&self, token: BooleanToken) -> Boolean {
+    fn parse_boolean(token: &BooleanToken) -> Boolean {
         match token {
             BooleanToken::True => Boolean::True,
             BooleanToken::False => Boolean::False,
@@ -175,10 +175,10 @@ impl Parser {
                 }
                 Parenthesis::Close(_) => Ok(self.create_constant_value(ConstantVariant::Unit)),
             },
-            Token::Keyword(keyword) => self.parse_keyword(tokens, keyword),
+            Token::Keyword(keyword) => self.parse_keyword(tokens, &keyword),
             Token::Modifier(modifier) => self.parse_modifiers(modifier, tokens),
             Token::Symbol(symbol) => {
-                let path = self.parse_path_symbol(symbol, tokens)?;
+                let path = Self::parse_path_symbol(symbol, tokens)?;
                 let identifier = self.create_identifier(path);
                 self.parse_application(identifier, tokens)
             }
@@ -196,7 +196,7 @@ impl Parser {
         Node::Identifier(identifier)
     }
 
-    fn parse_keyword(&mut self, tokens: &mut Tokens, keyword: Keyword) -> NodeResult {
+    fn parse_keyword(&mut self, tokens: &mut Tokens, keyword: &Keyword) -> NodeResult {
         match keyword {
             Keyword::Let => self.create_let(tokens),
             Keyword::If => self.create_if(tokens),
@@ -216,7 +216,7 @@ impl Parser {
     }
 
     fn create_let(&mut self, tokens: &mut Tokens) -> NodeResult {
-        let name = self.parse_identifier(tokens)?;
+        let name = Self::parse_identifier(tokens)?;
         let next = tokens.peek();
         if let Some(token) = next {
             let value_type = match token {
@@ -286,7 +286,7 @@ impl Parser {
     }
 
     fn create_function(&mut self, modifiers: Vec<Modifier>, tokens: &mut Tokens) -> NodeResult {
-        let identifier = self.parse_identifier(tokens)?;
+        let identifier = Self::parse_identifier(tokens)?;
         let mut visibility = Visibility::Private;
         let mut application_strategy = ApplicationStrategy::Eager;
         let mut internal = false;
@@ -365,26 +365,20 @@ impl Parser {
 
     fn parse_return_type(&mut self, tokens: &mut Tokens) -> ParseResult<Type> {
         let next = tokens.peek();
-        if let Some(token) = next {
-            match token {
-                Token::Operator(Operator::SkinnyArrowRight) => {
-                    tokens.next();
-                    self.parse_type(tokens)
-                }
-                _ => Ok(Type::Any),
+        let token = next.ok_or("An unexpected end of tokens")?;
+        match token {
+            Token::Operator(Operator::SkinnyArrowRight) => {
+                tokens.next();
+                self.parse_type(tokens)
             }
-        } else {
-            Err(Cow::from("An unexpected end of tokens"))
+            _ => Ok(Type::Any),
         }
     }
 
     fn parse_type(&self, tokens: &mut Tokens) -> ParseResult<Type> {
         let next = tokens.next();
-        if let Some(token) = next {
-            self.parse_type_token(token, tokens)
-        } else {
-            Err("End of tokens".into())
-        }
+        let token = next.ok_or("End of tokens")?;
+        self.parse_type_token(token, tokens)
     }
 
     fn parse_type_token(&self, token: Token, tokens: &mut Tokens) -> ParseResult<Type> {
@@ -427,7 +421,7 @@ impl Parser {
         modifiers: Vec<Modifier>,
         tokens: &mut Tokens,
     ) -> ParseResult<Node> {
-        let identifier = self.parse_identifier(tokens)?;
+        let identifier = Self::parse_identifier(tokens)?;
         let mut functions = Vec::new();
         let mut internal_functions = Vec::new();
         let mut constants = Vec::new();
@@ -462,7 +456,7 @@ impl Parser {
         Ok(Node::Module(module))
     }
 
-    fn parse_path_symbol(&mut self, symbol: String, tokens: &mut Tokens) -> ParseResult<Path> {
+    fn parse_path_symbol(symbol: String, tokens: &mut Tokens) -> ParseResult<Path> {
         let mut path = vec![symbol];
         let mut last_path_operator = false;
         while let Some(token) = tokens.peek() {
@@ -470,10 +464,9 @@ impl Parser {
                 Token::Operator(Operator::Path) => {
                     if last_path_operator {
                         return Err("Unexpected path operator".into());
-                    } else {
-                        last_path_operator = true;
-                        tokens.next();
                     }
+                    last_path_operator = true;
+                    tokens.next();
                 }
                 Token::Symbol(symbol) => {
                     if last_path_operator {
@@ -496,7 +489,7 @@ impl Parser {
     }
 
     fn create_constant(&mut self, modifiers: Vec<Modifier>, tokens: &mut Tokens) -> NodeResult {
-        let identifier = self.parse_identifier(tokens)?;
+        let identifier = Self::parse_identifier(tokens)?;
         let value = self.parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
             return Err(Cow::from("Invalid constant expression"));
@@ -514,7 +507,7 @@ impl Parser {
         Ok(Node::Constant(constant))
     }
 
-    fn parse_identifier(&self, tokens: &mut Tokens) -> ParseResult<String> {
+    fn parse_identifier(tokens: &mut Tokens) -> ParseResult<String> {
         let identifier = tokens.next();
         if identifier.is_none() {
             return Err(Cow::from("Missing name token"));

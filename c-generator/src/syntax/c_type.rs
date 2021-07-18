@@ -37,9 +37,8 @@ impl Generator for CType {
     fn generate(self) -> GeneratorResult {
         match self {
             CType::Primitive(primitive) => primitive.generate(),
-            CType::Struct(name) => Ok(format!("struct {}", name)),
+            CType::Struct(name) | CType::Closure(name, _, _) => Ok(format!("struct {}", name)),
             CType::Custom(name) => Ok(name),
-            CType::Closure(name, _, _) => Ok(format!("struct {}", name)),
         }
     }
 }
