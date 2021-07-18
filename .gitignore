@@ -1,4 +1,5 @@
 .idea/
+.playground/
 target/
 *.iml
 *.out
