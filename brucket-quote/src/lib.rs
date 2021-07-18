@@ -59,8 +59,8 @@ macro_rules! brucket {
         ($($internal_function:tt)*)
         ($($constant:tt)*)
     ) => {
-        Module::new(
-            NodeId($node_id),
+        brucket_ast::Module::new(
+            brucket_ast::NodeId($node_id),
             $static,
             stringify!($name).to_owned(),
             vec![$(brucket!($function),)*],
@@ -76,8 +76,8 @@ macro_rules! brucket {
         brucket!(@constant $node_id $visibility $name $value)
     };
     (@constant $node_id:literal $visibility:ident $name:ident $value:tt) => {
-        Constant::new(
-            NodeId($node_id),
+        brucket_ast::Constant::new(
+            brucket_ast::NodeId($node_id),
             brucket!(@visibility $visibility),
             stringify!($name).to_owned(),
             Box::new(brucket!($value)),
@@ -104,8 +104,8 @@ macro_rules! brucket {
         $parameters:tt
         $return_type:tt
     ) => {
-        InternalFunction::new(
-            NodeId($node_id),
+        brucket_ast::function::InternalFunction::new(
+            brucket_ast::NodeId($node_id),
             brucket!(@visibility $visibility),
             brucket!(@strategy $strategy),
             stringify!($name).to_owned(),
@@ -141,8 +141,8 @@ macro_rules! brucket {
         $body_node_id:literal
         $body:tt
     ) => {
-        Function::new(
-            NodeId($node_id),
+        brucket_ast::function::Function::new(
+            brucket_ast::NodeId($node_id),
             brucket!(@visibility $visibility),
             brucket!(@strategy $strategy),
             stringify!($name).to_owned(),
@@ -154,24 +154,24 @@ macro_rules! brucket {
         brucket!(@node $node_type $node)
     };
     (@node $node_type:ident $node:tt) => {
-        Node::$node_type(brucket!($node))
+        brucket_ast::Node::$node_type(brucket!($node))
     };
 
-    (@visibility public) => { Visibility::Public };
-    (@visibility private) => { Visibility::Private };
+    (@visibility public) => { brucket_ast::Visibility::Public };
+    (@visibility private) => { brucket_ast::Visibility::Private };
 
-    (@strategy eager) => { ApplicationStrategy::Eager };
-    (@strategy lazy) => { ApplicationStrategy::Lazy };
+    (@strategy eager) => { brucket_ast::function::ApplicationStrategy::Eager };
+    (@strategy lazy) => { brucket_ast::function::ApplicationStrategy::Lazy };
 
     ((lambda $parameters:tt $body:tt)) => {
-        Node::Lambda(brucket!(@lambda 0 $parameters any $body))
+        brucket_ast::Node::Lambda(brucket!(@lambda 0 $parameters any $body))
     };
     (($node_id:literal: lambda $parameters:tt -> $return_type:tt $body:tt)) => {
-        Node::Lambda(brucket!(@lambda $node_id $parameters $return_type $body))
+        brucket_ast::Node::Lambda(brucket!(@lambda $node_id $parameters $return_type $body))
     };
     (@lambda $node_id:literal $parameters:tt $return_type:tt $body:tt) => {
-        Lambda::new(
-            NodeId($node_id),
+        brucket_ast::lambda::Lambda::new(
+            brucket_ast::NodeId($node_id),
             brucket!(@parameters $parameters),
             brucket!(@type $return_type),
             Box::new(brucket!($body)),
@@ -185,17 +185,17 @@ macro_rules! brucket {
         vec![$(brucket!(@parameter $parameter),)*]
     };
     (@parameter ($name:ident: $type:tt...)) => {
-        Parameter::new(
+        brucket_ast::lambda::Parameter::new(
             stringify!($name).to_owned(),
             brucket!(@type $type),
-            Arity::Variadic
+            brucket_ast::lambda::Arity::Variadic
         )
     };
     (@parameter ($name:ident: $type:tt)) => {
-        Parameter::new(
+        brucket_ast::lambda::Parameter::new(
             stringify!($name).to_owned(),
             brucket!(@type $type),
-            Arity::Unary
+            brucket_ast::lambda::Arity::Unary
         )
     };
 
@@ -206,8 +206,8 @@ macro_rules! brucket {
         brucket!((0: let $name: $value_type $value $then))
     };
     (($node_id:literal: let $name:ident: $value_type:tt $value:tt $then:tt)) => {
-        Node::Let(Let::new(
-            NodeId($node_id),
+        brucket_ast::Node::Let(brucket_ast::Let::new(
+            brucket_ast::NodeId($node_id),
             stringify!($name).to_owned(),
             brucket!(@type $value_type),
             Box::new(brucket!($value)),
@@ -215,31 +215,31 @@ macro_rules! brucket {
         ))
     };
 
-    (@type any) => { Type::Any };
-    (@type unit) => { Type::Unit };
-    (@type bool) => { Type::Boolean };
-    (@type int) => { Type::Integer };
-    (@type float) => { Type::Float };
-    (@type str) => { Type::String };
+    (@type any) => { brucket_ast::ast_type::Type::Any };
+    (@type unit) => { brucket_ast::ast_type::Type::Unit };
+    (@type bool) => { brucket_ast::ast_type::Type::Boolean };
+    (@type int) => { brucket_ast::ast_type::Type::Integer };
+    (@type float) => { brucket_ast::ast_type::Type::Float };
+    (@type str) => { brucket_ast::ast_type::Type::String };
     (@type ($($parameter_type:ident)* -> $return_type:ident)) => {
         brucket!(@type (($($parameter_type)*) -> $return_type))
     };
     (@type (($($parameter_type:tt)*) -> $return_type:ident)) => {
-        Type::Lambda(LambdaType::new(
+        brucket_ast::ast_type::Type::Lambda(brucket_ast::ast_type::LambdaType::new(
             vec![$(brucket!(@type $parameter_type),)*],
             Box::new(brucket!(@type $return_type))
         ))
     };
     (@type $symbol:ident) => {
-        Type::Symbol(stringify!($symbol).to_owned())
+        brucket_ast::ast_type::Type::Symbol(stringify!($symbol).to_owned())
     };
 
     ((if $condition:tt $if_true:tt $if_false:tt)) => {
         brucket!((0: if $condition $if_true $if_false))
     };
     (($node_id:literal: if $condition:tt $if_true:tt $if_false:tt)) => {
-        Node::If(If::new(
-            NodeId($node_id),
+        brucket_ast::Node::If(brucket_ast::If::new(
+            brucket_ast::NodeId($node_id),
             Box::new(brucket!($condition)),
             Box::new(brucket!($if_true)),
             Box::new(brucket!($if_false)),
@@ -247,29 +247,29 @@ macro_rules! brucket {
     };
 
     (()) => {
-        Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Unit,
+        brucket_ast::Node::ConstantValue(brucket_ast::constant_value::ConstantValue::new(
+            brucket_ast::NodeId(0),
+            brucket_ast::constant_value::ConstantVariant::Unit,
         ))
     };
 
     (null) => {
-        Node::ConstantValue(ConstantValue::new(
-            NodeId(0),
-            ConstantVariant::Null,
+        brucket_ast::Node::ConstantValue(brucket_ast::constant_value::ConstantValue::new(
+            brucket_ast::NodeId(0),
+            brucket_ast::constant_value::ConstantVariant::Null,
         ))
     };
 
     ((($identifier:ident$(::$remaining:ident)+) $($argument:tt)*)) => {
-        Node::Application(Application::new(
-            NodeId(0),
+        brucket_ast::Node::Application(brucket_ast::Application::new(
+            brucket_ast::NodeId(0),
             Box::new(brucket!(@complex_identifier $identifier $($remaining)+)),
             vec![$(brucket!($argument),)*],
         ))
     };
     (($identifier:ident $($argument:tt)*)) => {
-        Node::Application(Application::new(
-            NodeId(0),
+        brucket_ast::Node::Application(brucket_ast::Application::new(
+            brucket_ast::NodeId(0),
             Box::new(brucket!($identifier)),
             vec![$(brucket!($argument),)*],
         ))
@@ -279,9 +279,9 @@ macro_rules! brucket {
         brucket!((0: $constant_value))
     };
     (($node_id:literal: $constant_value:literal)) => {
-        Node::ConstantValue(ConstantValue::new(
-            NodeId($node_id),
-            ConstantVariant::from($constant_value),
+        brucket_ast::Node::ConstantValue(brucket_ast::constant_value::ConstantValue::new(
+            brucket_ast::NodeId($node_id),
+            brucket_ast::constant_value::ConstantVariant::from($constant_value),
         ))
     };
 
@@ -289,9 +289,9 @@ macro_rules! brucket {
         brucket!(@complex_identifier $identifier $($remaining)+)
     };
     (@complex_identifier $($identifier:ident)+) => {
-        Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Complex(
+        brucket_ast::Node::Identifier(brucket_ast::Identifier::new(
+            brucket_ast::NodeId(0),
+            brucket_ast::path::Path::Complex(
                 vec![$(stringify!($identifier).to_owned(),)+],
             )
         ))
@@ -301,15 +301,15 @@ macro_rules! brucket {
         brucket!((0: $identifier))
     };
     (($node_id:literal: $identifier:ident)) => {
-        Node::Identifier(Identifier::new(
-            NodeId($node_id),
-            Path::Simple(stringify!($identifier).to_owned()),
+        brucket_ast::Node::Identifier(brucket_ast::Identifier::new(
+            brucket_ast::NodeId($node_id),
+            brucket_ast::path::Path::Simple(stringify!($identifier).to_owned()),
         ))
     };
 
     (($identifier:tt $($argument:tt)*)) => {
-        Node::Application(Application::new(
-            NodeId(0),
+        brucket_ast::Node::Application(brucket_ast::Application::new(
+            brucket_ast::NodeId(0),
             Box::new(brucket!($identifier)),
             vec![$(brucket!($argument),)*],
         ))
