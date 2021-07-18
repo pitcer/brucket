@@ -22,27 +22,32 @@
  * SOFTWARE.
  */
 
-use crate::ast::ast_type::Type;
-use crate::ast::{Node, NodeId};
+use crate::ast_type::Type;
+use crate::lambda::{Lambda, Parameter};
+use crate::{NodeId, Visibility};
 use derive_more::{Constructor, IsVariant};
 
 #[derive(Debug, Clone, PartialEq, Constructor)]
-pub struct Lambda {
+pub struct Function {
     pub node_id: NodeId,
-    pub parameters: Vec<Parameter>,
-    pub return_type: Type,
-    pub body: Box<Node>,
+    pub visibility: Visibility,
+    pub application_strategy: ApplicationStrategy,
+    pub name: String,
+    pub body: Lambda,
 }
 
 #[derive(Debug, Clone, PartialEq, Constructor)]
-pub struct Parameter {
+pub struct InternalFunction {
+    pub node_id: NodeId,
+    pub visibility: Visibility,
+    pub application_strategy: ApplicationStrategy,
     pub name: String,
-    pub parameter_type: Type,
-    pub arity: Arity,
+    pub parameters: Vec<Parameter>,
+    pub return_type: Type,
 }
 
 #[derive(Debug, Clone, PartialEq, IsVariant)]
-pub enum Arity {
-    Unary,
-    Variadic,
+pub enum ApplicationStrategy {
+    Eager,
+    Lazy,
 }

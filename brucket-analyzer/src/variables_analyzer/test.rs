@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::constant_value::{Boolean, ConstantVariant};
-use brucket_ast::ast::lambda::{Arity, Parameter};
+use brucket_ast::constant_value::{Boolean, ConstantVariant};
+use brucket_ast::lambda::{Arity, Parameter};
 use brucket_quote::brucket;
 
 use super::*;

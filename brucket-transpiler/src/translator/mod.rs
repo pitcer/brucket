@@ -25,12 +25,12 @@
 use crate::translator::state::{TranslationState, Variable};
 use brucket_analyzer::type_analyzer::NodeTypes;
 use brucket_analyzer::variables_analyzer::Variables;
-use brucket_ast::ast::ast_type::{LambdaType, Type};
-use brucket_ast::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
-use brucket_ast::ast::function::{Function, InternalFunction};
-use brucket_ast::ast::lambda::{Lambda, Parameter};
-use brucket_ast::ast::path::Path;
-use brucket_ast::ast::{Application, Constant, Identifier, If, Let, Module, Node};
+use brucket_ast::ast_type::{LambdaType, Type};
+use brucket_ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
+use brucket_ast::function::{Function, InternalFunction};
+use brucket_ast::lambda::{Lambda, Parameter};
+use brucket_ast::path::Path;
+use brucket_ast::{Application, Constant, Identifier, If, Let, Module, Node};
 use c_generator::generator::Generator;
 use c_generator::syntax::c_struct::{CStruct, Fields};
 use c_generator::syntax::c_type::{CPrimitiveType, CType, FunctionPointer};

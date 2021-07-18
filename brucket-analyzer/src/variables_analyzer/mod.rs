@@ -22,13 +22,13 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::ast_type::Type;
-use brucket_ast::ast::constant_value::ConstantValue;
-use brucket_ast::ast::function::{Function, InternalFunction};
-use brucket_ast::ast::lambda::Lambda;
-use brucket_ast::ast::path::Path;
-use brucket_ast::ast::{Application, Constant, If, Let, Module, NodeIdHolder};
-use brucket_ast::ast::{Identifier, Node, NodeId};
+use brucket_ast::ast_type::Type;
+use brucket_ast::constant_value::ConstantValue;
+use brucket_ast::function::{Function, InternalFunction};
+use brucket_ast::lambda::Lambda;
+use brucket_ast::path::Path;
+use brucket_ast::{Application, Constant, If, Let, Module, NodeIdHolder};
+use brucket_ast::{Identifier, Node, NodeId};
 use derive_more::Constructor;
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};

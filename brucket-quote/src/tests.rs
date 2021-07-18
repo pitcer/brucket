@@ -22,14 +22,12 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::ast_type::{LambdaType, Type};
-use brucket_ast::ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
-use brucket_ast::ast::function::{ApplicationStrategy, Function, InternalFunction};
-use brucket_ast::ast::lambda::{Arity, Lambda, Parameter};
-use brucket_ast::ast::path::Path;
-use brucket_ast::ast::{
-    Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility,
-};
+use brucket_ast::ast_type::{LambdaType, Type};
+use brucket_ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
+use brucket_ast::function::{ApplicationStrategy, Function, InternalFunction};
+use brucket_ast::lambda::{Arity, Lambda, Parameter};
+use brucket_ast::path::Path;
+use brucket_ast::{Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility};
 
 use super::*;
 

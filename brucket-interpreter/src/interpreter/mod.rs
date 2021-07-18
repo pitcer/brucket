@@ -26,7 +26,7 @@ use crate::evaluator::Evaluator;
 use crate::evaluator::EvaluatorState;
 use crate::value::Value;
 use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
-use brucket_ast::ast::Node;
+use brucket_ast::Node;
 use brucket_parser::lexer::Lexer;
 use brucket_parser::parser::Parser;
 use derive_more::Constructor;

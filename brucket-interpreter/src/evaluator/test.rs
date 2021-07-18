@@ -23,11 +23,11 @@
  */
 
 use brucket_analyzer::variables_analyzer::{NodeVariables, Variables};
-use brucket_ast::ast::ast_type::Type;
-use brucket_ast::ast::constant_value::ConstantValue;
-use brucket_ast::ast::function::Function;
-use brucket_ast::ast::lambda::Parameter;
-use brucket_ast::ast::{Application, Constant, Identifier, If, Let, NodeId, Visibility};
+use brucket_ast::ast_type::Type;
+use brucket_ast::constant_value::ConstantValue;
+use brucket_ast::function::Function;
+use brucket_ast::lambda::Parameter;
+use brucket_ast::{Application, Constant, Identifier, If, Let, NodeId, Visibility};
 use brucket_quote::brucket;
 
 use super::*;

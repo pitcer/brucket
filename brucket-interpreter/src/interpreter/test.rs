@@ -25,13 +25,13 @@
 use crate::evaluator::environment::Environment;
 use crate::value::Value;
 use crate::value::{Closure, Numeric};
-use brucket_ast::ast::ast_type::Type;
-use brucket_ast::ast::constant_value::{ConstantValue, ConstantVariant, Number};
-use brucket_ast::ast::function::ApplicationStrategy;
-use brucket_ast::ast::lambda::{Arity, Parameter};
-use brucket_ast::ast::path::Path;
-use brucket_ast::ast::Identifier;
-use brucket_ast::ast::{Node, NodeId};
+use brucket_ast::ast_type::Type;
+use brucket_ast::constant_value::{ConstantValue, ConstantVariant, Number};
+use brucket_ast::function::ApplicationStrategy;
+use brucket_ast::lambda::{Arity, Parameter};
+use brucket_ast::path::Path;
+use brucket_ast::Identifier;
+use brucket_ast::{Node, NodeId};
 
 use super::*;
 

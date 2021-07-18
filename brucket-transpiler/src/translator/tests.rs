@@ -24,7 +24,7 @@
 
 use super::*;
 use brucket_analyzer::type_analyzer::TypeAnalyzer;
-use brucket_ast::ast::NodeId;
+use brucket_ast::NodeId;
 use c_generator::syntax::function::FunctionDefinition;
 use c_generator::syntax::module::ModuleMember;
 

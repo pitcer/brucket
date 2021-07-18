@@ -24,9 +24,9 @@
 
 use crate::evaluator::environment::Environment;
 use crate::evaluator::internal::InternalFunction;
-use brucket_ast::ast::function::ApplicationStrategy;
-use brucket_ast::ast::lambda::Parameter;
-use brucket_ast::ast::Node;
+use brucket_ast::function::ApplicationStrategy;
+use brucket_ast::lambda::Parameter;
+use brucket_ast::Node;
 use derive_more::Constructor;
 use std::fmt;
 use std::fmt::{Display, Formatter};

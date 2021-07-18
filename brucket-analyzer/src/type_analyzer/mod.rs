@@ -22,11 +22,11 @@
  * SOFTWARE.
  */
 
-use brucket_ast::ast::ast_type::{LambdaType, Type};
-use brucket_ast::ast::constant_value::{ConstantValue, ConstantVariant, Number};
-use brucket_ast::ast::lambda::Lambda;
-use brucket_ast::ast::path::Path;
-use brucket_ast::ast::{Application, Identifier, If, Let, Node, NodeId, NodeIdHolder};
+use brucket_ast::ast_type::{LambdaType, Type};
+use brucket_ast::constant_value::{ConstantValue, ConstantVariant, Number};
+use brucket_ast::lambda::Lambda;
+use brucket_ast::path::Path;
+use brucket_ast::{Application, Identifier, If, Let, Node, NodeId, NodeIdHolder};
 use derive_more::Constructor;
 use std::borrow::Cow;
 use std::collections::HashMap;
