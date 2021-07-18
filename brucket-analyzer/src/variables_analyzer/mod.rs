@@ -36,7 +36,7 @@ use std::hash::Hash;
 use std::mem;
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 pub type VariablesError = Cow<'static, str>;
 pub type VariablesResult = Result<NodeVariables, VariablesError>;

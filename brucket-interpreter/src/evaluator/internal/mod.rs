@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 macro_rules! internal_environment_map {
     ($($identifier:literal => $function:expr),*) => {

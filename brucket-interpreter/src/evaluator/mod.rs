@@ -43,7 +43,7 @@ use std::slice::Iter;
 pub mod environment;
 pub mod internal;
 #[cfg(test)]
-mod test;
+mod tests;
 
 pub type ModuleEnvironment = HashMap<String, Environment>;
 type ValueError = Cow<'static, str>;

@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use std::mem;
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 pub type TypedError = Cow<'static, str>;
 pub type TypedResult = Result<Type, TypedError>;

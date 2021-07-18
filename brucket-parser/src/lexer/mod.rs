@@ -33,7 +33,7 @@ use std::option::Option::Some;
 use std::str::Chars;
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 type SymbolMap = HashMap<&'static str, Token>;
 

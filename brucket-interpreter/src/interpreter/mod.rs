@@ -33,7 +33,7 @@ use derive_more::Constructor;
 use std::borrow::Cow;
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 type ValueResult = Result<Value, Cow<'static, str>>;
 

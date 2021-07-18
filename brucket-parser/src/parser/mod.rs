@@ -39,7 +39,7 @@ use std::option::Option::Some;
 use std::vec::IntoIter;
 
 #[cfg(test)]
-mod test;
+mod tests;
 
 type NodeResult = ParseResult<Node>;
 pub type ParseResult<T> = Result<T, ParseError>;
