@@ -1,10 +1,10 @@
-use super::brucket;
-use brucket_ast::ast_type::{LambdaType, Type};
-use brucket_ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
-use brucket_ast::function::{ApplicationStrategy, Function, InternalFunction};
-use brucket_ast::lambda::{Arity, Lambda, Parameter};
-use brucket_ast::path::Path;
-use brucket_ast::{Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility};
+use crate::ast_type::{LambdaType, Type};
+use crate::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
+use crate::function::{ApplicationStrategy, Function, InternalFunction};
+use crate::lambda::{Arity, Lambda, Parameter};
+use crate::path::Path;
+use crate::quote;
+use crate::{Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility};
 
 #[test]
 fn quoted_integer_is_integer_constant_value() {
@@ -12,7 +12,7 @@ fn quoted_integer_is_integer_constant_value() {
         NodeId(0),
         ConstantVariant::Numeric(Number::Integer("42".to_owned())),
     ));
-    let actual = brucket!(42);
+    let actual = quote!(42);
     assert_eq!(expected, actual);
 }
 
@@ -22,7 +22,7 @@ fn quoted_float_is_float_constant_value() {
         NodeId(0),
         ConstantVariant::Numeric(Number::FloatingPoint("42.24".to_owned())),
     ));
-    let actual = brucket!(42.24);
+    let actual = quote!(42.24);
     assert_eq!(expected, actual);
 }
 
@@ -32,7 +32,7 @@ fn quoted_true_is_boolean_constant_value() {
         NodeId(0),
         ConstantVariant::Boolean(Boolean::True),
     ));
-    let actual = brucket!(true);
+    let actual = quote!(true);
     assert_eq!(expected, actual);
 }
 
@@ -42,7 +42,7 @@ fn quoted_false_is_boolean_constant_value() {
         NodeId(0),
         ConstantVariant::Boolean(Boolean::False),
     ));
-    let actual = brucket!(false);
+    let actual = quote!(false);
     assert_eq!(expected, actual);
 }
 
@@ -52,21 +52,21 @@ fn quoted_string_is_string_constant_value() {
         NodeId(0),
         ConstantVariant::String("foobar".to_owned()),
     ));
-    let actual = brucket!("foobar");
+    let actual = quote!("foobar");
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_unit_is_unit_constant_value() {
     let expected = Node::ConstantValue(ConstantValue::new(NodeId(0), ConstantVariant::Unit));
-    let actual = brucket!(());
+    let actual = quote!(());
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_null_is_null_constant_value() {
     let expected = Node::ConstantValue(ConstantValue::new(NodeId(0), ConstantVariant::Null));
-    let actual = brucket!(null);
+    let actual = quote!(null);
     assert_eq!(expected, actual);
 }
 
@@ -76,7 +76,7 @@ fn quoted_simple_identifier_is_identifier_node() {
         NodeId(0),
         Path::Simple("foobar".to_owned()),
     ));
-    let actual = brucket!(foobar);
+    let actual = quote!(foobar);
     assert_eq!(expected, actual);
 }
 
@@ -90,7 +90,7 @@ fn quoted_complex_identifier_is_identifier_node() {
             "foobar".to_owned(),
         ]),
     ));
-    let actual = brucket!(foo::bar::foobar);
+    let actual = quote!(foo::bar::foobar);
     assert_eq!(expected, actual);
 }
 
@@ -104,7 +104,7 @@ fn quoted_application_is_application_node() {
         ))),
         Vec::new(),
     ));
-    let actual = brucket!((foobar));
+    let actual = quote!((foobar));
     assert_eq!(expected, actual);
 }
 
@@ -121,7 +121,7 @@ fn quoted_unary_application_is_application_node() {
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))],
     ));
-    let actual = brucket!((foobar 42));
+    let actual = quote!((foobar 42));
     assert_eq!(expected, actual);
 }
 
@@ -148,7 +148,7 @@ fn quoted_multi_parameter_application_is_application_node() {
             )),
         ],
     ));
-    let actual = brucket!((foobar 42 24 0));
+    let actual = quote!((foobar 42 24 0));
     assert_eq!(expected, actual);
 }
 
@@ -165,7 +165,7 @@ fn quoted_application_simple_complex_path_identifier_is_application_node() {
             ConstantVariant::String("foo".to_owned()),
         ))],
     ));
-    let actual = brucket!(((foo::foobar) "foo"));
+    let actual = quote!(((foo::foobar) "foo"));
     assert_eq!(expected, actual);
 }
 
@@ -184,7 +184,7 @@ fn quoted_application_complex_path_identifier_is_application_node() {
         ))),
         Vec::new(),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         ((foo::bar::foobar::barfoo))
     };
     assert_eq!(expected, actual);
@@ -205,7 +205,7 @@ fn quoted_let_is_let_node() {
             Path::Simple("x".to_owned()),
         ))),
     ));
-    let actual = brucket!((let x 42 x));
+    let actual = quote!((let x 42 x));
     assert_eq!(expected, actual);
 }
 
@@ -224,7 +224,7 @@ fn quoted_typed_let_is_let_node() {
             Path::Simple("x".to_owned()),
         ))),
     ));
-    let actual = brucket!((let x: int 42 x));
+    let actual = quote!((let x: int 42 x));
     assert_eq!(expected, actual);
 }
 
@@ -245,7 +245,7 @@ fn quoted_if_is_if_node() {
             ConstantVariant::Numeric(Number::Integer("24".to_owned())),
         ))),
     ));
-    let actual = brucket!((if true 42 24));
+    let actual = quote!((if true 42 24));
     assert_eq!(expected, actual);
 }
 
@@ -260,7 +260,7 @@ fn quoted_empty_parameters_lambda_is_lambda_node() {
             Path::Simple("x".to_owned()),
         ))),
     ));
-    let actual = brucket!((lambda [] x));
+    let actual = quote!((lambda [] x));
     assert_eq!(expected, actual);
 }
 
@@ -275,7 +275,7 @@ fn quoted_single_parameter_lambda_is_lambda_node() {
             Path::Simple("x".to_owned()),
         ))),
     ));
-    let actual = brucket!((lambda [x] x));
+    let actual = quote!((lambda [x] x));
     assert_eq!(expected, actual);
 }
 
@@ -294,7 +294,7 @@ fn quoted_multi_parameters_lambda_is_lambda_node() {
             Path::Simple("x".to_owned()),
         ))),
     ));
-    let actual = brucket!((lambda [x y z] x));
+    let actual = quote!((lambda [x y z] x));
     assert_eq!(expected, actual);
 }
 
@@ -309,7 +309,7 @@ fn quoted_lambda_with_variadic_parameter_is_lambda_node() {
             Path::Simple("x".to_owned()),
         ))),
     ));
-    let actual = brucket!((lambda [(xs: any...)] x));
+    let actual = quote!((lambda [(xs: any...)] x));
     assert_eq!(expected, actual);
 }
 
@@ -353,7 +353,7 @@ fn quoted_lambda_application_is_application_node() {
             )),
         ],
     ));
-    let actual = brucket! {
+    let actual = quote! {
         ((1: lambda [(x: any) (y: any) (z: any...)] -> any z) 1 2 3 4 5)
     };
     assert_eq!(expected, actual);
@@ -387,7 +387,7 @@ fn quoted_function_is_function_node() {
             ))),
         ),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Function
         (function foo [x y z] (bar 42))
     };
@@ -422,7 +422,7 @@ fn quoted_function_with_types_is_function_node() {
             ))),
         ),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Function
         (0: private eager function foo [(x: any) (y: Bar) (z: int...)] -> bool
             0: (bar 42))
@@ -447,7 +447,7 @@ fn quoted_public_function_is_function_node() {
             ))),
         ),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Function
         (0: public eager function foo [] -> any 0: 42)
     };
@@ -489,7 +489,7 @@ fn quoted_function_with_lambda_type_is_function_node() {
             ))),
         ),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Function
         (0: private eager function foobar
             [(x: any) (y: (int bool -> Test)) (z: int...)] -> (-> int)
@@ -515,7 +515,7 @@ fn quoted_lazy_function_is_function_node() {
             ))),
         ),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Function
         (0: private lazy function foo [] -> any 0: 42)
     };
@@ -539,7 +539,7 @@ fn quoted_public_lazy_function_is_function_node() {
             ))),
         ),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Function
         (0: public lazy function foo [] -> any 0: 42)
     };
@@ -570,7 +570,7 @@ fn quoted_function_application_is_application_node() {
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))],
     ));
-    let actual = brucket! {
+    let actual = quote! {
         ((@node Function (0: private lazy function foo [x] -> any 1: x)) 42)
     };
     assert_eq!(expected, actual);
@@ -590,7 +590,7 @@ fn quoted_internal_function_is_internal_function_node() {
         ],
         Type::Boolean,
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node InternalFunction
         (0: public lazy internal_function foobar [(x: any) (y: Bar) (z: int...)] -> bool)
     };
@@ -608,7 +608,7 @@ fn quoted_constant_is_constant_node() {
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Constant
         (constant foo 42)
     };
@@ -626,7 +626,7 @@ fn quoted_public_constant_is_constant_node() {
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Constant
         (0: public constant foo 42)
     };
@@ -672,7 +672,7 @@ fn quoted_module_is_module_node() {
             ))),
         )],
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Module
         (module foo
             (
@@ -699,7 +699,7 @@ fn quoted_static_module_is_module_node() {
         Vec::new(),
         Vec::new(),
     ));
-    let actual = brucket! {
+    let actual = quote! {
         @node Module
         (0: static module foo () () ())
     };
@@ -710,21 +710,21 @@ fn quoted_static_module_is_module_node() {
 fn lambda_type_is_quoted_correctly() {
     assert_eq!(
         Type::Lambda(LambdaType::new(Vec::default(), Box::new(Type::Integer))),
-        brucket!(@type (-> int))
+        quote!(@type (-> int))
     );
     assert_eq!(
         Type::Lambda(LambdaType::new(
             vec![Type::Integer],
             Box::new(Type::Integer)
         )),
-        brucket!(@type (int -> int))
+        quote!(@type (int -> int))
     );
     assert_eq!(
         Type::Lambda(LambdaType::new(
             vec![Type::Integer, Type::Integer],
             Box::new(Type::Integer)
         )),
-        brucket!(@type (int int -> int))
+        quote!(@type (int int -> int))
     );
     assert_eq!(
         Type::Lambda(LambdaType::new(
@@ -737,6 +737,6 @@ fn lambda_type_is_quoted_correctly() {
             ],
             Box::new(Type::Integer)
         )),
-        brucket!(@type ((int (int -> int)) -> int))
+        quote!(@type ((int (int -> int)) -> int))
     );
 }

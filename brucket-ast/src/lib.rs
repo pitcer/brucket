@@ -57,6 +57,7 @@ pub mod constant_value;
 pub mod function;
 pub mod lambda;
 pub mod path;
+pub mod quote_macro;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Node {

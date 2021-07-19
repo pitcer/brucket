@@ -1,6 +1,6 @@
 use brucket_analyzer::variables_analyzer::{NodeVariables, Variables};
+use brucket_ast::quote;
 use brucket_ast::NodeId;
-use brucket_quote::brucket;
 
 use super::*;
 
@@ -10,7 +10,7 @@ type TestResult = Result<(), ValueError>;
 fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate_with_default_state(&brucket!(42))?;
+    let actual = evaluator.evaluate_with_default_state(&quote!(42))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -19,7 +19,7 @@ fn test_evaluated_constant_expression_is_numeric_value() -> TestResult {
 fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Boolean(true);
-    let actual = evaluator.evaluate_with_default_state(&brucket!(true))?;
+    let actual = evaluator.evaluate_with_default_state(&quote!(true))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -28,7 +28,7 @@ fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
 fn test_evaluated_string_expression_is_textual_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Textual("foobar".to_owned());
-    let actual = evaluator.evaluate_with_default_state(&brucket!("foobar"))?;
+    let actual = evaluator.evaluate_with_default_state(&quote!("foobar"))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -37,7 +37,7 @@ fn test_evaluated_string_expression_is_textual_value() -> TestResult {
 fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Unit;
-    let actual = evaluator.evaluate_with_default_state(&brucket!(()))?;
+    let actual = evaluator.evaluate_with_default_state(&quote!(()))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -46,7 +46,7 @@ fn test_evaluated_unit_expression_is_unit_value() -> TestResult {
 fn test_evaluated_null_expression_is_null_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Null;
-    let actual = evaluator.evaluate_with_default_state(&brucket!(null))?;
+    let actual = evaluator.evaluate_with_default_state(&quote!(null))?;
     assert_eq!(expected, actual);
     Ok(())
 }
@@ -55,7 +55,7 @@ fn test_evaluated_null_expression_is_null_value() -> TestResult {
 fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate_with_default_state(&brucket! {
+    let actual = evaluator.evaluate_with_default_state(&quote! {
         (let x 42
             x)
     })?;
@@ -67,7 +67,7 @@ fn test_evaluated_let_expression_variable_has_correct_value() -> TestResult {
 fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(40));
-    let actual = evaluator.evaluate_with_default_state(&brucket! {
+    let actual = evaluator.evaluate_with_default_state(&quote! {
         (let x 40
             (let y 2
                 x))
@@ -80,7 +80,7 @@ fn test_first_variable_is_not_overwritten_by_second_with_different_name() -> Tes
 fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(2));
-    let actual = evaluator.evaluate_with_default_state(&brucket! {
+    let actual = evaluator.evaluate_with_default_state(&quote! {
         (let x 40
             (let x 2
                 x))
@@ -93,7 +93,7 @@ fn test_first_variable_is_overwritten_by_second_with_the_same_name() -> TestResu
 fn test_evaluated_if_expression_has_correct_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Numeric(Numeric::Integer(42));
-    let actual = evaluator.evaluate_with_default_state(&brucket! {
+    let actual = evaluator.evaluate_with_default_state(&quote! {
         (if true 42 24)
     })?;
     assert_eq!(expected, actual);
@@ -105,7 +105,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         Vec::new(),
-        Box::new(brucket!(x)),
+        Box::new(quote!(x)),
         environment!("x" => Value::Numeric(Numeric::Integer(42))),
     ));
     let actual = evaluator.evaluate_with_variables(
@@ -116,7 +116,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
                 maplit::hashset!["x".to_owned()]
             )
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 (1: lambda [] -> any x))
         },
@@ -129,15 +129,15 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
 fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        brucket!(@parameters [y]),
-        Box::new(brucket!(y)),
+        quote!(@parameters [y]),
+        Box::new(quote!(y)),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 (1: lambda [y] -> any y))
         },
@@ -150,15 +150,15 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
 fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        brucket!(@parameters [y z a]),
-        Box::new(brucket!(y)),
+        quote!(@parameters [y z a]),
+        Box::new(quote!(y)),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 (1: lambda [y z a] -> any y))
         },
@@ -179,7 +179,7 @@ fn test_evaluated_application_on_lambda_expression_without_parameters_is_value()
                 maplit::hashset!["x".to_owned()]
             )
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 ((1: lambda [] -> any x)))
         },
@@ -196,7 +196,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameter_is_value() -> 
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 ((1: lambda [y] -> any y) 24))
         },
@@ -213,7 +213,7 @@ fn test_evaluated_application_on_lambda_expression_with_parameters_is_value() ->
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 ((1: lambda [y z a] -> any y) 24 4 2))
         },
@@ -234,7 +234,7 @@ fn test_closure_does_not_have_access_to_variable_outside_its_environment() {
                 maplit::hashset!["z".to_owned()]
             )
         }),
-        &brucket! {
+        &quote! {
             (let x 42
                 (let y (1: lambda [a] -> any z)
                     (let z 24
@@ -255,7 +255,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(brucket!(42)),
+                    Box::new(quote!(42)),
                     Environment::default(),
             ))
         },
@@ -264,7 +264,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             @node Module
             (module foo ((0: public eager function bar [] -> any 1: 42)) () ())
         },
@@ -279,8 +279,8 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
-            brucket!(@parameters [x]),
-            Box::new(brucket!(42)),
+            quote!(@parameters [x]),
+            Box::new(quote!(42)),
             Environment::default(),
         ),
     );
@@ -288,7 +288,7 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             @node Function
             (0: public eager function foo [x] -> any 1: 42)
         },
@@ -301,15 +301,15 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
 fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
-        brucket!(@parameters [(x: any) (y: any) (z: any...)]),
-        Box::new(brucket!(x)),
+        quote!(@parameters [(x: any) (y: any) (z: any...)]),
+        Box::new(quote!(x)),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             (1: lambda [(x: any) (y: any) (z: any...)] -> any x)
         },
     )?;
@@ -334,7 +334,7 @@ fn test_evaluated_application_on_lambda_with_variadic_parameter_is_value() -> Te
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             ((1: lambda [(x: any) (y: any) (z: any...)] -> any z) 1 2 3 4 5)
         },
     )?;
@@ -353,7 +353,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(brucket!(42)),
+                    Box::new(quote!(42)),
                     Environment::default(),
             )),
             "baar" => Value::Numeric(Numeric::Integer(42))
@@ -364,7 +364,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
             NodeId(1) => NodeVariables::default(),
             NodeId(2) => NodeVariables::default()
         }),
-        &brucket! {
+        &quote! {
             @node Module
             (module foo
                 (
@@ -388,13 +388,13 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
     let mut evaluator = Evaluator::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Lazy,
-        Closure::new(Vec::new(), Box::new(brucket!(42)), Environment::default()),
+        Closure::new(Vec::new(), Box::new(quote!(42)), Environment::default()),
     );
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
         }),
-        &brucket! {
+        &quote! {
             @node Function
             (0: private lazy function foo [] -> any 1: 42)
         },
@@ -406,12 +406,12 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
 #[test]
 fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value() -> TestResult {
     let mut evaluator = Evaluator::default();
-    let expected = Value::Thunk(Box::new(brucket!(42)), Environment::default());
+    let expected = Value::Thunk(Box::new(quote!(42)), Environment::default());
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),
         }),
-        &brucket! {
+        &quote! {
             ((@node Function (0: private lazy function foo [x] -> any 1: x)) 42)
         },
     )?;
@@ -423,7 +423,7 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
 fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Module(true, "foo".to_owned(), Environment::default());
-    let actual = evaluator.evaluate_with_default_state(&brucket! {
+    let actual = evaluator.evaluate_with_default_state(&quote! {
         @node Module
         (0: static module foo () () ())
     })?;

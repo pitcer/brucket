@@ -1,4 +1,4 @@
-use brucket_quote::brucket;
+use brucket_ast::quote;
 
 use super::*;
 
@@ -7,7 +7,7 @@ type TestResult = Result<(), Cow<'static, str>>;
 #[test]
 fn test_parsed_number_token_is_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!(42);
+    let expected = quote!(42);
     let actual = parser.parse(vec![Token::Number(NumberToken::Integer("42".to_owned()))])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -16,7 +16,7 @@ fn test_parsed_number_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_boolean_token_is_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!(true);
+    let expected = quote!(true);
     let actual = parser.parse(vec![Token::Boolean(BooleanToken::True)])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -25,7 +25,7 @@ fn test_parsed_boolean_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_string_token_is_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!("foobar");
+    let expected = quote!("foobar");
     let actual = parser.parse(vec![Token::String("foobar".to_owned())])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -34,7 +34,7 @@ fn test_parsed_string_token_is_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!(foobar);
+    let expected = quote!(foobar);
     let actual = parser.parse(vec![Token::Symbol("foobar".to_owned())])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -43,7 +43,7 @@ fn test_parsed_symbol_token_is_symbol_expression() -> TestResult {
 #[test]
 fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!(());
+    let expected = quote!(());
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Parenthesis(Parenthesis::Close(')')),
@@ -55,7 +55,7 @@ fn test_parsed_unit_tokens_are_unit_expression() -> TestResult {
 #[test]
 fn test_parsed_null_token_is_null_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!(null);
+    let expected = quote!(null);
     let actual = parser.parse(vec![Token::Null])?;
     assert_eq!(expected, actual);
     Ok(())
@@ -64,7 +64,7 @@ fn test_parsed_null_token_is_null_expression() -> TestResult {
 #[test]
 fn test_parsed_constant_function_tokens_are_application_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((foobar));
+    let expected = quote!((foobar));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_owned()),
@@ -77,7 +77,7 @@ fn test_parsed_constant_function_tokens_are_application_expression() -> TestResu
 #[test]
 fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((foobar 42));
+    let expected = quote!((foobar 42));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_owned()),
@@ -91,7 +91,7 @@ fn test_parsed_unary_function_tokens_are_application_expression() -> TestResult 
 #[test]
 fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((foobar 42 24 0));
+    let expected = quote!((foobar 42 24 0));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Symbol("foobar".to_owned()),
@@ -107,7 +107,7 @@ fn test_parsed_multi_parameter_function_tokens_are_application_expression() -> T
 #[test]
 fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((let x 42 x));
+    let expected = quote!((let x 42 x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
@@ -123,7 +123,7 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
 #[test]
 fn test_parsed_if_tokens_are_if_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((if true 42 24));
+    let expected = quote!((if true 42 24));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::If),
@@ -139,7 +139,7 @@ fn test_parsed_if_tokens_are_if_expression() -> TestResult {
 #[test]
 fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((lambda [] x));
+    let expected = quote!((lambda [] x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -155,7 +155,7 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((lambda [x] x));
+    let expected = quote!((lambda [x] x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -172,7 +172,7 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((lambda [x y z] x));
+    let expected = quote!((lambda [x y z] x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
@@ -191,7 +191,7 @@ fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestRes
 #[test]
 fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Module
         (module foo
             ((function x [] 42))
@@ -231,7 +231,7 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
 #[test]
 fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Function
         (function foo [x y z] (bar 42))
     };
@@ -257,7 +257,7 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
 #[test]
 fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Constant
         (constant foo 42)
     };
@@ -275,7 +275,7 @@ fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         (lambda [(xs: any...)] x)
     };
     let actual = parser.parse(vec![
@@ -295,7 +295,7 @@ fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> 
 #[test]
 fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Function
         (0: public eager function foo [] -> any 0: 42)
     };
@@ -316,7 +316,7 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
 #[test]
 fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Constant
         (0: public constant foo 42)
     };
@@ -335,7 +335,7 @@ fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
 #[test]
 fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Function
         (0: private lazy function foo [] -> any 0: 42)
     };
@@ -356,7 +356,7 @@ fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
 #[test]
 fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Function
         (0: public lazy function foo [] -> any 0: 42)
     };
@@ -378,7 +378,7 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
 #[test]
 fn test_parsed_internal_function_tokens_are_internal_function() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node InternalFunction
         (0: public lazy internal_function foobar [(x: any) (y: Bar) (z: int...)] -> bool)
     };
@@ -413,7 +413,7 @@ fn test_parsed_internal_function_tokens_are_internal_function() -> TestResult {
 fn test_parsed_application_simple_path_identifier_tokens_are_application_expression() -> TestResult
 {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         ((foo::foobar) "foo")
     };
     let actual = parser.parse(vec![
@@ -432,7 +432,7 @@ fn test_parsed_application_simple_path_identifier_tokens_are_application_express
 fn test_parsed_application_complex_path_identifier_tokens_are_application_expression() -> TestResult
 {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         ((foo::bar::foobar::barfoo))
     };
     let actual = parser.parse(vec![
@@ -453,7 +453,7 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
 #[test]
 fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Module
         (0: static module foo () () ())
     };
@@ -471,7 +471,7 @@ fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
 #[test]
 fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Function
         (0: private eager function foo [(x: any) (y: Bar) (z: int...)] -> bool
             0: (bar 42))
@@ -507,7 +507,7 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
 #[test]
 fn test_parse_function_with_lambda_type() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket! {
+    let expected = quote! {
         @node Function
         (0: private eager function foobar
             [(x: any) (y: (int bool -> Test)) (z: int...)] -> (-> int)
@@ -553,7 +553,7 @@ fn test_parse_function_with_lambda_type() -> TestResult {
 fn test_lambda_type_is_parsed_correctly() -> TestResult {
     let parser = Parser::default();
     assert_eq!(
-        brucket!(@type (-> int)),
+        quote!(@type (-> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -566,7 +566,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
         )?,
     );
     assert_eq!(
-        brucket!(@type (int -> int)),
+        quote!(@type (int -> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -580,7 +580,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
         )?,
     );
     assert_eq!(
-        brucket!(@type (int int -> int)),
+        quote!(@type (int int -> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -595,7 +595,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
         )?,
     );
     assert_eq!(
-        brucket!(@type ((int (int -> int)) -> int)),
+        quote!(@type ((int (int -> int)) -> int)),
         parser.parse_type(
             &mut vec![
                 Token::Parenthesis(Parenthesis::Open('(')),
@@ -619,7 +619,7 @@ fn test_lambda_type_is_parsed_correctly() -> TestResult {
 #[test]
 fn test_typed_let_is_let_expression() -> TestResult {
     let mut parser = Parser::default();
-    let expected = brucket!((let x: int 42 x));
+    let expected = quote!((let x: int 42 x));
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),

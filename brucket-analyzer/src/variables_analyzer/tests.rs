@@ -1,6 +1,6 @@
 use brucket_ast::constant_value::{Boolean, ConstantVariant};
 use brucket_ast::lambda::{Arity, Parameter};
-use brucket_quote::brucket;
+use brucket_ast::quote;
 
 use super::*;
 
@@ -9,7 +9,7 @@ type TestError = Cow<'static, str>;
 
 #[test]
 fn test_let_variables_are_analyzed_correctly() -> TestResult {
-    let node = brucket! {
+    let node = quote! {
         (0: let foo: any (1: 1)
             (2: let bar: any (3: 1.1)
                 (4: foo)))
