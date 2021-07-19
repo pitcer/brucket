@@ -110,10 +110,7 @@ mod test {
 
     #[test]
     fn test_number_expressions_are_converted_to_c_syntax_correctly() -> TestResult {
-        assert_eq!(
-            "42",
-            NumberExpression::Integer("42".to_owned()).generate()?
-        );
+        assert_eq!("42", NumberExpression::Integer("42".to_owned()).generate()?);
         assert_eq!(
             "42.42",
             NumberExpression::FloatingPoint("42.42".to_owned()).generate()?
