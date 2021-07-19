@@ -29,7 +29,7 @@ impl NodeTypes {
         let node_id = node.node_id();
         self.0
             .get(&node_id)
-            .ok_or_else(|| format!("Type for node {} not found", node_id).into())
+            .ok_or_else(|| Cow::from(format!("Type for node {} not found", node_id)))
     }
 }
 
@@ -118,7 +118,7 @@ impl TypeAnalyzer {
     }
 
     fn analyze_application_types(&mut self, application: &Application) -> TypedResult {
-        let identifier = &application.identifier;
+        let identifier = &*application.identifier;
         let identifier_type = self.analyze_node_types(identifier)?;
         if let Type::Lambda(lambda_type) = identifier_type {
             for argument in &application.arguments {
@@ -129,25 +129,24 @@ impl TypeAnalyzer {
                 .insert(application, *lambda_type.return_type.clone());
             Ok(*lambda_type.return_type)
         } else {
-            Err("Application identifier must evaluate to Lambda".into())
+            Err(Cow::from("Application identifier must evaluate to Lambda"))
         }
     }
 
     fn analyze_let_types(&mut self, let_node: &Let) -> TypedResult {
-        let value = &let_node.value;
+        let value = &*let_node.value;
         let value_type = self.analyze_node_types(value)?;
         let name = &let_node.name;
         let expected_value_type = &let_node.value_type;
         if *expected_value_type != Type::Any && *expected_value_type != value_type {
-            return Err(format!(
+            return Err(Cow::from(format!(
                 "Invalid let variable type, name: {}, expected: {}, actual: {}",
                 name, expected_value_type, value_type
-            )
-            .into());
+            )));
         }
         let path = Path::Simple(name.clone());
         self.environment.insert_variable(path.clone(), value_type);
-        let then = &let_node.then;
+        let then = &*let_node.then;
         let then_type = self.analyze_node_types(then)?;
         self.environment.remove_variable(&path);
         self.environment
@@ -157,25 +156,23 @@ impl TypeAnalyzer {
     }
 
     fn analyze_if_types(&mut self, if_node: &If) -> TypedResult {
-        let if_true = &if_node.if_true;
-        let if_false = &if_node.if_false;
+        let if_true = &*if_node.if_true;
+        let if_false = &*if_node.if_false;
         let then_type = self.analyze_node_types(if_true)?;
         let else_type = self.analyze_node_types(if_false)?;
         if then_type != else_type {
-            return Err(format!(
+            return Err(Cow::from(format!(
                 "Types in both if expression's branches must be the same, actual: {}, {}",
                 then_type, else_type
-            )
-            .into());
+            )));
         }
-        let condition = &if_node.condition;
+        let condition = &*if_node.condition;
         let condition_type = self.analyze_node_types(condition)?;
         if condition_type != Type::Boolean {
-            return Err(format!(
+            return Err(Cow::from(format!(
                 "Condition type must have Boolean type, actual: {}",
                 condition_type
-            )
-            .into());
+            )));
         }
         self.environment
             .node_types
@@ -186,14 +183,14 @@ impl TypeAnalyzer {
     fn analyze_lambda_types(&mut self, lambda: &Lambda) -> TypedResult {
         // TODO: reduce number of clones
         // ---
-        let parameters = &lambda.parameters;
+        let parameters = &*lambda.parameters;
         for parameter in parameters {
             self.environment.insert_variable(
                 Path::Simple(parameter.name.clone()),
                 parameter.parameter_type.clone(),
             );
         }
-        let body = &lambda.body;
+        let body = &*lambda.body;
         let body_type = self.analyze_node_types(body)?;
         for parameter in parameters {
             self.environment

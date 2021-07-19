@@ -51,7 +51,7 @@ impl Transpiler {
         let mut environment = Environment::default();
         let binary_int_lambda_type = Type::Lambda(LambdaType::new(
             vec![Type::Integer, Type::Integer],
-            Type::Integer.into(),
+            Box::new(Type::Integer),
         ));
         environment.insert_variable(Path::Simple("+".to_owned()), binary_int_lambda_type.clone());
         environment.insert_variable(Path::Simple("-".to_owned()), binary_int_lambda_type.clone());

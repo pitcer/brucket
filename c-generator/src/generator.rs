@@ -27,7 +27,7 @@ pub struct Indentation {
 impl Default for Indentation {
     #[inline]
     fn default() -> Self {
-        Self::new("    ".into(), 0)
+        Self::new(Cow::from("    "), 0)
     }
 }
 

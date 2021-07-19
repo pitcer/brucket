@@ -165,7 +165,7 @@ impl Evaluator {
             }
         }
         environment.insert(name.clone(), evaluated_value);
-        let then = &let_node.then;
+        let then = &*let_node.then;
         let result = self.evaluate_environment(then, environment, state);
         environment.remove(name);
         result
@@ -209,7 +209,7 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState<'_>,
     ) -> Result<Environment, ValueError> {
-        let variables = &state.variables.get(lambda)?;
+        let variables = state.variables.get(lambda)?;
         let free_variables = &variables.free_variables;
         let new_env: Environment = free_variables
             .iter()
@@ -357,7 +357,7 @@ impl Evaluator {
                 }
             }
         }
-        let parameters = &closure.parameters;
+        let parameters = &*closure.parameters;
         let parameters_length = parameters.len();
         let arguments_length = arguments.len();
         if !has_variadic_parameter && parameters_length != arguments_length {
@@ -495,7 +495,7 @@ impl Evaluator {
         for constant in &module.constants {
             let visibility = &constant.visibility;
             let identifier = &constant.name;
-            let value = &constant.value;
+            let value = &*constant.value;
             let value = self.evaluate_environment(value, &constants_environment, state)?;
             let value = Rc::new(value);
             if let Visibility::Public = *visibility {

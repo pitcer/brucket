@@ -25,7 +25,7 @@ impl Token {
     fn into_symbol(self) -> ParseResult<String> {
         match self {
             Token::Symbol(symbol) => Ok(symbol),
-            _ => Err(format!("Token is not a symbol: {:?}", self).into()),
+            _ => Err(Cow::from(format!("Token is not a symbol: {:?}", self))),
         }
     }
 
@@ -67,7 +67,7 @@ impl Parser {
     fn parse_first(&mut self, tokens: &mut Tokens) -> NodeResult {
         match tokens.next() {
             Some(token) => self.parse_first_token(token, tokens),
-            None => Err("Empty tokens".into()),
+            None => Err(Cow::from("Empty tokens")),
         }
     }
 
@@ -87,14 +87,16 @@ impl Parser {
                 let variant = ConstantVariant::Boolean(boolean);
                 Ok(self.create_constant_value(variant))
             }
-            Token::Keyword(keyword) => Err(format!("Unexpected token: {:?}", keyword).into()),
+            Token::Keyword(keyword) => Err(Cow::from(format!("Unexpected token: {:?}", keyword))),
             Token::Symbol(symbol) => {
                 let path = Self::parse_path_symbol(symbol, tokens)?;
                 Ok(self.create_identifier(path))
             }
-            Token::Modifier(modifier) => Err(format!("Unexpected token: {:?}", modifier).into()),
+            Token::Modifier(modifier) => {
+                Err(Cow::from(format!("Unexpected token: {:?}", modifier)))
+            }
             Token::PrimitiveType(type_token) => {
-                Err(format!("Unexpected token: {:?}", type_token).into())
+                Err(Cow::from(format!("Unexpected token: {:?}", type_token)))
             }
         }
     }
@@ -102,17 +104,17 @@ impl Parser {
     fn parse_parenthesis(&mut self, parenthesis: &Parenthesis, tokens: &mut Tokens) -> NodeResult {
         match *parenthesis {
             Parenthesis::Open(_) => self.parse_section(tokens),
-            Parenthesis::Close(_) => Err("Unexpected close parenthesis".into()),
+            Parenthesis::Close(_) => Err(Cow::from("Unexpected close parenthesis")),
         }
     }
 
     fn parse_operator(operator: &Operator) -> NodeResult {
         match *operator {
-            Operator::Variadic => Err("Unexpected variadic operator".into()),
-            Operator::Path => Err("Unexpected path operator".into()),
-            Operator::Type => Err("Unexpected type operator".into()),
-            Operator::SkinnyArrowRight => Err("Unexpected '->'".into()),
-            Operator::ThickArrowRight => Err("Unexpected '=>'".into()),
+            Operator::Variadic => Err(Cow::from("Unexpected variadic operator")),
+            Operator::Path => Err(Cow::from("Unexpected path operator")),
+            Operator::Type => Err(Cow::from("Unexpected type operator")),
+            Operator::SkinnyArrowRight => Err(Cow::from("Unexpected '->'")),
+            Operator::ThickArrowRight => Err(Cow::from("Unexpected '=>'")),
         }
     }
 
@@ -139,7 +141,7 @@ impl Parser {
     fn parse_section(&mut self, tokens: &mut Tokens) -> NodeResult {
         match tokens.next() {
             Some(token) => self.parse_section_token(token, tokens),
-            None => Err("Empty tokens".into()),
+            None => Err(Cow::from("Empty tokens")),
         }
     }
 
@@ -212,7 +214,7 @@ impl Parser {
             let let_node = Let::new(node_id, name, value_type, Box::new(value), Box::new(then));
             Ok(Node::Let(let_node))
         } else {
-            Err("Invalid let expression: end of tokens".into())
+            Err(Cow::from("Invalid let expression: end of tokens"))
         }
     }
 
@@ -274,7 +276,7 @@ impl Parser {
                 Modifier::Lazy => application_strategy = ApplicationStrategy::Lazy,
                 Modifier::Internal => internal = true,
                 Modifier::Static => {
-                    return Err("Static is an invalid modifier for a function".into())
+                    return Err(Cow::from("Static is an invalid modifier for a function"))
                 }
             }
         }
@@ -314,7 +316,7 @@ impl Parser {
         let parameters = self.parse_parameters(tokens)?;
         let return_type = self.parse_return_type(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Invalid internal function expression".into());
+            return Err(Cow::from("Invalid internal function expression"));
         }
         let node_id = self.create_node_id();
         let internal_function = InternalFunction::new(
@@ -333,7 +335,7 @@ impl Parser {
         let return_type = self.parse_return_type(tokens)?;
         let body = self.parse_first(tokens)?;
         if !Self::is_section_closed(tokens) {
-            return Err("Invalid lambda expression".into());
+            return Err(Cow::from("Invalid lambda expression"));
         }
         let node_id = self.create_node_id();
         let lambda = Lambda::new(node_id, parameters, return_type, Box::new(body));
@@ -385,11 +387,11 @@ impl Parser {
             let parameter_type = self.parse_type_token(token, tokens)?;
             parameters_types.push(parameter_type);
         }
-        let return_type = self.parse_type(tokens)?.into();
+        let return_type = self.parse_type(tokens)?;
         if let Some(Token::Parenthesis(Parenthesis::Close(')'))) = tokens.next() {
-            Ok(LambdaType::new(parameters_types, return_type))
+            Ok(LambdaType::new(parameters_types, Box::new(return_type)))
         } else {
-            Err("Missing close parenthesis in lambda type".into())
+            Err(Cow::from("Missing close parenthesis in lambda type"))
         }
     }
 
@@ -411,14 +413,14 @@ impl Parser {
                 Node::Function(function) => functions.push(function),
                 Node::InternalFunction(function) => internal_functions.push(function),
                 Node::Constant(constant) => constants.push(constant),
-                _ => return Err(format!("Invalid module member: {:?}", member).into()),
+                _ => return Err(Cow::from(format!("Invalid module member: {:?}", member))),
             }
         }
         let mut is_static = false;
         for modifier in modifiers {
             match modifier {
                 Modifier::Static => is_static = true,
-                _ => return Err("Invalid module modifier".into()),
+                _ => return Err(Cow::from("Invalid module modifier")),
             }
         }
         let node_id = self.create_node_id();
@@ -440,7 +442,7 @@ impl Parser {
             match *token {
                 Token::Operator(Operator::Path) => {
                     if last_path_operator {
-                        return Err("Unexpected path operator".into());
+                        return Err(Cow::from("Unexpected path operator"));
                     }
                     last_path_operator = true;
                     tokens.next();
@@ -476,7 +478,7 @@ impl Parser {
             match modifier {
                 Modifier::Public => visibility = Visibility::Public,
                 Modifier::Private => visibility = Visibility::Private,
-                _ => return Err(format!("Invalid modifier: {:?}", modifier).into()),
+                _ => return Err(Cow::from(format!("Invalid modifier: {:?}", modifier))),
             }
         }
         let node_id = self.create_node_id();

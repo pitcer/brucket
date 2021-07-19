@@ -84,7 +84,7 @@ impl Translator {
         state: &mut TranslationState,
     ) -> TranslatorResult<CType> {
         match *node_type {
-            Type::Any => Err("Cannot translate any type to C equivalent".into()),
+            Type::Any => Err(Cow::from("Cannot translate any type to C equivalent")),
             Type::Unit => Ok(CType::Primitive(CPrimitiveType::Void)),
             Type::Boolean => Ok(CType::Custom("BOOL".to_owned())),
             Type::Integer => Ok(CType::Primitive(CPrimitiveType::Int)),
