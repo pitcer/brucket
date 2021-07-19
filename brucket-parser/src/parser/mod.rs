@@ -485,11 +485,7 @@ impl Parser {
 
     fn parse_identifier(tokens: &mut Tokens) -> ParseResult<String> {
         let identifier = tokens.next();
-        if identifier.is_none() {
-            return Err(Cow::from("Missing name token"));
-        }
-        let identifier = identifier.unwrap();
-        identifier.into_symbol()
+        identifier.map_or_else(|| Err(Cow::from("Missing name token")), Token::into_symbol)
     }
 
     fn parse_arguments(&mut self, tokens: &mut Tokens) -> ParseResult<Vec<Node>> {

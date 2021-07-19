@@ -178,7 +178,7 @@ mod test {
             VariableDeclaration::new(
                 vec![],
                 CType::Primitive(CPrimitiveType::Int),
-                "foobar".to_string(),
+                "foobar".to_owned(),
             )
             .generate_indented(&GeneratorState::default())?
         );
@@ -187,7 +187,7 @@ mod test {
             VariableDeclaration::new(
                 vec![Modifier::Const],
                 CType::Primitive(CPrimitiveType::Int),
-                "foobar".to_string(),
+                "foobar".to_owned(),
             )
             .generate_indented(&GeneratorState::default())?
         );
@@ -199,8 +199,8 @@ mod test {
         assert_eq!(
             "foo = bar;",
             VariableDefinition::new(
-                "foo".to_string(),
-                CExpression::NamedReference("bar".to_string())
+                "foo".to_owned(),
+                CExpression::NamedReference("bar".to_owned())
             )
             .generate_indented(&GeneratorState::default())?
         );
@@ -214,8 +214,8 @@ mod test {
             VariableInstruction::new(
                 vec![],
                 CType::Primitive(CPrimitiveType::Int),
-                "foo".to_string(),
-                CExpression::NamedReference("bar".to_string())
+                "foo".to_owned(),
+                CExpression::NamedReference("bar".to_owned())
             )
             .generate_indented(&GeneratorState::default())?
         );
@@ -224,8 +224,8 @@ mod test {
             VariableInstruction::new(
                 vec![Modifier::Const],
                 CType::Primitive(CPrimitiveType::Int),
-                "foo".to_string(),
-                CExpression::NamedReference("bar".to_string())
+                "foo".to_owned(),
+                CExpression::NamedReference("bar".to_owned())
             )
             .generate_indented(&GeneratorState::default())?
         );
@@ -240,10 +240,10 @@ mod test {
     bar;
 }"#,
             IfInstruction::new(
-                CExpression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_owned()),
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
-                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_owned()))
                 ]
             )
             .generate_indented(&GeneratorState::default())?
@@ -262,14 +262,14 @@ mod test {
     foo;
 }"#,
             IfElseInstruction::new(
-                CExpression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_owned()),
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
-                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_owned()))
                 ],
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("bar".to_string())),
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("bar".to_owned())),
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned()))
                 ],
             )
             .generate_indented(&GeneratorState::default())?
@@ -281,12 +281,12 @@ mod test {
     fn test_instruction_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "foobar;",
-            Instruction::Expression(CExpression::NamedReference("foobar".to_string()))
+            Instruction::Expression(CExpression::NamedReference("foobar".to_owned()))
                 .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "return foobar;",
-            Instruction::Return(CExpression::NamedReference("foobar".to_string()))
+            Instruction::Return(CExpression::NamedReference("foobar".to_owned()))
                 .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
@@ -294,8 +294,8 @@ mod test {
             Instruction::Variable(VariableInstruction::new(
                 vec![],
                 CType::Primitive(CPrimitiveType::Int),
-                "foo".to_string(),
-                CExpression::NamedReference("bar".to_string())
+                "foo".to_owned(),
+                CExpression::NamedReference("bar".to_owned())
             ))
             .generate_indented(&GeneratorState::default())?
         );
@@ -306,10 +306,10 @@ mod test {
     bar;
 }"#,
             Instruction::If(IfInstruction::new(
-                CExpression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_owned()),
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
-                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_owned()))
                 ]
             ))
             .generate_indented(&GeneratorState::default())?
@@ -323,14 +323,14 @@ mod test {
     foo;
 }"#,
             Instruction::IfElse(IfElseInstruction::new(
-                CExpression::NamedReference("foobar".to_string()),
+                CExpression::NamedReference("foobar".to_owned()),
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
-                    Instruction::Expression(CExpression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned())),
+                    Instruction::Expression(CExpression::NamedReference("bar".to_owned()))
                 ],
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("bar".to_string())),
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("bar".to_owned())),
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned()))
                 ],
             ))
             .generate_indented(&GeneratorState::default())?

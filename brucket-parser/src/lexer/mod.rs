@@ -120,7 +120,7 @@ impl Lexer {
         Ok(result)
     }
 
-    fn match_token(&self, current: char, characters: &mut Characters) -> TokenResult {
+    fn match_token(&self, current: char, characters: &mut Characters<'_>) -> TokenResult {
         match current {
             comment if comment.is_comment() => {
                 Self::skip_comment(characters);
@@ -151,7 +151,7 @@ impl Lexer {
         }
     }
 
-    fn skip_comment(characters: &mut Characters) {
+    fn skip_comment(characters: &mut Characters<'_>) {
         for current in characters {
             if current == '\n' {
                 return;
@@ -159,17 +159,20 @@ impl Lexer {
         }
     }
 
-    fn tokenize_dots(characters: &mut Characters) -> TokenResult {
+    fn tokenize_dots(characters: &mut Characters<'_>) -> TokenResult {
         let second = characters.next();
         let third = characters.next();
-        if second.is_some() && second.unwrap() == '.' && third.is_some() && third.unwrap() == '.' {
-            Ok(Some(Token::Operator(Operator::Variadic)))
-        } else {
-            Err(Cow::from("Invalid dots operator"))
-        }
+        second
+            .filter(|second| *second == '.')
+            .and(third)
+            .filter(|third| *third == '.')
+            .map_or_else(
+                || Err(Cow::from("Invalid dots operator")),
+                |_| Ok(Some(Token::Operator(Operator::Variadic))),
+            )
     }
 
-    fn tokenize_colon(characters: &mut Characters) -> Token {
+    fn tokenize_colon(characters: &mut Characters<'_>) -> Token {
         let second = characters.peek();
         if let Some(':') = second {
             characters.next();
@@ -178,7 +181,7 @@ impl Lexer {
         Token::Operator(Operator::Type)
     }
 
-    fn tokenize_string(characters: &mut Characters) -> String {
+    fn tokenize_string(characters: &mut Characters<'_>) -> String {
         let mut result = String::new();
         let mut escaping = false;
         for current in characters {
@@ -194,7 +197,7 @@ impl Lexer {
         result
     }
 
-    fn tokenize_number(first: char, characters: &mut Characters) -> Number {
+    fn tokenize_number(first: char, characters: &mut Characters<'_>) -> Number {
         let mut number = String::new();
         let mut floating_point = false;
         number.push(first);
@@ -215,7 +218,7 @@ impl Lexer {
         }
     }
 
-    fn tokenize_symbol(first: char, characters: &mut Characters) -> String {
+    fn tokenize_symbol(first: char, characters: &mut Characters<'_>) -> String {
         let mut result = String::new();
         result.push(first);
         while let Some(current) = characters.peek() {

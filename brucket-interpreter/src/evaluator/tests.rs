@@ -27,7 +27,7 @@ fn test_evaluated_boolean_expression_is_boolean_value() -> TestResult {
 #[test]
 fn test_evaluated_string_expression_is_textual_value() -> TestResult {
     let mut evaluator = Evaluator::default();
-    let expected = Value::Textual("foobar".to_string());
+    let expected = Value::Textual("foobar".to_owned());
     let actual = evaluator.evaluate_with_default_state(&brucket!("foobar"))?;
     assert_eq!(expected, actual);
     Ok(())
@@ -249,7 +249,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Module(
         false,
-        "foo".to_string(),
+        "foo".to_owned(),
         environment! {
             "bar" => Value::FunctionClosure(
                 ApplicationStrategy::Eager,
@@ -347,7 +347,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::Module(
         false,
-        "foo".to_string(),
+        "foo".to_owned(),
         environment! {
             "bar" => Value::FunctionClosure(
                 ApplicationStrategy::Eager,
@@ -422,7 +422,7 @@ fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value()
 #[test]
 fn test_evaluated_static_module_expression_is_static_module_value() -> TestResult {
     let mut evaluator = Evaluator::default();
-    let expected = Value::Module(true, "foo".to_string(), Environment::default());
+    let expected = Value::Module(true, "foo".to_owned(), Environment::default());
     let actual = evaluator.evaluate_with_default_state(&brucket! {
         @node Module
         (0: static module foo () () ())

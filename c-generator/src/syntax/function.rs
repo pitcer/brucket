@@ -92,7 +92,7 @@ mod test {
     fn test_function_parameter_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "int foobar",
-            FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "foobar".to_string())
+            FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "foobar".to_owned())
                 .generate()?
         );
         Ok(())
@@ -104,16 +104,10 @@ mod test {
             "int foobar(int foo, int bar)",
             FunctionHeader::new(
                 CType::Primitive(CPrimitiveType::Int),
-                "foobar".to_string(),
+                "foobar".to_owned(),
                 vec![
-                    FunctionParameter::new(
-                        CType::Primitive(CPrimitiveType::Int),
-                        "foo".to_string()
-                    ),
-                    FunctionParameter::new(
-                        CType::Primitive(CPrimitiveType::Int),
-                        "bar".to_string()
-                    )
+                    FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "foo".to_owned()),
+                    FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "bar".to_owned())
                 ],
             )
             .generate()?
@@ -127,16 +121,10 @@ mod test {
             "int foobar(int foo, int bar);",
             FunctionDeclaration::new(FunctionHeader::new(
                 CType::Primitive(CPrimitiveType::Int),
-                "foobar".to_string(),
+                "foobar".to_owned(),
                 vec![
-                    FunctionParameter::new(
-                        CType::Primitive(CPrimitiveType::Int),
-                        "foo".to_string()
-                    ),
-                    FunctionParameter::new(
-                        CType::Primitive(CPrimitiveType::Int),
-                        "bar".to_string()
-                    )
+                    FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "foo".to_owned()),
+                    FunctionParameter::new(CType::Primitive(CPrimitiveType::Int), "bar".to_owned())
                 ],
             ))
             .generate_indented(&GeneratorState::default())?
@@ -153,7 +141,7 @@ mod test {
             FunctionDefinition::new(
                 FunctionHeader::new(
                     CType::Primitive(CPrimitiveType::Int),
-                    "foobar".to_string(),
+                    "foobar".to_owned(),
                     Parameters::default()
                 ),
                 Instructions::default()
@@ -167,11 +155,11 @@ mod test {
             FunctionDefinition::new(
                 FunctionHeader::new(
                     CType::Primitive(CPrimitiveType::Int),
-                    "foobar".to_string(),
+                    "foobar".to_owned(),
                     Parameters::default()
                 ),
                 vec![Instruction::Return(CExpression::NamedReference(
-                    "bar".to_string()
+                    "bar".to_owned()
                 ))]
             )
             .generate_indented(&GeneratorState::default())?
@@ -184,15 +172,15 @@ mod test {
             FunctionDefinition::new(
                 FunctionHeader::new(
                     CType::Primitive(CPrimitiveType::Int),
-                    "foobar".to_string(),
+                    "foobar".to_owned(),
                     vec![FunctionParameter::new(
                         CType::Primitive(CPrimitiveType::Int),
-                        "foo".to_string()
+                        "foo".to_owned()
                     )]
                 ),
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
-                    Instruction::Return(CExpression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned())),
+                    Instruction::Return(CExpression::NamedReference("bar".to_owned()))
                 ]
             )
             .generate_indented(&GeneratorState::default())?
@@ -205,21 +193,21 @@ mod test {
             FunctionDefinition::new(
                 FunctionHeader::new(
                     CType::Primitive(CPrimitiveType::Int),
-                    "foobar".to_string(),
+                    "foobar".to_owned(),
                     vec![
                         FunctionParameter::new(
                             CType::Primitive(CPrimitiveType::Int),
-                            "foo".to_string()
+                            "foo".to_owned()
                         ),
                         FunctionParameter::new(
                             CType::Primitive(CPrimitiveType::Int),
-                            "bar".to_string()
+                            "bar".to_owned()
                         )
                     ]
                 ),
                 vec![
-                    Instruction::Expression(CExpression::NamedReference("foo".to_string())),
-                    Instruction::Return(CExpression::NamedReference("bar".to_string()))
+                    Instruction::Expression(CExpression::NamedReference("foo".to_owned())),
+                    Instruction::Return(CExpression::NamedReference("bar".to_owned()))
                 ]
             )
             .generate_indented(&GeneratorState::default())?

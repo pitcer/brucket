@@ -64,18 +64,18 @@ impl Transpiler {
         expression: Translation,
         mut expression_members: ModuleMembers,
     ) -> Vec<ModuleMember> {
-        let include_stdio_macro = ModuleMember::Macro(Macro::Include("stdio.h".to_string()));
+        let include_stdio_macro = ModuleMember::Macro(Macro::Include("stdio.h".to_owned()));
         let define_unit_macro = ModuleMember::Macro(Macro::Define(DefineMacro::new(
-            "BOOL".to_string(),
-            "signed char".to_string(),
+            "BOOL".to_owned(),
+            "signed char".to_owned(),
         )));
         let define_true_macro = ModuleMember::Macro(Macro::Define(DefineMacro::new(
-            "TRUE".to_string(),
-            "1".to_string(),
+            "TRUE".to_owned(),
+            "1".to_owned(),
         )));
         let define_false_macro = ModuleMember::Macro(Macro::Define(DefineMacro::new(
-            "FALSE".to_string(),
-            "0".to_string(),
+            "FALSE".to_owned(),
+            "0".to_owned(),
         )));
         let plus_function = Self::create_binary_operator_function("__$internal_add", '+');
         let minus_function = Self::create_binary_operator_function("__$internal_subtract", '-');
@@ -102,14 +102,14 @@ impl Transpiler {
     fn create_main_function(translation: Translation) -> ModuleMember {
         let print_result_instruction =
             Instruction::Expression(CExpression::FunctionCall(FunctionCallExpression::new(
-                FunctionIdentifier::NamedReference("printf".to_string()),
+                FunctionIdentifier::NamedReference("printf".to_owned()),
                 vec![
-                    CExpression::String("%d\\n".to_string()),
+                    CExpression::String("%d\\n".to_owned()),
                     translation.result_expression,
                 ],
             )));
         let return_instruction = Instruction::Return(CExpression::Number(
-            NumberExpression::Integer("0".to_string()),
+            NumberExpression::Integer("0".to_owned()),
         ));
 
         let mut instructions = translation.preceding_instructions;
@@ -119,7 +119,7 @@ impl Transpiler {
         ModuleMember::FunctionDefinition(FunctionDefinition::new(
             FunctionHeader::new(
                 CType::Primitive(CPrimitiveType::Int),
-                "main".to_string(),
+                "main".to_owned(),
                 Parameters::default(),
             ),
             instructions,
@@ -130,15 +130,15 @@ impl Transpiler {
         ModuleMember::FunctionDefinition(FunctionDefinition::new(
             FunctionHeader::new(
                 CType::Primitive(CPrimitiveType::Int),
-                name.to_string(),
+                name.to_owned(),
                 vec![
                     FunctionParameter::new(
                         CType::Primitive(CPrimitiveType::Int),
-                        "first".to_string(),
+                        "first".to_owned(),
                     ),
                     FunctionParameter::new(
                         CType::Primitive(CPrimitiveType::Int),
-                        "second".to_string(),
+                        "second".to_owned(),
                     ),
                 ],
             ),

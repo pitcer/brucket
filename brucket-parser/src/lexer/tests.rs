@@ -50,7 +50,7 @@ fn test_tokenized_close_square_bracket_is_parenthesis_token() -> TestResult {
 #[test]
 fn test_tokenized_string_is_string_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::String("foo bar \" \\ foobar ".to_string())];
+    let expected = vec![Token::String("foo bar \" \\ foobar ".to_owned())];
     let actual = lexer.tokenize("\"foo bar \\\" \\\\ foobar \"")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -59,7 +59,7 @@ fn test_tokenized_string_is_string_token() -> TestResult {
 #[test]
 fn test_tokenized_single_character_number_is_number_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Number(Number::Integer("7".to_string()))];
+    let expected = vec![Token::Number(Number::Integer("7".to_owned()))];
     let actual = lexer.tokenize("7")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -68,7 +68,7 @@ fn test_tokenized_single_character_number_is_number_token() -> TestResult {
 #[test]
 fn test_tokenized_multi_character_number_is_number_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Number(Number::Integer("4224".to_string()))];
+    let expected = vec![Token::Number(Number::Integer("4224".to_owned()))];
     let actual = lexer.tokenize("4224")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -77,7 +77,7 @@ fn test_tokenized_multi_character_number_is_number_token() -> TestResult {
 #[test]
 fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Symbol("x".to_string())];
+    let expected = vec![Token::Symbol("x".to_owned())];
     let actual = lexer.tokenize("x")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -86,7 +86,7 @@ fn test_tokenized_single_character_symbol_is_symbol_token() -> TestResult {
 #[test]
 fn test_tokenized_multi_character_symbol_is_symbol_token() -> TestResult {
     let lexer = Lexer::default();
-    let expected = vec![Token::Symbol("xyz".to_string())];
+    let expected = vec![Token::Symbol("xyz".to_owned())];
     let actual = lexer.tokenize("xyz")?;
     assert_eq!(expected, actual);
     Ok(())
@@ -235,14 +235,14 @@ fn test_statement_is_tokenized_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("multiply".to_string()),
-        Token::Number(Number::Integer("123".to_string())),
+        Token::Symbol("multiply".to_owned()),
+        Token::Number(Number::Integer("123".to_owned())),
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("+".to_string()),
-        Token::Number(Number::Integer("321".to_string())),
-        Token::Number(Number::Integer("1".to_string())),
+        Token::Symbol("+".to_owned()),
+        Token::Number(Number::Integer("321".to_owned())),
+        Token::Number(Number::Integer("1".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
-        Token::String("foobar".to_string()),
+        Token::String("foobar".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ];
     let actual = lexer.tokenize("(multiply 123 (+ 321 1) \"foobar\" )")?;
@@ -255,7 +255,7 @@ fn test_closing_parenthesis_after_number_is_handled_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Number(Number::Integer("42".to_string())),
+        Token::Number(Number::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ];
     let actual = lexer.tokenize("(42)")?;
@@ -268,7 +268,7 @@ fn test_closing_parenthesis_after_symbol_is_handled_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ];
     let actual = lexer.tokenize("(foo)")?;
@@ -281,7 +281,7 @@ fn test_tokenize_number() {
     let mut characters = "224)".chars().peekable();
     let number = Lexer::tokenize_number('4', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
-    assert_eq!(Number::Integer("4224".to_string()), number);
+    assert_eq!(Number::Integer("4224".to_owned()), number);
     assert_eq!(')', parenthesis);
 }
 
@@ -290,7 +290,7 @@ fn test_tokenize_floating_point_number() {
     let mut characters = "2.24)".chars().peekable();
     let number = Lexer::tokenize_number('4', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
-    assert_eq!(Number::FloatingPoint("42.24".to_string()), number);
+    assert_eq!(Number::FloatingPoint("42.24".to_owned()), number);
     assert_eq!(')', parenthesis);
 }
 
@@ -299,7 +299,7 @@ fn test_tokenize_symbol() {
     let mut characters = "oo)".chars().peekable();
     let symbol = Lexer::tokenize_symbol('f', &mut characters);
     let parenthesis = characters.next().expect("Missing closing parenthesis");
-    assert_eq!("foo".to_string(), symbol);
+    assert_eq!("foo".to_owned(), symbol);
     assert_eq!(')', parenthesis);
 }
 
@@ -334,9 +334,9 @@ fn test_tokenized_two_colons_are_path_operator_token() -> TestResult {
 fn test_tokenized_path_is_path_tokens() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("bar".to_string()),
+        Token::Symbol("bar".to_owned()),
     ];
     let actual = lexer.tokenize("foo::bar")?;
     assert_eq!(expected, actual);
@@ -347,13 +347,13 @@ fn test_tokenized_path_is_path_tokens() -> TestResult {
 fn test_tokenized_complex_path_is_path_tokens() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("bar".to_string()),
+        Token::Symbol("bar".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("foobar".to_string()),
+        Token::Symbol("foobar".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("barfoo".to_string()),
+        Token::Symbol("barfoo".to_owned()),
     ];
     let actual = lexer.tokenize("foo::bar::foobar::barfoo")?;
     assert_eq!(expected, actual);
@@ -364,7 +364,7 @@ fn test_tokenized_complex_path_is_path_tokens() -> TestResult {
 fn test_typed_variadic_parameter_is_tokenized_correctly() -> TestResult {
     let lexer = Lexer::default();
     let expected = vec![
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Any),
         Token::Operator(Operator::Variadic),

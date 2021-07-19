@@ -133,7 +133,7 @@ impl Translator {
     fn translate_constant_variant(variant: ConstantVariant) -> CExpression {
         match variant {
             ConstantVariant::Unit => CExpression::Empty,
-            ConstantVariant::Null => CExpression::NamedReference("NULL".to_string()),
+            ConstantVariant::Null => CExpression::NamedReference("NULL".to_owned()),
             ConstantVariant::Numeric(numeric) => match numeric {
                 Number::Integer(value) => CExpression::Number(NumberExpression::Integer(value)),
                 Number::FloatingPoint(value) => {
@@ -141,8 +141,8 @@ impl Translator {
                 }
             },
             ConstantVariant::Boolean(boolean) => match boolean {
-                Boolean::True => CExpression::NamedReference("TRUE".to_string()),
-                Boolean::False => CExpression::NamedReference("FALSE".to_string()),
+                Boolean::True => CExpression::NamedReference("TRUE".to_owned()),
+                Boolean::False => CExpression::NamedReference("FALSE".to_owned()),
             },
             ConstantVariant::String(string) => CExpression::String(string),
         }
@@ -260,14 +260,14 @@ impl Translator {
             .state
             .variables
             .iter()
-            .map(|variable| CExpression::NamedReference(variable.name.to_string()))
+            .map(|variable| CExpression::NamedReference(variable.name.clone()))
             .collect::<Arguments>();
         let parameters = environment
             .state
             .variables
             .iter()
             .map(|variable| {
-                FunctionParameter::new(variable.variable_type.clone(), variable.name.to_string())
+                FunctionParameter::new(variable.variable_type.clone(), variable.name.clone())
             })
             .collect::<Parameters>();
 

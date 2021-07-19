@@ -69,7 +69,7 @@ impl Generator for CPrimitiveType {
             CPrimitiveType::Char => "char",
             CPrimitiveType::Void => "void",
         }
-        .to_string())
+        .to_owned())
     }
 }
 
@@ -93,7 +93,7 @@ mod test {
     #[test]
     fn test_types_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!("int", CType::Primitive(CPrimitiveType::Int).generate()?);
-        assert_eq!("FooBar", CType::Custom("FooBar".to_string()).generate()?);
+        assert_eq!("FooBar", CType::Custom("FooBar".to_owned()).generate()?);
         assert_eq!(
             "struct FooBar",
             CType::Struct("FooBar".to_owned()).generate()?

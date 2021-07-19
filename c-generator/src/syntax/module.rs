@@ -80,17 +80,17 @@ int foobar() {
 
 }"#,
             Module::new(vec![
-                ModuleMember::Macro(Macro::Include("test.h".to_string())),
+                ModuleMember::Macro(Macro::Include("test.h".to_owned())),
                 ModuleMember::Variable(VariableInstruction::new(
                     vec![Modifier::Static],
                     CType::Primitive(CPrimitiveType::Int),
-                    "FOOBAR".to_string(),
-                    CExpression::NamedReference("test".to_string())
+                    "FOOBAR".to_owned(),
+                    CExpression::NamedReference("test".to_owned())
                 )),
                 ModuleMember::FunctionDefinition(FunctionDefinition::new(
                     FunctionHeader::new(
                         CType::Primitive(CPrimitiveType::Int),
-                        "foobar".to_string(),
+                        "foobar".to_owned(),
                         Parameters::default()
                     ),
                     Instructions::default()
@@ -105,7 +105,7 @@ int foobar() {
     fn test_module_member_is_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "#include <test.h>",
-            ModuleMember::Macro(Macro::Include("test.h".to_string()))
+            ModuleMember::Macro(Macro::Include("test.h".to_owned()))
                 .generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
@@ -115,7 +115,7 @@ int foobar() {
             ModuleMember::FunctionDefinition(FunctionDefinition::new(
                 FunctionHeader::new(
                     CType::Primitive(CPrimitiveType::Int),
-                    "foobar".to_string(),
+                    "foobar".to_owned(),
                     Parameters::default()
                 ),
                 Instructions::default()
@@ -127,7 +127,7 @@ int foobar() {
             ModuleMember::Variable(VariableInstruction::new(
                 vec![Modifier::Static],
                 CType::Primitive(CPrimitiveType::Int),
-                "FOOBAR".to_string(),
+                "FOOBAR".to_owned(),
                 CExpression::NamedReference("test".to_owned())
             ))
             .generate_indented(&GeneratorState::default())?

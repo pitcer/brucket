@@ -42,7 +42,7 @@ fn translate_if() -> TestResult {
     );
     assert_eq!(expected, actual);
 
-    let actual = &environment.state.members[0];
+    let actual = environment.state.members.first().ok_or("Missing member")?;
     let expected = ModuleMember::FunctionDefinition(FunctionDefinition::new(
         FunctionHeader::new(
             CType::Primitive(CPrimitiveType::Int),

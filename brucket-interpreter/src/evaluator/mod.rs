@@ -51,7 +51,7 @@ impl Evaluator {
         self.evaluate(node, &state)
     }
 
-    pub fn evaluate(&mut self, node: &Node, state: &EvaluatorState) -> ValueResult {
+    pub fn evaluate(&mut self, node: &Node, state: &EvaluatorState<'_>) -> ValueResult {
         let environment = Environment::default();
         self.evaluate_environment(node, &environment, state)
     }
@@ -60,7 +60,7 @@ impl Evaluator {
         &mut self,
         node: &Node,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         match node {
             Node::ConstantValue(value) => Self::evaluate_constant_value(&value.variant),
@@ -112,12 +112,12 @@ impl Evaluator {
             Number::Integer(value) => value
                 .parse::<i32>()
                 .map(Numeric::Integer)
-                .map_err(|_| Cow::from("Error while parsing to i32")),
+                .map_err(|error| Cow::from(format!("Error while parsing to i32: {}", error))),
 
             Number::FloatingPoint(value) => value
                 .parse::<f64>()
                 .map(Numeric::FloatingPoint)
-                .map_err(|_| Cow::from("Error while parsing to f64")),
+                .map_err(|error| Cow::from(format!("Error while parsing to f64: {}", error))),
         }
     }
 
@@ -149,7 +149,7 @@ impl Evaluator {
         &mut self,
         let_node: &Let,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let value = &*let_node.value;
         let evaluated_value = self.evaluate_environment(value, environment, state)?;
@@ -175,7 +175,7 @@ impl Evaluator {
         &mut self,
         if_node: &If,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let condition = &*if_node.condition;
         let condition = self.evaluate_environment(condition, environment, state)?;
@@ -194,7 +194,7 @@ impl Evaluator {
     fn evaluate_lambda(
         lambda: &Lambda,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> Result<Closure, VariablesError> {
         let environment = Self::create_optimized_lambda_environment(lambda, environment, state)?;
         Ok(Closure::new(
@@ -207,7 +207,7 @@ impl Evaluator {
     fn create_optimized_lambda_environment(
         lambda: &Lambda,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> Result<Environment, ValueError> {
         let variables = &state.variables.get(lambda)?;
         let free_variables = &variables.free_variables;
@@ -226,7 +226,7 @@ impl Evaluator {
         &self,
         path: &Path,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         match path {
             Path::Simple(identifier) => {
@@ -281,7 +281,7 @@ impl Evaluator {
         &mut self,
         application: &Application,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let identifier = &*application.identifier;
         let identifier = self.evaluate_environment(identifier, environment, state)?;
@@ -321,7 +321,7 @@ impl Evaluator {
         application_strategy: &ApplicationStrategy,
         arguments: &[Node],
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
@@ -379,7 +379,7 @@ impl Evaluator {
         closure: InternalFunctionClosure,
         arguments: &[Node],
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
@@ -431,9 +431,9 @@ impl Evaluator {
     fn create_pair_list(
         &mut self,
         application_strategy: &ApplicationStrategy,
-        arguments: Iter<Node>,
+        arguments: Iter<'_, Node>,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let mut result = Value::Null;
         for argument in arguments.rev() {
@@ -454,7 +454,7 @@ impl Evaluator {
         &mut self,
         module: &Module,
         environment: &Environment,
-        state: &EvaluatorState,
+        state: &EvaluatorState<'_>,
     ) -> ValueResult {
         let module_environment = Environment::default();
         let constants_environment = environment.clone();

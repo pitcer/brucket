@@ -1,11 +1,10 @@
+use super::brucket;
 use brucket_ast::ast_type::{LambdaType, Type};
 use brucket_ast::constant_value::{Boolean, ConstantValue, ConstantVariant, Number};
 use brucket_ast::function::{ApplicationStrategy, Function, InternalFunction};
 use brucket_ast::lambda::{Arity, Lambda, Parameter};
 use brucket_ast::path::Path;
 use brucket_ast::{Application, Constant, Identifier, If, Let, Module, Node, NodeId, Visibility};
-
-use super::*;
 
 #[test]
 fn quoted_integer_is_integer_constant_value() {
@@ -321,36 +320,36 @@ fn quoted_lambda_application_is_application_node() {
         Box::new(Node::Lambda(Lambda::new(
             NodeId(1),
             vec![
-                Parameter::new("x".to_string(), Type::Any, Arity::Unary),
-                Parameter::new("y".to_string(), Type::Any, Arity::Unary),
-                Parameter::new("z".to_string(), Type::Any, Arity::Variadic),
+                Parameter::new("x".to_owned(), Type::Any, Arity::Unary),
+                Parameter::new("y".to_owned(), Type::Any, Arity::Unary),
+                Parameter::new("z".to_owned(), Type::Any, Arity::Variadic),
             ],
             Type::Any,
             Box::new(Node::Identifier(Identifier::new(
                 NodeId(0),
-                Path::Simple("z".to_string()),
+                Path::Simple("z".to_owned()),
             ))),
         ))),
         vec![
             Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("1".to_string())),
+                ConstantVariant::Numeric(Number::Integer("1".to_owned())),
             )),
             Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("2".to_string())),
+                ConstantVariant::Numeric(Number::Integer("2".to_owned())),
             )),
             Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("3".to_string())),
+                ConstantVariant::Numeric(Number::Integer("3".to_owned())),
             )),
             Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("4".to_string())),
+                ConstantVariant::Numeric(Number::Integer("4".to_owned())),
             )),
             Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
-                ConstantVariant::Numeric(Number::Integer("5".to_string())),
+                ConstantVariant::Numeric(Number::Integer("5".to_owned())),
             )),
         ],
     ));
@@ -555,20 +554,20 @@ fn quoted_function_application_is_application_node() {
             NodeId(0),
             Visibility::Private,
             ApplicationStrategy::Lazy,
-            "foo".to_string(),
+            "foo".to_owned(),
             Lambda::new(
                 NodeId(1),
-                vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+                vec![Parameter::new("x".to_owned(), Type::Any, Arity::Unary)],
                 Type::Any,
                 Box::new(Node::Identifier(Identifier::new(
                     NodeId(0),
-                    Path::Simple("x".to_string()),
+                    Path::Simple("x".to_owned()),
                 ))),
             ),
         ))),
         vec![Node::ConstantValue(ConstantValue::new(
             NodeId(0),
-            ConstantVariant::Numeric(Number::Integer("42".to_string())),
+            ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))],
     ));
     let actual = brucket! {

@@ -112,11 +112,11 @@ mod test {
     fn test_number_expressions_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "42",
-            NumberExpression::Integer("42".to_string()).generate()?
+            NumberExpression::Integer("42".to_owned()).generate()?
         );
         assert_eq!(
             "42.42",
-            NumberExpression::FloatingPoint("42.42".to_string()).generate()?
+            NumberExpression::FloatingPoint("42.42".to_owned()).generate()?
         );
         Ok(())
     }
@@ -126,7 +126,7 @@ mod test {
         assert_eq!(
             "foobar()",
             FunctionCallExpression::new(
-                FunctionIdentifier::NamedReference("foobar".to_string()),
+                FunctionIdentifier::NamedReference("foobar".to_owned()),
                 Arguments::default()
             )
             .generate()?
@@ -134,18 +134,18 @@ mod test {
         assert_eq!(
             "foobar(foo)",
             FunctionCallExpression::new(
-                FunctionIdentifier::NamedReference("foobar".to_string()),
-                vec![CExpression::NamedReference("foo".to_string())]
+                FunctionIdentifier::NamedReference("foobar".to_owned()),
+                vec![CExpression::NamedReference("foo".to_owned())]
             )
             .generate()?
         );
         assert_eq!(
             "foobar(foo, bar)",
             FunctionCallExpression::new(
-                FunctionIdentifier::NamedReference("foobar".to_string()),
+                FunctionIdentifier::NamedReference("foobar".to_owned()),
                 vec![
-                    CExpression::NamedReference("foo".to_string()),
-                    CExpression::NamedReference("bar".to_string())
+                    CExpression::NamedReference("foo".to_owned()),
+                    CExpression::NamedReference("bar".to_owned())
                 ]
             )
             .generate()?
@@ -153,11 +153,11 @@ mod test {
         assert_eq!(
             "foobar(foo, bar, foobar)",
             FunctionCallExpression::new(
-                FunctionIdentifier::NamedReference("foobar".to_string()),
+                FunctionIdentifier::NamedReference("foobar".to_owned()),
                 vec![
-                    CExpression::NamedReference("foo".to_string()),
-                    CExpression::NamedReference("bar".to_string()),
-                    CExpression::NamedReference("foobar".to_string())
+                    CExpression::NamedReference("foo".to_owned()),
+                    CExpression::NamedReference("bar".to_owned()),
+                    CExpression::NamedReference("foobar".to_owned())
                 ]
             )
             .generate()?
@@ -172,9 +172,9 @@ mod test {
             CompoundLiteral::new(
                 CType::Struct("foobar".to_owned()),
                 vec![
-                    CExpression::Number(NumberExpression::Integer("1".to_string())),
-                    CExpression::Number(NumberExpression::FloatingPoint("4.2".to_string())),
-                    CExpression::NamedReference("foo".to_string())
+                    CExpression::Number(NumberExpression::Integer("1".to_owned())),
+                    CExpression::Number(NumberExpression::FloatingPoint("4.2".to_owned())),
+                    CExpression::NamedReference("foo".to_owned())
                 ]
             )
             .generate()?
@@ -187,29 +187,29 @@ mod test {
         assert_eq!("", CExpression::Empty.generate()?);
         assert_eq!(
             "42",
-            CExpression::Number(NumberExpression::Integer("42".to_string())).generate()?
+            CExpression::Number(NumberExpression::Integer("42".to_owned())).generate()?
         );
         assert_eq!(
             "42.42",
-            CExpression::Number(NumberExpression::FloatingPoint("42.42".to_string())).generate()?
+            CExpression::Number(NumberExpression::FloatingPoint("42.42".to_owned())).generate()?
         );
         assert_eq!(
             "foobar",
-            CExpression::NamedReference("foobar".to_string()).generate()?
+            CExpression::NamedReference("foobar".to_owned()).generate()?
         );
-        assert_eq!("\"\"", CExpression::String("".to_string()).generate()?);
+        assert_eq!("\"\"", CExpression::String("".to_owned()).generate()?);
         assert_eq!(
             "\"foobar\"",
-            CExpression::String("foobar".to_string()).generate()?
+            CExpression::String("foobar".to_owned()).generate()?
         );
         assert_eq!(
             "foobar(foo, bar, foobar)",
             CExpression::FunctionCall(FunctionCallExpression::new(
-                FunctionIdentifier::NamedReference("foobar".to_string()),
+                FunctionIdentifier::NamedReference("foobar".to_owned()),
                 vec![
-                    CExpression::NamedReference("foo".to_string()),
-                    CExpression::NamedReference("bar".to_string()),
-                    CExpression::NamedReference("foobar".to_string())
+                    CExpression::NamedReference("foo".to_owned()),
+                    CExpression::NamedReference("bar".to_owned()),
+                    CExpression::NamedReference("foobar".to_owned())
                 ]
             ))
             .generate()?
@@ -219,9 +219,9 @@ mod test {
             CExpression::CompoundLiteral(CompoundLiteral::new(
                 CType::Struct("foobar".to_owned()),
                 vec![
-                    CExpression::Number(NumberExpression::Integer("1".to_string())),
-                    CExpression::Number(NumberExpression::FloatingPoint("4.2".to_string())),
-                    CExpression::NamedReference("foo".to_string())
+                    CExpression::Number(NumberExpression::Integer("1".to_owned())),
+                    CExpression::Number(NumberExpression::FloatingPoint("4.2".to_owned())),
+                    CExpression::NamedReference("foo".to_owned())
                 ]
             ))
             .generate()?

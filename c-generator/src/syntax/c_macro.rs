@@ -41,7 +41,7 @@ mod test {
     fn test_define_macros_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "#define FOOBAR foo bar",
-            DefineMacro::new("FOOBAR".to_string(), "foo bar".to_string())
+            DefineMacro::new("FOOBAR".to_owned(), "foo bar".to_owned())
                 .generate_indented(&GeneratorState::default())?
         );
         Ok(())
@@ -51,15 +51,12 @@ mod test {
     fn test_macros_are_converted_to_c_syntax_correctly() -> TestResult {
         assert_eq!(
             "#include <stdio.h>",
-            Macro::Include("stdio.h".to_string()).generate_indented(&GeneratorState::default())?
+            Macro::Include("stdio.h".to_owned()).generate_indented(&GeneratorState::default())?
         );
         assert_eq!(
             "#define FOOBAR foo bar",
-            Macro::Define(DefineMacro::new(
-                "FOOBAR".to_string(),
-                "foo bar".to_string()
-            ))
-            .generate_indented(&GeneratorState::default())?
+            Macro::Define(DefineMacro::new("FOOBAR".to_owned(), "foo bar".to_owned()))
+                .generate_indented(&GeneratorState::default())?
         );
         Ok(())
     }

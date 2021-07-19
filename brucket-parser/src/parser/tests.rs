@@ -111,9 +111,9 @@ fn test_parsed_let_tokens_are_let_expression() -> TestResult {
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
-        Token::Symbol("x".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -128,8 +128,8 @@ fn test_parsed_if_tokens_are_if_expression() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::If),
         Token::Boolean(BooleanToken::True),
-        Token::Number(NumberToken::Integer("42".to_string())),
-        Token::Number(NumberToken::Integer("24".to_string())),
+        Token::Number(NumberToken::Integer("42".to_owned())),
+        Token::Number(NumberToken::Integer("24".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -145,7 +145,7 @@ fn test_parsed_empty_parameters_lambda_tokens_are_lambda_expression() -> TestRes
         Token::Keyword(Keyword::Lambda),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -160,9 +160,9 @@ fn test_parsed_single_parameter_lambda_tokens_are_lambda_expression() -> TestRes
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -177,11 +177,11 @@ fn test_parsed_multi_parameters_lambda_tokens_are_lambda_expression() -> TestRes
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("x".to_string()),
-        Token::Symbol("y".to_string()),
-        Token::Symbol("z".to_string()),
+        Token::Symbol("x".to_owned()),
+        Token::Symbol("y".to_owned()),
+        Token::Symbol("z".to_owned()),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -202,25 +202,25 @@ fn test_parsed_module_tokens_are_module_expression() -> TestResult {
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Module),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Internal),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("z".to_string()),
+        Token::Symbol("z".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Constant),
-        Token::Symbol("y".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("y".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -238,15 +238,15 @@ fn test_parsed_function_tokens_are_function_expressions() -> TestResult {
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("x".to_string()),
-        Token::Symbol("y".to_string()),
-        Token::Symbol("z".to_string()),
+        Token::Symbol("x".to_owned()),
+        Token::Symbol("y".to_owned()),
+        Token::Symbol("z".to_owned()),
         Token::Parenthesis(Parenthesis::Close(']')),
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("bar".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("bar".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -264,8 +264,8 @@ fn test_parsed_constant_tokens_are_constant_expression() -> TestResult {
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Constant),
-        Token::Symbol("foo".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("foo".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -282,10 +282,10 @@ fn test_parsed_lambda_with_variadic_parameter_tokens_are_lambda_expression() -> 
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Lambda),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("xs".to_string()),
+        Token::Symbol("xs".to_owned()),
         Token::Operator(Operator::Variadic),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -303,10 +303,10 @@ fn test_parsed_public_function_tokens_are_public_function_expressions() -> TestR
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -324,8 +324,8 @@ fn test_parsed_public_constant_tokens_are_constant_expression() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Public),
         Token::Keyword(Keyword::Constant),
-        Token::Symbol("foo".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("foo".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -343,10 +343,10 @@ fn test_parsed_lazy_function_tokens_are_lazy_function() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Lazy),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -365,10 +365,10 @@ fn test_parsed_public_lazy_function_tokens_are_public_lazy_function() -> TestRes
         Token::Modifier(Modifier::Public),
         Token::Modifier(Modifier::Lazy),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
         Token::Parenthesis(Parenthesis::Close(']')),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -388,15 +388,15 @@ fn test_parsed_internal_function_tokens_are_internal_function() -> TestResult {
         Token::Modifier(Modifier::Internal),
         Token::Modifier(Modifier::Lazy),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foobar".to_string()),
+        Token::Symbol("foobar".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Any),
-        Token::Symbol("y".to_string()),
+        Token::Symbol("y".to_owned()),
         Token::Operator(Operator::Type),
-        Token::Symbol("Bar".to_string()),
-        Token::Symbol("z".to_string()),
+        Token::Symbol("Bar".to_owned()),
+        Token::Symbol("z".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Integer),
         Token::Operator(Operator::Variadic),
@@ -418,10 +418,10 @@ fn test_parsed_application_simple_path_identifier_tokens_are_application_express
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("foobar".to_string()),
-        Token::String("foo".to_string()),
+        Token::Symbol("foobar".to_owned()),
+        Token::String("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -437,13 +437,13 @@ fn test_parsed_application_complex_path_identifier_tokens_are_application_expres
     };
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("bar".to_string()),
+        Token::Symbol("bar".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("foobar".to_string()),
+        Token::Symbol("foobar".to_owned()),
         Token::Operator(Operator::Path),
-        Token::Symbol("barfoo".to_string()),
+        Token::Symbol("barfoo".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -461,7 +461,7 @@ fn test_parsed_static_module_tokens_are_module_expression() -> TestResult {
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Modifier(Modifier::Static),
         Token::Keyword(Keyword::Module),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);
@@ -479,15 +479,15 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foo".to_string()),
+        Token::Symbol("foo".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Any),
-        Token::Symbol("y".to_string()),
+        Token::Symbol("y".to_owned()),
         Token::Operator(Operator::Type),
-        Token::Symbol("Bar".to_string()),
-        Token::Symbol("z".to_string()),
+        Token::Symbol("Bar".to_owned()),
+        Token::Symbol("z".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Integer),
         Token::Operator(Operator::Variadic),
@@ -495,8 +495,8 @@ fn test_parsed_function_with_types_tokens_are_function_expressions() -> TestResu
         Token::Operator(Operator::SkinnyArrowRight),
         Token::PrimitiveType(PrimitiveType::Boolean),
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("bar".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("bar".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -516,12 +516,12 @@ fn test_parse_function_with_lambda_type() -> TestResult {
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Function),
-        Token::Symbol("foobar".to_string()),
+        Token::Symbol("foobar".to_owned()),
         Token::Parenthesis(Parenthesis::Open('[')),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Any),
-        Token::Symbol("y".to_string()),
+        Token::Symbol("y".to_owned()),
         Token::Operator(Operator::Type),
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::PrimitiveType(PrimitiveType::Integer),
@@ -529,7 +529,7 @@ fn test_parse_function_with_lambda_type() -> TestResult {
         Token::Operator(Operator::SkinnyArrowRight),
         Token::Symbol("Test".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
-        Token::Symbol("z".to_string()),
+        Token::Symbol("z".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Integer),
         Token::Operator(Operator::Variadic),
@@ -540,8 +540,8 @@ fn test_parse_function_with_lambda_type() -> TestResult {
         Token::PrimitiveType(PrimitiveType::Integer),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Open('(')),
-        Token::Symbol("bar".to_string()),
-        Token::Number(NumberToken::Integer("42".to_string())),
+        Token::Symbol("bar".to_owned()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
         Token::Parenthesis(Parenthesis::Close(')')),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
@@ -623,11 +623,11 @@ fn test_typed_let_is_let_expression() -> TestResult {
     let actual = parser.parse(vec![
         Token::Parenthesis(Parenthesis::Open('(')),
         Token::Keyword(Keyword::Let),
-        Token::Symbol("x".to_string()),
+        Token::Symbol("x".to_owned()),
         Token::Operator(Operator::Type),
         Token::PrimitiveType(PrimitiveType::Integer),
-        Token::Number(NumberToken::Integer("42".to_string())),
-        Token::Symbol("x".to_string()),
+        Token::Number(NumberToken::Integer("42".to_owned())),
+        Token::Symbol("x".to_owned()),
         Token::Parenthesis(Parenthesis::Close(')')),
     ])?;
     assert_eq!(expected, actual);

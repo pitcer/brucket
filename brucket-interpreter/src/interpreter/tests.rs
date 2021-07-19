@@ -118,16 +118,16 @@ fn test_interpret_module() -> TestResult {
     let mut interpreter = Interpreter::default();
     let expected = Value::Module(
         false,
-        "foo".to_string(),
+        "foo".to_owned(),
         environment! {
             "bar" => Value::Numeric(Numeric::Integer(1)),
             "barfoo" => Value::FunctionClosure(
                 ApplicationStrategy::Eager,
                 Closure::new(
-                    vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+                    vec![Parameter::new("x".to_owned(), Type::Any, Arity::Unary)],
                     Box::new(Node::ConstantValue(ConstantValue::new(
                         NodeId(408),
-                        ConstantVariant::Numeric(Number::Integer("2".to_string()))
+                        ConstantVariant::Numeric(Number::Integer("2".to_owned()))
                     ))),
                     Environment::default(),
             )),
@@ -135,10 +135,10 @@ fn test_interpret_module() -> TestResult {
             "fooo" => Value::FunctionClosure(
                 ApplicationStrategy::Eager,
                 Closure::new(
-                    vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+                    vec![Parameter::new("x".to_owned(), Type::Any, Arity::Unary)],
                     Box::new(Node::ConstantValue(ConstantValue::new(
                         NodeId(418),
-                        ConstantVariant::Numeric(Number::Integer("4".to_string()))
+                        ConstantVariant::Numeric(Number::Integer("4".to_owned()))
                     ))),
                     Environment::default(),
             ))
@@ -166,10 +166,10 @@ fn test_interpret_function() -> TestResult {
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
         Closure::new(
-            vec![Parameter::new("x".to_string(), Type::Any, Arity::Unary)],
+            vec![Parameter::new("x".to_owned(), Type::Any, Arity::Unary)],
             Box::from(Node::Identifier(Identifier::new(
                 NodeId(406),
-                Path::Simple("x".to_string()),
+                Path::Simple("x".to_owned()),
             ))),
             Environment::default(),
         ),
@@ -599,7 +599,7 @@ fn test_interpret_static_module() -> TestResult {
     let mut interpreter = Interpreter::default();
     let expected = Value::Module(
         true,
-        "foo".to_string(),
+        "foo".to_owned(),
         environment! {
             "bar" => Value::Numeric(Numeric::Integer(1))
         },
