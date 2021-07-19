@@ -75,6 +75,7 @@ type TokenError = Cow<'static, str>;
 type TokenResult = Result<Option<Token>, TokenError>;
 
 impl Default for Lexer {
+    #[inline]
     fn default() -> Self {
         let symbol_map = maplit::hashmap! {
             "true" => Token::Boolean(Boolean::True),
@@ -108,6 +109,7 @@ impl Default for Lexer {
 }
 
 impl Lexer {
+    #[inline]
     pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, TokenError> {
         let mut result = Vec::new();
         let mut characters = syntax.chars().peekable();

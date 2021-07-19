@@ -14,8 +14,11 @@
     clippy::let_underscore_must_use,
     clippy::lossy_float_literal,
     clippy::map_err_ignore,
+    clippy::mem_forget,
+    clippy::missing_inline_in_public_items,
     clippy::multiple_inherent_impl,
     clippy::panic,
+    clippy::pattern_type_mismatch,
     clippy::print_stderr,
     clippy::print_stdout,
     clippy::rc_buffer,
@@ -44,7 +47,7 @@ use crate::function::Function;
 use crate::lambda::Lambda;
 use ast_type::Type;
 use constant_value::ConstantValue;
-use derive_more::{Constructor, Display, IsVariant};
+use derive_more::{Constructor, Display};
 use function::InternalFunction;
 use path::Path;
 use std::fmt::Debug;
@@ -77,18 +80,19 @@ pub trait NodeIdHolder {
 }
 
 impl NodeIdHolder for Node {
+    #[inline]
     fn node_id(&self) -> NodeId {
-        match self {
-            Node::ConstantValue(value) => value.node_id,
-            Node::Identifier(identifier) => identifier.node_id,
-            Node::Application(application) => application.node_id,
-            Node::Let(let_node) => let_node.node_id,
-            Node::If(if_node) => if_node.node_id,
-            Node::Lambda(lambda) => lambda.node_id,
-            Node::Function(function) => function.node_id,
-            Node::InternalFunction(function) => function.node_id,
-            Node::Constant(constant) => constant.node_id,
-            Node::Module(module) => module.node_id,
+        match *self {
+            Node::ConstantValue(ref value) => value.node_id,
+            Node::Identifier(ref identifier) => identifier.node_id,
+            Node::Application(ref application) => application.node_id,
+            Node::Let(ref let_node) => let_node.node_id,
+            Node::If(ref if_node) => if_node.node_id,
+            Node::Lambda(ref lambda) => lambda.node_id,
+            Node::Function(ref function) => function.node_id,
+            Node::InternalFunction(ref function) => function.node_id,
+            Node::Constant(ref constant) => constant.node_id,
+            Node::Module(ref module) => module.node_id,
         }
     }
 }
@@ -96,6 +100,7 @@ impl NodeIdHolder for Node {
 macro_rules! impl_node_id_holder {
     ($node_type:ty) => {
         impl NodeIdHolder for $node_type {
+            #[inline]
             fn node_id(&self) -> NodeId {
                 self.node_id
             }
@@ -152,7 +157,7 @@ pub struct Constant {
     pub value: Box<Node>,
 }
 
-#[derive(Debug, Clone, PartialEq, IsVariant)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Visibility {
     Public,
     Private,

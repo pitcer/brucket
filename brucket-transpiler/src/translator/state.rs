@@ -20,11 +20,13 @@ pub struct TranslationState {
 }
 
 impl TranslationState {
+    #[inline]
     pub fn add_typedef(&mut self, value: String) {
         let typedef = ModuleMember::Typedef(Typedef::new(value));
         self.typedefs.push(typedef);
     }
 
+    #[inline]
     pub fn add_function(&mut self, header: FunctionHeader, body: Instructions) {
         let function_declaration =
             ModuleMember::FunctionDeclaration(FunctionDeclaration::new(header.clone()));
@@ -34,40 +36,49 @@ impl TranslationState {
         self.members.push(function_definition);
     }
 
+    #[inline]
     pub fn add_struct(&mut self, c_struct: CStruct) {
         let c_struct = ModuleMember::Struct(c_struct);
         self.structs.push(c_struct);
     }
 
+    #[inline]
     pub fn push_variable(&mut self, variable: Variable) {
         self.variables.push(variable);
     }
 
+    #[inline]
     pub fn pop_variable(&mut self) {
         self.variables.pop();
     }
 
+    #[inline]
     #[must_use]
     pub fn contains_variable(&self, variable: &Variable) -> bool {
         self.variables.contains(variable)
     }
 
+    #[inline]
     pub fn increment_let(&mut self) {
         self.let_count += 1
     }
 
+    #[inline]
     pub fn increment_if(&mut self) {
         self.if_count += 1
     }
 
+    #[inline]
     pub fn increment_lambda(&mut self) {
         self.lambda_count += 1
     }
 
+    #[inline]
     pub fn increment_typedef(&mut self) {
         self.typedef_count += 1
     }
 
+    #[inline]
     pub fn all_members(&mut self) -> ModuleMembers {
         let length =
             self.declarations.len() + self.members.len() + self.typedefs.len() + self.structs.len();

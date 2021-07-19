@@ -48,6 +48,7 @@ pub struct Translation {
 pub struct Translator;
 
 impl Translator {
+    #[inline]
     pub fn translate(
         &self,
         node: Node,
@@ -82,15 +83,15 @@ impl Translator {
         node_type: &Type,
         state: &mut TranslationState,
     ) -> TranslatorResult<CType> {
-        match node_type {
+        match *node_type {
             Type::Any => Err("Cannot translate any type to C equivalent".into()),
             Type::Unit => Ok(CType::Primitive(CPrimitiveType::Void)),
             Type::Boolean => Ok(CType::Custom("BOOL".to_owned())),
             Type::Integer => Ok(CType::Primitive(CPrimitiveType::Int)),
             Type::Float => Ok(CType::Primitive(CPrimitiveType::Double)),
             Type::String => Ok(CType::Custom("char*".to_owned())),
-            Type::Symbol(symbol) => Ok(CType::Custom(symbol.clone())),
-            Type::Lambda(lambda) => self.translate_lambda_type(lambda, state),
+            Type::Symbol(ref symbol) => Ok(CType::Custom(symbol.clone())),
+            Type::Lambda(ref lambda) => self.translate_lambda_type(lambda, state),
         }
     }
 
@@ -170,14 +171,14 @@ impl Translator {
     }
 
     fn translate_path(path: &Path) -> String {
-        match path {
-            Path::Simple(path) => path
+        match *path {
+            Path::Simple(ref path) => path
                 .replace("+", "__$internal_add")
                 .replace("-", "__$internal_subtract")
                 .replace("*", "__$internal_multiply")
                 .replace("/", "__$internal_divide")
                 .replace("%", "__$internal_remainder"),
-            Path::Complex(complex_path) => complex_path.join("_"),
+            Path::Complex(ref complex_path) => complex_path.join("_"),
         }
     }
 
@@ -409,7 +410,7 @@ impl Translator {
             .collect::<Parameters>();
 
         let lambda_type = environment.types.get(&lambda)?;
-        if let Type::Lambda(lambda_type) = lambda_type {
+        if let Type::Lambda(ref lambda_type) = *lambda_type {
             let return_type = self.translate_type(&*lambda_type.return_type, state)?;
             let mut parameters = free_parameters
                 .iter()

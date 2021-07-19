@@ -18,11 +18,13 @@ pub type TypedResult = Result<Type, TypedError>;
 pub struct NodeTypes(HashMap<NodeId, Type>);
 
 impl NodeTypes {
+    #[inline]
     pub fn insert(&mut self, node: &dyn NodeIdHolder, node_type: Type) {
         let node_id = node.node_id();
         self.0.insert(node_id, node_type);
     }
 
+    #[inline]
     pub fn get(&self, node: &dyn NodeIdHolder) -> Result<&Type, TypedError> {
         let node_id = node.node_id();
         self.0
@@ -38,14 +40,17 @@ pub struct Environment {
 }
 
 impl Environment {
+    #[inline]
     pub fn insert_variable(&mut self, path: Path, variable_type: Type) {
         self.variables.insert(path, variable_type);
     }
 
+    #[inline]
     pub fn remove_variable(&mut self, path: &Path) -> Option<Type> {
         self.variables.remove(path)
     }
 
+    #[inline]
     #[must_use]
     pub fn get_variable(&self, path: &Path) -> Option<&Type> {
         self.variables.get(path)
@@ -58,6 +63,7 @@ pub struct TypeAnalyzer {
 }
 
 impl TypeAnalyzer {
+    #[inline]
     pub fn analyze_types(&mut self, node: &Node) -> Result<(Type, NodeTypes), TypedError> {
         let node_type = self.analyze_node_types(node)?;
         let node_types = mem::take(&mut self.environment.node_types);
@@ -66,13 +72,13 @@ impl TypeAnalyzer {
 
     #[allow(clippy::match_same_arms)]
     fn analyze_node_types(&mut self, node: &Node) -> TypedResult {
-        let node_type = match node {
-            Node::ConstantValue(value) => self.analyze_constant_value_types(value),
-            Node::Identifier(identifier) => self.analyze_identifier_types(identifier)?,
-            Node::Application(application) => self.analyze_application_types(application)?,
-            Node::Let(let_node) => self.analyze_let_types(let_node)?,
-            Node::If(if_node) => self.analyze_if_types(if_node)?,
-            Node::Lambda(lambda) => self.analyze_lambda_types(lambda)?,
+        let node_type = match *node {
+            Node::ConstantValue(ref value) => self.analyze_constant_value_types(value),
+            Node::Identifier(ref identifier) => self.analyze_identifier_types(identifier)?,
+            Node::Application(ref application) => self.analyze_application_types(application)?,
+            Node::Let(ref let_node) => self.analyze_let_types(let_node)?,
+            Node::If(ref if_node) => self.analyze_if_types(if_node)?,
+            Node::Lambda(ref lambda) => self.analyze_lambda_types(lambda)?,
             Node::Module(_) => unimplemented!(),
             Node::Function(_) => unimplemented!(),
             Node::Constant(_) => unimplemented!(),
@@ -82,10 +88,10 @@ impl TypeAnalyzer {
     }
 
     fn analyze_constant_value_types(&mut self, value: &ConstantValue) -> Type {
-        let value_type = match &value.variant {
+        let value_type = match value.variant {
             ConstantVariant::Unit => Type::Unit,
             ConstantVariant::Null => Type::Any,
-            ConstantVariant::Numeric(number) => match number {
+            ConstantVariant::Numeric(ref number) => match *number {
                 Number::Integer(_) => Type::Integer,
                 Number::FloatingPoint(_) => Type::Float,
             },

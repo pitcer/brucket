@@ -1,7 +1,7 @@
 use crate::ast_type::Type;
 use crate::lambda::{Lambda, Parameter};
 use crate::{NodeId, Visibility};
-use derive_more::{Constructor, IsVariant};
+use derive_more::Constructor;
 
 #[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Function {
@@ -22,7 +22,7 @@ pub struct InternalFunction {
     pub return_type: Type,
 }
 
-#[derive(Debug, Clone, PartialEq, IsVariant)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ApplicationStrategy {
     Eager,
     Lazy,

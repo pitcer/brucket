@@ -21,11 +21,13 @@ pub type VariablesResult = Result<NodeVariables, VariablesError>;
 pub struct Variables(pub HashMap<NodeId, NodeVariables>);
 
 impl Variables {
+    #[inline]
     pub fn insert(&mut self, node: &impl NodeIdHolder, node_variables: NodeVariables) {
         let node_id = node.node_id();
         self.0.insert(node_id, node_variables);
     }
 
+    #[inline]
     pub fn get(&self, node: &impl NodeIdHolder) -> Result<&NodeVariables, VariablesError> {
         let node_id = node.node_id();
         self.0
@@ -72,6 +74,7 @@ pub struct VariablesAnalyzer {
 }
 
 impl VariablesAnalyzer {
+    #[inline]
     pub fn analyze_variables(
         &mut self,
         node: &Node,
@@ -82,17 +85,21 @@ impl VariablesAnalyzer {
     }
 
     fn analyze_node_variables(&mut self, node: &Node) -> VariablesResult {
-        let node_variables = match node {
-            Node::ConstantValue(value) => self.analyze_constant_value_variables(value),
-            Node::Identifier(identifier) => self.analyze_identifier_variables(identifier),
-            Node::Application(application) => self.analyze_application_variables(application)?,
-            Node::Let(let_node) => self.analyze_let_variables(let_node)?,
-            Node::If(if_node) => self.analyze_if_variables(if_node)?,
-            Node::Lambda(lambda) => self.analyze_lambda_variables(lambda)?,
-            Node::Function(function) => self.analyze_function_variables(function)?,
-            Node::InternalFunction(function) => self.analyze_internal_function_variables(function),
-            Node::Constant(constant) => self.analyze_constant_variables(constant)?,
-            Node::Module(module) => self.analyze_module_variables(module)?,
+        let node_variables = match *node {
+            Node::ConstantValue(ref value) => self.analyze_constant_value_variables(value),
+            Node::Identifier(ref identifier) => self.analyze_identifier_variables(identifier),
+            Node::Application(ref application) => {
+                self.analyze_application_variables(application)?
+            }
+            Node::Let(ref let_node) => self.analyze_let_variables(let_node)?,
+            Node::If(ref if_node) => self.analyze_if_variables(if_node)?,
+            Node::Lambda(ref lambda) => self.analyze_lambda_variables(lambda)?,
+            Node::Function(ref function) => self.analyze_function_variables(function)?,
+            Node::InternalFunction(ref function) => {
+                self.analyze_internal_function_variables(function)
+            }
+            Node::Constant(ref constant) => self.analyze_constant_variables(constant)?,
+            Node::Module(ref module) => self.analyze_module_variables(module)?,
         };
         Ok(node_variables)
     }
@@ -109,7 +116,7 @@ impl VariablesAnalyzer {
         let mut node_variables = NodeVariables::default();
 
         let path = &identifier.path;
-        if let Path::Simple(name) = path {
+        if let Path::Simple(ref name) = *path {
             node_variables.used_variables.insert(name.clone());
             node_variables.free_variables.insert(name.clone());
         }

@@ -20,6 +20,7 @@ pub enum Instruction {
 }
 
 impl IndentedGenerator for Instruction {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let indentation = &state.indentation;
         match self {
@@ -49,6 +50,7 @@ pub struct VariableDeclaration {
 }
 
 impl IndentedGenerator for VariableDeclaration {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let mut modifiers = self.modifiers.generate()?;
         if !modifiers.is_empty() {
@@ -71,6 +73,7 @@ pub struct VariableDefinition {
 }
 
 impl IndentedGenerator for VariableDefinition {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(format!(
             "{}{} = {};",
@@ -90,6 +93,7 @@ pub struct VariableInstruction {
 }
 
 impl IndentedGenerator for VariableInstruction {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let mut modifiers = self.modifiers.generate()?;
         if !modifiers.is_empty() {
@@ -113,6 +117,7 @@ pub struct IfInstruction {
 }
 
 impl IndentedGenerator for IfInstruction {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let indentation = &state.indentation;
         let incremented_indentation = state.indentation.to_incremented();
@@ -135,6 +140,7 @@ pub struct IfElseInstruction {
 }
 
 impl IndentedGenerator for IfElseInstruction {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let indentation = &state.indentation;
         let incremented_indentation = state.indentation.to_incremented();
@@ -154,6 +160,7 @@ impl IndentedGenerator for IfElseInstruction {
 pub type Instructions = Vec<Instruction>;
 
 impl IndentedGenerator for Instructions {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(self
             .into_iter()

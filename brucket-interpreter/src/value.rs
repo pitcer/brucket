@@ -23,14 +23,15 @@ pub enum Value {
 }
 
 impl Display for Value {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
+        match *self {
             Value::Unit => write!(f, "()"),
             Value::Null => write!(f, "null"),
-            Value::Numeric(numeric) => numeric.fmt(f),
-            Value::Textual(text) => write!(f, "\"{}\"", text),
-            Value::Boolean(boolean) => write!(f, "{}", boolean),
-            Value::Pair(left, right) => write!(f, "({}, {})", left, right),
+            Value::Numeric(ref numeric) => numeric.fmt(f),
+            Value::Textual(ref text) => write!(f, "\"{}\"", text),
+            Value::Boolean(ref boolean) => write!(f, "{}", boolean),
+            Value::Pair(ref left, ref right) => write!(f, "({}, {})", left, right),
             Value::Closure(_) => write!(f, "(<Closure>)"),
             Value::FunctionClosure(_, _) | Value::InternalFunctionClosure(_) => {
                 write!(f, "(<Closure>)")
@@ -48,10 +49,11 @@ pub enum Numeric {
 }
 
 impl Display for Numeric {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Numeric::Integer(number) => write!(f, "{}", number),
-            Numeric::FloatingPoint(number) => write!(f, "{}", number),
+        match *self {
+            Numeric::Integer(ref number) => write!(f, "{}", number),
+            Numeric::FloatingPoint(ref number) => write!(f, "{}", number),
         }
     }
 }

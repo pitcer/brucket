@@ -10,6 +10,7 @@ pub enum CType {
 }
 
 impl Generator for CType {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         match self {
             CType::Primitive(primitive) => primitive.generate(),
@@ -27,6 +28,7 @@ pub struct FunctionPointer {
 }
 
 impl Generator for FunctionPointer {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(format!(
             "{} (*{})({})",
@@ -40,6 +42,7 @@ impl Generator for FunctionPointer {
 pub type Types = Vec<CType>;
 
 impl Generator for Types {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(self
             .into_iter()
@@ -60,6 +63,7 @@ pub enum CPrimitiveType {
 }
 
 impl Generator for CPrimitiveType {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(match self {
             CPrimitiveType::Int => "int",

@@ -30,11 +30,11 @@ impl Token {
     }
 
     fn is_open_parenthesis(&self) -> bool {
-        matches!(self, Token::Parenthesis(Parenthesis::Open(_)))
+        matches!(*self, Token::Parenthesis(Parenthesis::Open(_)))
     }
 
     fn is_close_parenthesis(&self) -> bool {
-        matches!(self, Token::Parenthesis(Parenthesis::Close(_)))
+        matches!(*self, Token::Parenthesis(Parenthesis::Close(_)))
     }
 }
 
@@ -46,6 +46,7 @@ pub struct Parser {
 }
 
 impl Parser {
+    #[inline]
     pub fn parse(&mut self, tokens: Vec<Token>) -> NodeResult {
         let mut iterator = tokens.into_iter().peekable();
         self.parse_first(&mut iterator)
@@ -99,14 +100,14 @@ impl Parser {
     }
 
     fn parse_parenthesis(&mut self, parenthesis: &Parenthesis, tokens: &mut Tokens) -> NodeResult {
-        match parenthesis {
+        match *parenthesis {
             Parenthesis::Open(_) => self.parse_section(tokens),
             Parenthesis::Close(_) => Err("Unexpected close parenthesis".into()),
         }
     }
 
     fn parse_operator(operator: &Operator) -> NodeResult {
-        match operator {
+        match *operator {
             Operator::Variadic => Err("Unexpected variadic operator".into()),
             Operator::Path => Err("Unexpected path operator".into()),
             Operator::Type => Err("Unexpected type operator".into()),
@@ -129,7 +130,7 @@ impl Parser {
     }
 
     fn parse_boolean(token: &BooleanToken) -> Boolean {
-        match token {
+        match *token {
             BooleanToken::True => Boolean::True,
             BooleanToken::False => Boolean::False,
         }
@@ -173,7 +174,7 @@ impl Parser {
     }
 
     fn parse_keyword(&mut self, tokens: &mut Tokens, keyword: &Keyword) -> NodeResult {
-        match keyword {
+        match *keyword {
             Keyword::Let => self.create_let(tokens),
             Keyword::If => self.create_if(tokens),
             Keyword::Lambda => self.create_lambda(tokens).map(Node::Lambda),
@@ -195,7 +196,7 @@ impl Parser {
         let name = Self::parse_identifier(tokens)?;
         let next = tokens.peek();
         if let Some(token) = next {
-            let value_type = match token {
+            let value_type = match *token {
                 Token::Operator(Operator::Type) => {
                     tokens.next();
                     self.parse_type(tokens)?
@@ -342,7 +343,7 @@ impl Parser {
     fn parse_return_type(&mut self, tokens: &mut Tokens) -> ParseResult<Type> {
         let next = tokens.peek();
         let token = next.ok_or("An unexpected end of tokens")?;
-        match token {
+        match *token {
             Token::Operator(Operator::SkinnyArrowRight) => {
                 tokens.next();
                 self.parse_type(tokens)
@@ -436,7 +437,7 @@ impl Parser {
         let mut path = vec![symbol];
         let mut last_path_operator = false;
         while let Some(token) = tokens.peek() {
-            match token {
+            match *token {
                 Token::Operator(Operator::Path) => {
                     if last_path_operator {
                         return Err("Unexpected path operator".into());
@@ -444,7 +445,7 @@ impl Parser {
                     last_path_operator = true;
                     tokens.next();
                 }
-                Token::Symbol(symbol) => {
+                Token::Symbol(ref symbol) => {
                     if last_path_operator {
                         last_path_operator = false;
                         path.push(symbol.clone());
@@ -519,8 +520,8 @@ impl Parser {
         let name = token.into_symbol()?;
         let next = tokens.peek();
         if let Some(token) = next {
-            match token {
-                Token::Operator(operator) => match operator {
+            match *token {
+                Token::Operator(ref operator) => match *operator {
                     Operator::Variadic => {
                         tokens.next();
                         Ok(Parameter::new(name, Type::Any, Arity::Variadic))
@@ -530,7 +531,7 @@ impl Parser {
                         let parameter_type = self.parse_type(tokens)?;
                         let next = tokens.peek();
                         let arity = if let Some(next) = next {
-                            if let Token::Operator(Operator::Variadic) = next {
+                            if let Token::Operator(Operator::Variadic) = *next {
                                 tokens.next();
                                 Arity::Variadic
                             } else {

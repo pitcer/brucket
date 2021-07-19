@@ -8,6 +8,7 @@ pub enum Macro {
 }
 
 impl IndentedGenerator for Macro {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         match self {
             Macro::Include(module) => Ok(format!("{}#include <{}>", state.indentation, module)),
@@ -23,6 +24,7 @@ pub struct DefineMacro {
 }
 
 impl IndentedGenerator for DefineMacro {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(format!(
             "{}#define {} {}",

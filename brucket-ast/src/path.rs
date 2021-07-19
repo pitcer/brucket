@@ -7,10 +7,11 @@ pub enum Path {
 }
 
 impl Display for Path {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Path::Simple(name) => write!(f, "{}", name),
-            Path::Complex(path) => write!(f, "{}", path.join("::")),
+        match *self {
+            Path::Simple(ref name) => write!(f, "{}", name),
+            Path::Complex(ref path) => write!(f, "{}", path.join("::")),
         }
     }
 }

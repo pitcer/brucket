@@ -20,6 +20,7 @@ macro_rules! impl_from_number_for_constant_variant {
     ($($number_type:ty)+) => {
         $(
             impl From<$number_type> for ConstantVariant {
+                #[inline]
                 fn from(number: $number_type) -> Self {
                     ConstantVariant::Numeric(Number::from(number))
                 }
@@ -31,18 +32,21 @@ macro_rules! impl_from_number_for_constant_variant {
 impl_from_number_for_constant_variant!(usize u8 u16 u32 u64 isize i8 i16 i32 i64 f32 f64);
 
 impl From<bool> for ConstantVariant {
+    #[inline]
     fn from(boolean: bool) -> Self {
         ConstantVariant::Boolean(Boolean::from(boolean))
     }
 }
 
 impl From<&str> for ConstantVariant {
+    #[inline]
     fn from(string: &str) -> Self {
         Self::from(string.to_owned())
     }
 }
 
 impl From<String> for ConstantVariant {
+    #[inline]
     fn from(string: String) -> Self {
         ConstantVariant::String(string)
     }
@@ -58,6 +62,7 @@ macro_rules! impl_from_for_number {
     ($identifier:ident $($number_type:ty)+) => {
         $(
             impl From<$number_type> for Number {
+                #[inline]
                 fn from(number: $number_type) -> Self {
                     Number::$identifier(number.to_string())
                 }
@@ -76,6 +81,7 @@ pub enum Boolean {
 }
 
 impl From<bool> for Boolean {
+    #[inline]
     fn from(boolean: bool) -> Self {
         if boolean {
             Boolean::True

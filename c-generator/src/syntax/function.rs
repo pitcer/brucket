@@ -11,6 +11,7 @@ pub struct FunctionDeclaration {
 }
 
 impl IndentedGenerator for FunctionDeclaration {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(format!("{}{};", state.indentation, self.header.generate()?))
     }
@@ -23,6 +24,7 @@ pub struct FunctionDefinition {
 }
 
 impl IndentedGenerator for FunctionDefinition {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let indentation = &state.indentation;
         let incremented_indentation = state.indentation.to_incremented();
@@ -45,6 +47,7 @@ pub struct FunctionHeader {
 }
 
 impl Generator for FunctionHeader {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(format!(
             "{} {}({})",
@@ -58,6 +61,7 @@ impl Generator for FunctionHeader {
 pub type Parameters = Vec<FunctionParameter>;
 
 impl Generator for Parameters {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(self
             .into_iter()
@@ -74,6 +78,7 @@ pub struct FunctionParameter {
 }
 
 impl Generator for FunctionParameter {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(format!("{} {}", self.parameter_type.generate()?, self.name))
     }

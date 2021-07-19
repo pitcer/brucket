@@ -25,6 +25,7 @@ pub struct Transpiler;
 
 impl Transpiler {
     #[allow(clippy::unused_self)]
+    #[inline]
     pub fn transpile(&self, syntax: &str) -> GeneratorResult {
         let lexer = Lexer::default();
         let mut parser = Parser::default();

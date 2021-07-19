@@ -9,12 +9,10 @@ use derive_more::Constructor;
 use std::borrow::Cow;
 
 #[cfg(test)]
-use std::io::Read;
-
-#[cfg(test)]
 mod tests;
 
-type ValueResult = Result<Value, Cow<'static, str>>;
+type ValueError = Cow<'static, str>;
+type ValueResult = Result<Value, ValueError>;
 
 #[derive(Default, Constructor)]
 pub struct Interpreter {
@@ -25,6 +23,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+    #[inline]
     pub fn interpret_with_modules(
         &mut self,
         endpoint_syntax: &str,
@@ -59,6 +58,7 @@ impl Interpreter {
         self.evaluator.evaluate(&node, &state)
     }
 
+    #[inline]
     pub fn interpret(&mut self, syntax: &str) -> ValueResult {
         self.interpret_with_module_environment(syntax)
     }
@@ -81,19 +81,21 @@ impl Interpreter {
     ) -> ValueResult {
         let path = "../lib/";
         let mut paths = std::fs::read_dir(path)
-            .unwrap_or_else(|_| panic!("Cannot read library directory in a path '{}'", path))
-            .map(|file| file.unwrap().path())
-            .collect::<Vec<_>>();
+            .map_err(|error| {
+                format!(
+                    "Cannot read library directory in a path '{}': {}",
+                    path, error
+                )
+            })?
+            .map(|file| file.map(|file| file.path()))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("{}", error))?;
         paths.sort_by(|first, second| first.cmp(second).reverse());
-        let mut modules_vec = Vec::new();
-        for path in paths {
-            let mut library_file = std::fs::File::open(path).expect("Cannot open library file");
-            let mut library_syntax = String::new();
-            library_file
-                .read_to_string(&mut library_syntax)
-                .expect("Cannot read library file");
-            modules_vec.push(library_syntax);
-        }
+        let modules_vec = paths
+            .into_iter()
+            .map(std::fs::read_to_string)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("Cannot read library file: {}", error))?;
         let mut modules_vec = modules_vec
             .iter()
             .map(String::as_str)

@@ -6,10 +6,10 @@ use brucket_ast::constant_value::{Boolean, ConstantVariant, Number};
 use brucket_ast::function::{ApplicationStrategy, InternalFunction};
 use brucket_ast::lambda::{Arity, Lambda};
 use brucket_ast::path::Path;
-use brucket_ast::{Application, If, Node};
+use brucket_ast::{Application, If, Node, Visibility};
 use brucket_ast::{Let, Module};
 use derive_more::Constructor;
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::option::Option::Some;
 use std::rc::Rc;
@@ -62,59 +62,59 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState<'_>,
     ) -> ValueResult {
-        match node {
-            Node::ConstantValue(value) => Self::evaluate_constant_value(&value.variant),
-            Node::Identifier(identifier) => {
+        match *node {
+            Node::ConstantValue(ref value) => Self::evaluate_constant_value(&value.variant),
+            Node::Identifier(ref identifier) => {
                 self.get_from_environment(&identifier.path, environment, state)
             }
-            Node::Application(application) => {
+            Node::Application(ref application) => {
                 self.evaluate_application(application, environment, state)
             }
-            Node::Let(let_node) => self.evaluate_let(let_node, environment, state),
-            Node::If(if_node) => self.evaluate_if(if_node, environment, state),
-            Node::Lambda(lambda) => Ok(Value::Closure(Self::evaluate_lambda(
+            Node::Let(ref let_node) => self.evaluate_let(let_node, environment, state),
+            Node::If(ref if_node) => self.evaluate_if(if_node, environment, state),
+            Node::Lambda(ref lambda) => Ok(Value::Closure(Self::evaluate_lambda(
                 lambda,
                 environment,
                 state,
             )?)),
-            Node::Module(module) => self.evaluate_module(module, environment, state),
-            Node::Function(function) => Ok(Value::FunctionClosure(
+            Node::Module(ref module) => self.evaluate_module(module, environment, state),
+            Node::Function(ref function) => Ok(Value::FunctionClosure(
                 function.application_strategy.clone(),
                 Self::evaluate_lambda(&function.body, environment, state)?,
             )),
-            Node::InternalFunction(internal_function) => {
+            Node::InternalFunction(ref internal_function) => {
                 self.evaluate_internal_function(internal_function, environment)
             }
-            Node::Constant(constant) => {
+            Node::Constant(ref constant) => {
                 self.evaluate_environment(&constant.value, environment, state)
             }
         }
     }
 
     fn evaluate_constant_value(variant: &ConstantVariant) -> ValueResult {
-        match variant {
+        match *variant {
             ConstantVariant::Unit => Ok(Value::Unit),
             ConstantVariant::Null => Ok(Value::Null),
-            ConstantVariant::Numeric(value) => {
+            ConstantVariant::Numeric(ref value) => {
                 let value = Self::evaluate_number(value)?;
                 Ok(Value::Numeric(value))
             }
-            ConstantVariant::Boolean(value) => match value {
+            ConstantVariant::Boolean(ref value) => match *value {
                 Boolean::True => Ok(Value::Boolean(true)),
                 Boolean::False => Ok(Value::Boolean(false)),
             },
-            ConstantVariant::String(value) => Ok(Value::Textual(value.clone())),
+            ConstantVariant::String(ref value) => Ok(Value::Textual(value.clone())),
         }
     }
 
     fn evaluate_number(value: &Number) -> Result<Numeric, ValueError> {
-        match value {
-            Number::Integer(value) => value
+        match *value {
+            Number::Integer(ref value) => value
                 .parse::<i32>()
                 .map(Numeric::Integer)
                 .map_err(|error| Cow::from(format!("Error while parsing to i32: {}", error))),
 
-            Number::FloatingPoint(value) => value
+            Number::FloatingPoint(ref value) => value
                 .parse::<f64>()
                 .map(Numeric::FloatingPoint)
                 .map_err(|error| Cow::from(format!("Error while parsing to f64: {}", error))),
@@ -155,8 +155,8 @@ impl Evaluator {
         let evaluated_value = self.evaluate_environment(value, environment, state)?;
         let evaluated_value = Rc::new(evaluated_value);
         let name = &let_node.name;
-        if let Node::Lambda(_) = value {
-            if let Value::Closure(closure) = evaluated_value.borrow() {
+        if let Node::Lambda(_) = *value {
+            if let Value::Closure(ref closure) = *evaluated_value {
                 let used_variables = &state.variables.get(value)?.used_variables;
                 if used_variables.contains(name) {
                     let closure_environment = &closure.environment;
@@ -228,8 +228,8 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState<'_>,
     ) -> ValueResult {
-        match path {
-            Path::Simple(identifier) => {
+        match *path {
+            Path::Simple(ref identifier) => {
                 let value = environment.get(identifier).or_else(|| {
                     environment
                         .get_weak(identifier)
@@ -252,7 +252,7 @@ impl Evaluator {
                     }
                 }
             }
-            Path::Complex(path) => {
+            Path::Complex(ref path) => {
                 let first_path = path.get(0);
                 if let Some(first_path) = first_path {
                     let module_env = self.module_environment.get(first_path);
@@ -329,12 +329,12 @@ impl Evaluator {
         for parameter in &closure.parameters {
             let name = &parameter.name;
             let arity = &parameter.arity;
-            match arity {
+            match *arity {
                 Arity::Unary => {
                     let argument = arguments_iterator
                         .next()
                         .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
-                    let argument = if application_strategy.is_eager() {
+                    let argument = if let ApplicationStrategy::Eager = *application_strategy {
                         self.evaluate_environment(argument, environment, state)
                     } else {
                         Ok(Value::Thunk(
@@ -384,15 +384,16 @@ impl Evaluator {
         let mut arguments_iterator = arguments.iter();
         let mut has_variadic_parameter = false;
         let mut closure_environment = HashMap::new();
+        let application_strategy = &closure.application_strategy;
         for parameter in &closure.parameters {
             let name = &parameter.name;
             let arity = &parameter.arity;
-            match arity {
+            match *arity {
                 Arity::Unary => {
                     let argument = arguments_iterator
                         .next()
                         .ok_or_else(|| format!("Missing argument for a parameter '{}'", name))?;
-                    let argument = if closure.application_strategy.is_eager() {
+                    let argument = if let ApplicationStrategy::Eager = *application_strategy {
                         self.evaluate_environment(argument, environment, state)
                     } else {
                         Ok(Value::Thunk(
@@ -404,7 +405,7 @@ impl Evaluator {
                 }
                 Arity::Variadic => {
                     let list = self.create_pair_list(
-                        &closure.application_strategy,
+                        application_strategy,
                         arguments_iterator,
                         environment,
                         state,
@@ -437,7 +438,7 @@ impl Evaluator {
     ) -> ValueResult {
         let mut result = Value::Null;
         for argument in arguments.rev() {
-            let argument = if application_strategy.is_eager() {
+            let argument = if let ApplicationStrategy::Eager = *application_strategy {
                 self.evaluate_environment(argument, environment, state)
             } else {
                 Ok(Value::Thunk(
@@ -468,7 +469,7 @@ impl Evaluator {
             let closure = Self::evaluate_lambda(lambda, environment, state)?;
             let closure = Value::FunctionClosure(application_strategy.clone(), closure);
             let closure = Rc::new(closure);
-            if visibility.is_public() {
+            if let Visibility::Public = *visibility {
                 module_environment.insert(identifier.clone(), Rc::clone(&closure));
             }
             constants_environment.insert(identifier.clone(), Rc::clone(&closure));
@@ -483,7 +484,7 @@ impl Evaluator {
             let identifier = &internal_function.name;
             let closure = self.evaluate_internal_function(internal_function, environment)?;
             let closure = Rc::new(closure);
-            if visibility.is_public() {
+            if let Visibility::Public = *visibility {
                 module_environment.insert(identifier.clone(), Rc::clone(&closure));
             }
             constants_environment.insert(identifier.clone(), Rc::clone(&closure));
@@ -497,7 +498,7 @@ impl Evaluator {
             let value = &constant.value;
             let value = self.evaluate_environment(value, &constants_environment, state)?;
             let value = Rc::new(value);
-            if visibility.is_public() {
+            if let Visibility::Public = *visibility {
                 module_environment.insert(identifier.clone(), Rc::clone(&value));
             }
             constants_environment.insert(identifier.clone(), Rc::clone(&value));
@@ -516,12 +517,12 @@ impl Evaluator {
         closures: &[(&String, Rc<Value>, &HashSet<String>)],
         values: &HashMap<String, Rc<Value>>,
     ) {
-        for (identifier, closure, used_identifiers) in closures {
-            if let Value::FunctionClosure(_, closure) = closure.borrow() {
+        for &(identifier, ref closure, used_identifiers) in closures {
+            if let Value::FunctionClosure(_, ref closure) = **closure {
                 let environment = &closure.environment;
                 for used_identifier in used_identifiers.iter() {
                     if let Some(evaluated_value) = values.get(used_identifier) {
-                        if &used_identifier == identifier {
+                        if used_identifier == identifier {
                             let value = Rc::downgrade(evaluated_value);
                             environment.insert_weak(used_identifier.clone(), value);
                         } else {

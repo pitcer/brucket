@@ -1,6 +1,6 @@
 use crate::ast_type::Type;
 use crate::{Node, NodeId};
-use derive_more::{Constructor, IsVariant};
+use derive_more::Constructor;
 
 #[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Lambda {
@@ -17,7 +17,7 @@ pub struct Parameter {
     pub arity: Arity,
 }
 
-#[derive(Debug, Clone, PartialEq, IsVariant)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Arity {
     Unary,
     Variadic,

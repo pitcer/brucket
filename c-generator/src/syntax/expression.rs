@@ -13,6 +13,7 @@ pub enum CExpression {
 }
 
 impl Generator for CExpression {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         match self {
             CExpression::Empty => Ok("".to_owned()),
@@ -32,6 +33,7 @@ pub enum NumberExpression {
 }
 
 impl Generator for NumberExpression {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         match self {
             NumberExpression::Integer(integer) => Ok(integer),
@@ -47,6 +49,7 @@ pub struct FunctionCallExpression {
 }
 
 impl Generator for FunctionCallExpression {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(format!(
             "{}({})",
@@ -63,6 +66,7 @@ pub enum FunctionIdentifier {
 }
 
 impl Generator for FunctionIdentifier {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         match self {
             FunctionIdentifier::NamedReference(name) => Ok(name),
@@ -74,6 +78,7 @@ impl Generator for FunctionIdentifier {
 pub type Arguments = Vec<CExpression>;
 
 impl Generator for Arguments {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(self
             .into_iter()
@@ -90,6 +95,7 @@ pub struct CompoundLiteral {
 }
 
 impl Generator for CompoundLiteral {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         let cast_type = self.cast_type.generate()?;
         let initializers = self

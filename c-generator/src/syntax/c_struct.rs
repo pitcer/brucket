@@ -9,6 +9,7 @@ pub struct CStruct {
 }
 
 impl IndentedGenerator for CStruct {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let indentation = &state.indentation;
         let incremented_indentation = state.indentation.to_incremented();
@@ -26,6 +27,7 @@ impl IndentedGenerator for CStruct {
 pub type Fields = Vec<VariableDeclaration>;
 
 impl IndentedGenerator for Fields {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(self
             .into_iter()

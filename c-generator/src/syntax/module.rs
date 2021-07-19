@@ -12,6 +12,7 @@ pub struct Module {
 }
 
 impl IndentedGenerator for Module {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         self.members.generate_indented(state)
     }
@@ -20,6 +21,7 @@ impl IndentedGenerator for Module {
 pub type ModuleMembers = Vec<ModuleMember>;
 
 impl IndentedGenerator for ModuleMembers {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(self
             .into_iter()
@@ -41,6 +43,7 @@ pub enum ModuleMember {
 }
 
 impl IndentedGenerator for ModuleMember {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         match self {
             ModuleMember::Macro(c_macro) => c_macro.generate_indented(state),

@@ -61,6 +61,7 @@ macro_rules! implement_arithmetic_operation {
         impl $type for Numeric {
             type Output = Self;
 
+            #[inline]
             fn $operation(self, rhs: Numeric) -> Self::Output {
                 match self {
                     Numeric::Integer(first) => match rhs {

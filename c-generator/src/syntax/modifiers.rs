@@ -3,6 +3,7 @@ use crate::generator::{Generator, GeneratorError, GeneratorResult};
 pub type Modifiers = Vec<Modifier>;
 
 impl Generator for Modifiers {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         Ok(self
             .into_iter()
@@ -20,6 +21,7 @@ pub enum Modifier {
 }
 
 impl Generator for Modifier {
+    #[inline]
     fn generate(self) -> GeneratorResult {
         match self {
             Modifier::Const => Ok("const".to_owned()),

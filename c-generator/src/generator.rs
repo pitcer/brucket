@@ -25,12 +25,14 @@ pub struct Indentation {
 }
 
 impl Default for Indentation {
+    #[inline]
     fn default() -> Self {
         Self::new("    ".into(), 0)
     }
 }
 
 impl Indentation {
+    #[inline]
     #[must_use]
     pub fn to_incremented(&self) -> Indentation {
         let character = self.character.clone();
@@ -39,6 +41,7 @@ impl Indentation {
 }
 
 impl Display for Indentation {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let indentation = self.character.repeat(self.level);
         write!(f, "{}", indentation)

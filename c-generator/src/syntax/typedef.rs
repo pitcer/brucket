@@ -7,6 +7,7 @@ pub struct Typedef {
 }
 
 impl IndentedGenerator for Typedef {
+    #[inline]
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         Ok(format!("{}typedef {};", state.indentation, self.value))
     }
