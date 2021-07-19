@@ -35,25 +35,25 @@ impl NodeTypes {
 
 #[derive(Debug, Default, Constructor)]
 pub struct Environment {
-    variables: HashMap<Path, Type>,
+    variables: HashMap<String, Type>,
     node_types: NodeTypes,
 }
 
 impl Environment {
     #[inline]
-    pub fn insert_variable(&mut self, path: Path, variable_type: Type) {
-        self.variables.insert(path, variable_type);
+    pub fn insert_variable(&mut self, name: String, variable_type: Type) {
+        self.variables.insert(name, variable_type);
     }
 
     #[inline]
-    pub fn remove_variable(&mut self, path: &Path) -> Option<Type> {
-        self.variables.remove(path)
+    pub fn remove_variable(&mut self, name: &str) -> Option<Type> {
+        self.variables.remove(name)
     }
 
     #[inline]
     #[must_use]
-    pub fn get_variable(&self, path: &Path) -> Option<&Type> {
-        self.variables.get(path)
+    pub fn get_variable(&self, name: &str) -> Option<&Type> {
+        self.variables.get(name)
     }
 }
 
@@ -106,15 +106,22 @@ impl TypeAnalyzer {
 
     fn analyze_identifier_types(&mut self, identifier: &Identifier) -> TypedResult {
         let path = &identifier.path;
-        let path_type = self
-            .environment
-            .get_variable(path)
-            .ok_or_else(|| format!("Failed to get type of variable {}", path))?
-            .clone();
-        self.environment
-            .node_types
-            .insert(identifier, path_type.clone());
-        Ok(path_type)
+        if let Path::Simple(ref name) = *path {
+            let path_type = self
+                .environment
+                .get_variable(name)
+                .ok_or_else(|| format!("Failed to get type of variable {}", name))?
+                .clone();
+            self.environment
+                .node_types
+                .insert(identifier, path_type.clone());
+            Ok(path_type)
+        } else {
+            Err(Cow::from(format!(
+                "Failed to get type of variable {}",
+                path
+            )))
+        }
     }
 
     fn analyze_application_types(&mut self, application: &Application) -> TypedResult {
@@ -144,11 +151,10 @@ impl TypeAnalyzer {
                 name, expected_value_type, value_type
             )));
         }
-        let path = Path::Simple(name.clone());
-        self.environment.insert_variable(path.clone(), value_type);
+        self.environment.insert_variable(name.clone(), value_type);
         let then = &*let_node.then;
         let then_type = self.analyze_node_types(then)?;
-        self.environment.remove_variable(&path);
+        self.environment.remove_variable(name);
         self.environment
             .node_types
             .insert(let_node, then_type.clone());
@@ -181,22 +187,17 @@ impl TypeAnalyzer {
     }
 
     fn analyze_lambda_types(&mut self, lambda: &Lambda) -> TypedResult {
-        // TODO: reduce number of clones
-        // ---
         let parameters = &*lambda.parameters;
         for parameter in parameters {
-            self.environment.insert_variable(
-                Path::Simple(parameter.name.clone()),
-                parameter.parameter_type.clone(),
-            );
+            let name = parameter.name.clone();
+            let parameter_type = parameter.parameter_type.clone();
+            self.environment.insert_variable(name, parameter_type);
         }
         let body = &*lambda.body;
         let body_type = self.analyze_node_types(body)?;
         for parameter in parameters {
-            self.environment
-                .remove_variable(&Path::Simple(parameter.name.clone()));
+            self.environment.remove_variable(&*parameter.name);
         }
-        // ---
         // TODO: get parameters types from usage context
         let parameters_types = lambda
             .parameters

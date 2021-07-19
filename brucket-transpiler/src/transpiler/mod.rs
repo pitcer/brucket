@@ -4,7 +4,6 @@ use crate::translator::{Translation, Translator};
 use brucket_analyzer::type_analyzer::{Environment, TypeAnalyzer};
 use brucket_analyzer::variables_analyzer::VariablesAnalyzer;
 use brucket_ast::ast_type::{LambdaType, Type};
-use brucket_ast::path::Path;
 use brucket_parser::lexer::Lexer;
 use brucket_parser::parser::Parser;
 use c_generator::generator::{GeneratorResult, GeneratorState, IndentedGenerator};
@@ -53,11 +52,11 @@ impl Transpiler {
             vec![Type::Integer, Type::Integer],
             Box::new(Type::Integer),
         ));
-        environment.insert_variable(Path::Simple("+".to_owned()), binary_int_lambda_type.clone());
-        environment.insert_variable(Path::Simple("-".to_owned()), binary_int_lambda_type.clone());
-        environment.insert_variable(Path::Simple("*".to_owned()), binary_int_lambda_type.clone());
-        environment.insert_variable(Path::Simple("/".to_owned()), binary_int_lambda_type.clone());
-        environment.insert_variable(Path::Simple("%".to_owned()), binary_int_lambda_type);
+        environment.insert_variable("+".to_owned(), binary_int_lambda_type.clone());
+        environment.insert_variable("-".to_owned(), binary_int_lambda_type.clone());
+        environment.insert_variable("*".to_owned(), binary_int_lambda_type.clone());
+        environment.insert_variable("/".to_owned(), binary_int_lambda_type.clone());
+        environment.insert_variable("%".to_owned(), binary_int_lambda_type);
         environment
     }
 
