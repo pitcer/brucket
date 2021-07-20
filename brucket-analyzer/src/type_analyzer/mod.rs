@@ -34,44 +34,44 @@ impl NodeTypes {
 }
 
 #[derive(Debug, Default, Constructor)]
-pub struct Environment {
-    variables: HashMap<String, Type>,
+pub struct Environment<'a> {
+    variables: HashMap<&'a str, Cow<'a, Type>>,
     node_types: NodeTypes,
 }
 
-impl Environment {
+impl<'a> Environment<'a> {
     #[inline]
-    pub fn insert_variable(&mut self, name: String, variable_type: Type) {
+    pub fn insert_variable(&mut self, name: &'a str, variable_type: Cow<'a, Type>) {
         self.variables.insert(name, variable_type);
     }
 
     #[inline]
-    pub fn remove_variable(&mut self, name: &str) -> Option<Type> {
+    pub fn remove_variable(&mut self, name: &str) -> Option<Cow<'a, Type>> {
         self.variables.remove(name)
     }
 
     #[inline]
     #[must_use]
-    pub fn get_variable(&self, name: &str) -> Option<&Type> {
+    pub fn get_variable(&self, name: &str) -> Option<&Cow<'a, Type>> {
         self.variables.get(name)
     }
 }
 
 #[derive(Default, Constructor)]
-pub struct TypeAnalyzer {
-    environment: Environment,
+pub struct TypeAnalyzer<'a> {
+    environment: Environment<'a>,
 }
 
-impl TypeAnalyzer {
+impl<'a> TypeAnalyzer<'a> {
     #[inline]
-    pub fn analyze_types(&mut self, node: &Node) -> Result<(Type, NodeTypes), TypedError> {
+    pub fn analyze_types(&mut self, node: &'a Node) -> Result<(Type, NodeTypes), TypedError> {
         let node_type = self.analyze_node_types(node)?;
         let node_types = mem::take(&mut self.environment.node_types);
         Ok((node_type, node_types))
     }
 
     #[allow(clippy::match_same_arms)]
-    fn analyze_node_types(&mut self, node: &Node) -> TypedResult {
+    fn analyze_node_types(&mut self, node: &'a Node) -> TypedResult {
         let node_type = match *node {
             Node::ConstantValue(ref value) => self.analyze_constant_value_types(value),
             Node::Identifier(ref identifier) => self.analyze_identifier_types(identifier)?,
@@ -105,26 +105,23 @@ impl TypeAnalyzer {
     }
 
     fn analyze_identifier_types(&mut self, identifier: &Identifier) -> TypedResult {
-        let path = &identifier.path;
-        if let Path::Simple(ref name) = *path {
-            let path_type = self
-                .environment
-                .get_variable(name)
-                .ok_or_else(|| format!("Failed to get type of variable {}", name))?
-                .clone();
-            self.environment
-                .node_types
-                .insert(identifier, path_type.clone());
-            Ok(path_type)
-        } else {
-            Err(Cow::from(format!(
-                "Failed to get type of variable {}",
-                path
-            )))
+        match identifier.path {
+            Path::Simple(ref name) => {
+                let path_type = self
+                    .environment
+                    .get_variable(name)
+                    .ok_or_else(|| format!("Failed to get type of variable {}", name))?;
+                let path_type = path_type.clone().into_owned();
+                self.environment
+                    .node_types
+                    .insert(identifier, path_type.clone());
+                Ok(path_type)
+            }
+            Path::Complex(_) => unimplemented!(),
         }
     }
 
-    fn analyze_application_types(&mut self, application: &Application) -> TypedResult {
+    fn analyze_application_types(&mut self, application: &'a Application) -> TypedResult {
         let identifier = &*application.identifier;
         let identifier_type = self.analyze_node_types(identifier)?;
         if let Type::Lambda(lambda_type) = identifier_type {
@@ -140,7 +137,7 @@ impl TypeAnalyzer {
         }
     }
 
-    fn analyze_let_types(&mut self, let_node: &Let) -> TypedResult {
+    fn analyze_let_types(&mut self, let_node: &'a Let) -> TypedResult {
         let value = &*let_node.value;
         let value_type = self.analyze_node_types(value)?;
         let name = &let_node.name;
@@ -151,7 +148,8 @@ impl TypeAnalyzer {
                 name, expected_value_type, value_type
             )));
         }
-        self.environment.insert_variable(name.clone(), value_type);
+        self.environment
+            .insert_variable(name, Cow::Owned(value_type));
         let then = &*let_node.then;
         let then_type = self.analyze_node_types(then)?;
         self.environment.remove_variable(name);
@@ -161,7 +159,7 @@ impl TypeAnalyzer {
         Ok(then_type)
     }
 
-    fn analyze_if_types(&mut self, if_node: &If) -> TypedResult {
+    fn analyze_if_types(&mut self, if_node: &'a If) -> TypedResult {
         let if_true = &*if_node.if_true;
         let if_false = &*if_node.if_false;
         let then_type = self.analyze_node_types(if_true)?;
@@ -186,12 +184,13 @@ impl TypeAnalyzer {
         Ok(then_type)
     }
 
-    fn analyze_lambda_types(&mut self, lambda: &Lambda) -> TypedResult {
+    fn analyze_lambda_types(&mut self, lambda: &'a Lambda) -> TypedResult {
         let parameters = &*lambda.parameters;
         for parameter in parameters {
-            let name = parameter.name.clone();
-            let parameter_type = parameter.parameter_type.clone();
-            self.environment.insert_variable(name, parameter_type);
+            let name = &parameter.name;
+            let parameter_type = &parameter.parameter_type;
+            self.environment
+                .insert_variable(name, Cow::Borrowed(parameter_type));
         }
         let body = &*lambda.body;
         let body_type = self.analyze_node_types(body)?;

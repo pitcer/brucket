@@ -18,6 +18,7 @@ use c_generator::syntax::function::{
 use c_generator::syntax::instruction::Instruction;
 use c_generator::syntax::module::{Module, ModuleMember, ModuleMembers};
 use derive_more::Constructor;
+use std::borrow::Cow;
 
 #[derive(Default, Constructor)]
 pub struct Transpiler;
@@ -46,17 +47,17 @@ impl Transpiler {
         module.generate_indented(&generator_state)
     }
 
-    fn create_type_analyzer_environment() -> Environment {
+    fn create_type_analyzer_environment() -> Environment<'static> {
         let mut environment = Environment::default();
         let binary_int_lambda_type = Type::Lambda(LambdaType::new(
             vec![Type::Integer, Type::Integer],
             Box::new(Type::Integer),
         ));
-        environment.insert_variable("+".to_owned(), binary_int_lambda_type.clone());
-        environment.insert_variable("-".to_owned(), binary_int_lambda_type.clone());
-        environment.insert_variable("*".to_owned(), binary_int_lambda_type.clone());
-        environment.insert_variable("/".to_owned(), binary_int_lambda_type.clone());
-        environment.insert_variable("%".to_owned(), binary_int_lambda_type);
+        environment.insert_variable("+", Cow::Owned(binary_int_lambda_type.clone()));
+        environment.insert_variable("-", Cow::Owned(binary_int_lambda_type.clone()));
+        environment.insert_variable("*", Cow::Owned(binary_int_lambda_type.clone()));
+        environment.insert_variable("/", Cow::Owned(binary_int_lambda_type.clone()));
+        environment.insert_variable("%", Cow::Owned(binary_int_lambda_type));
         environment
     }
 
