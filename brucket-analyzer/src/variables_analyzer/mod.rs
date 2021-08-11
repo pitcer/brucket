@@ -130,7 +130,7 @@ impl VariablesAnalyzer {
     fn analyze_application_variables(&mut self, application: &Application) -> VariablesResult {
         let mut node_variables = NodeVariables::default();
 
-        let identifier = &*application.identifier;
+        let identifier = &application.identifier;
         let identifier_variables = self.analyze_node_variables(identifier)?;
         node_variables.append(identifier_variables);
 
@@ -156,11 +156,11 @@ impl VariablesAnalyzer {
         let variable = Variable::new(name.clone(), value_type);
         node_variables.variables.insert(name.clone(), variable);
 
-        let value = &*let_node.value;
+        let value = &let_node.value;
         let value_variables = self.analyze_node_variables(value)?;
         node_variables.append(value_variables);
 
-        let then = &*let_node.then;
+        let then = &let_node.then;
         let then_variables = self.analyze_node_variables(then)?;
         node_variables.append(then_variables);
 
@@ -175,15 +175,15 @@ impl VariablesAnalyzer {
     fn analyze_if_variables(&mut self, if_node: &If) -> VariablesResult {
         let mut node_variables = NodeVariables::default();
 
-        let condition = &*if_node.condition;
+        let condition = &if_node.condition;
         let condition_variables = self.analyze_node_variables(condition)?;
         node_variables.append(condition_variables);
 
-        let then = &*if_node.if_true;
+        let then = &if_node.if_true;
         let then_variables = self.analyze_node_variables(then)?;
         node_variables.append(then_variables);
 
-        let else_node = &*if_node.if_false;
+        let else_node = &if_node.if_false;
         let else_variables = self.analyze_node_variables(else_node)?;
         node_variables.append(else_variables);
 
@@ -196,7 +196,7 @@ impl VariablesAnalyzer {
     fn analyze_lambda_variables(&mut self, lambda: &Lambda) -> VariablesResult {
         let mut node_variables = NodeVariables::default();
 
-        let body = &*lambda.body;
+        let body = &lambda.body;
         let body_variables = self.analyze_node_variables(body)?;
         node_variables.append(body_variables);
 
@@ -239,7 +239,7 @@ impl VariablesAnalyzer {
     fn analyze_constant_variables(&mut self, constant: &Constant) -> VariablesResult {
         let mut node_variables = NodeVariables::default();
 
-        let value = &*constant.value;
+        let value = &constant.value;
         let value_variables = self.analyze_node_variables(value)?;
         node_variables.append(value_variables);
 

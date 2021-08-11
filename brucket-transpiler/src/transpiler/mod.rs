@@ -49,10 +49,10 @@ impl Transpiler {
 
     fn create_type_analyzer_environment() -> Environment<'static> {
         let mut environment = Environment::default();
-        let binary_int_lambda_type = Type::Lambda(LambdaType::new(
+        let binary_int_lambda_type = Type::Lambda(Box::new(LambdaType::new(
             vec![Type::Integer, Type::Integer],
-            Box::new(Type::Integer),
-        ));
+            Type::Integer,
+        )));
         environment.insert_variable("+", Cow::Owned(binary_int_lambda_type.clone()));
         environment.insert_variable("-", Cow::Owned(binary_int_lambda_type.clone()));
         environment.insert_variable("*", Cow::Owned(binary_int_lambda_type.clone()));

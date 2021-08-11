@@ -18,7 +18,7 @@ pub enum Value {
     Closure(Closure),
     FunctionClosure(ApplicationStrategy, Closure),
     InternalFunctionClosure(InternalFunctionClosure),
-    Thunk(Box<Node>, Environment),
+    Thunk(Node, Environment),
     Module(bool, String, Environment),
 }
 
@@ -69,6 +69,6 @@ pub struct InternalFunctionClosure {
 #[derive(Debug, PartialEq, Clone, Constructor)]
 pub struct Closure {
     pub parameters: Vec<Parameter>,
-    pub body: Box<Node>,
+    pub body: Node,
     pub environment: Environment,
 }

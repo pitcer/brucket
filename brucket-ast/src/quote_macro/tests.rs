@@ -96,43 +96,43 @@ fn quoted_complex_identifier_is_identifier_node() {
 
 #[test]
 fn quoted_application_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
+        Node::Identifier(Identifier::new(
             NodeId(0),
             Path::Simple("foobar".to_owned()),
-        ))),
+        )),
         Vec::new(),
-    ));
+    )));
     let actual = quote!((foobar));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_unary_application_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
+        Node::Identifier(Identifier::new(
             NodeId(0),
             Path::Simple("foobar".to_owned()),
-        ))),
+        )),
         vec![Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))],
-    ));
+    )));
     let actual = quote!((foobar 42));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_multi_parameter_application_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
+        Node::Identifier(Identifier::new(
             NodeId(0),
             Path::Simple("foobar".to_owned()),
-        ))),
+        )),
         vec![
             Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
@@ -147,33 +147,33 @@ fn quoted_multi_parameter_application_is_application_node() {
                 ConstantVariant::Numeric(Number::Integer("0".to_owned())),
             )),
         ],
-    ));
+    )));
     let actual = quote!((foobar 42 24 0));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_application_simple_complex_path_identifier_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
+        Node::Identifier(Identifier::new(
             NodeId(0),
             Path::Complex(vec!["foo".to_owned(), "foobar".to_owned()]),
-        ))),
+        )),
         vec![Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::String("foo".to_owned()),
         ))],
-    ));
+    )));
     let actual = quote!(((foo::foobar) "foo"));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_application_complex_path_identifier_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Identifier(Identifier::new(
+        Node::Identifier(Identifier::new(
             NodeId(0),
             Path::Complex(vec![
                 "foo".to_owned(),
@@ -181,9 +181,9 @@ fn quoted_application_complex_path_identifier_is_application_node() {
                 "foobar".to_owned(),
                 "barfoo".to_owned(),
             ]),
-        ))),
+        )),
         Vec::new(),
-    ));
+    )));
     let actual = quote! {
         ((foo::bar::foobar::barfoo))
     };
@@ -192,96 +192,84 @@ fn quoted_application_complex_path_identifier_is_application_node() {
 
 #[test]
 fn quoted_let_is_let_node() {
-    let expected = Node::Let(Let::new(
+    let expected = Node::Let(Box::new(Let::new(
         NodeId(0),
         "x".to_owned(),
         Type::Any,
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-        ))),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_owned()),
-        ))),
-    ));
+        )),
+        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
+    )));
     let actual = quote!((let x 42 x));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_typed_let_is_let_node() {
-    let expected = Node::Let(Let::new(
+    let expected = Node::Let(Box::new(Let::new(
         NodeId(0),
         "x".to_owned(),
         Type::Integer,
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-        ))),
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_owned()),
-        ))),
-    ));
+        )),
+        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
+    )));
     let actual = quote!((let x: int 42 x));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_if_is_if_node() {
-    let expected = Node::If(If::new(
+    let expected = Node::If(Box::new(If::new(
         NodeId(0),
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Boolean(Boolean::True),
-        ))),
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        )),
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-        ))),
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        )),
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("24".to_owned())),
-        ))),
-    ));
+        )),
+    )));
     let actual = quote!((if true 42 24));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_empty_parameters_lambda_is_lambda_node() {
-    let expected = Node::Lambda(Lambda::new(
+    let expected = Node::Lambda(Box::new(Lambda::new(
         NodeId(0),
         Vec::new(),
         Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_owned()),
-        ))),
-    ));
+        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
+    )));
     let actual = quote!((lambda [] x));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_single_parameter_lambda_is_lambda_node() {
-    let expected = Node::Lambda(Lambda::new(
+    let expected = Node::Lambda(Box::new(Lambda::new(
         NodeId(0),
         vec![Parameter::new("x".to_owned(), Type::Any, Arity::Unary)],
         Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_owned()),
-        ))),
-    ));
+        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
+    )));
     let actual = quote!((lambda [x] x));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_multi_parameters_lambda_is_lambda_node() {
-    let expected = Node::Lambda(Lambda::new(
+    let expected = Node::Lambda(Box::new(Lambda::new(
         NodeId(0),
         vec![
             Parameter::new("x".to_owned(), Type::Any, Arity::Unary),
@@ -289,35 +277,29 @@ fn quoted_multi_parameters_lambda_is_lambda_node() {
             Parameter::new("z".to_owned(), Type::Any, Arity::Unary),
         ],
         Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_owned()),
-        ))),
-    ));
+        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
+    )));
     let actual = quote!((lambda [x y z] x));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_lambda_with_variadic_parameter_is_lambda_node() {
-    let expected = Node::Lambda(Lambda::new(
+    let expected = Node::Lambda(Box::new(Lambda::new(
         NodeId(0),
         vec![Parameter::new("xs".to_owned(), Type::Any, Arity::Variadic)],
         Type::Any,
-        Box::new(Node::Identifier(Identifier::new(
-            NodeId(0),
-            Path::Simple("x".to_owned()),
-        ))),
-    ));
+        Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
+    )));
     let actual = quote!((lambda [(xs: any...)] x));
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn quoted_lambda_application_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Lambda(Lambda::new(
+        Node::Lambda(Box::new(Lambda::new(
             NodeId(1),
             vec![
                 Parameter::new("x".to_owned(), Type::Any, Arity::Unary),
@@ -325,10 +307,7 @@ fn quoted_lambda_application_is_application_node() {
                 Parameter::new("z".to_owned(), Type::Any, Arity::Variadic),
             ],
             Type::Any,
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(0),
-                Path::Simple("z".to_owned()),
-            ))),
+            Node::Identifier(Identifier::new(NodeId(0), Path::Simple("z".to_owned()))),
         ))),
         vec![
             Node::ConstantValue(ConstantValue::new(
@@ -352,7 +331,7 @@ fn quoted_lambda_application_is_application_node() {
                 ConstantVariant::Numeric(Number::Integer("5".to_owned())),
             )),
         ],
-    ));
+    )));
     let actual = quote! {
         ((1: lambda [(x: any) (y: any) (z: any...)] -> any z) 1 2 3 4 5)
     };
@@ -361,7 +340,7 @@ fn quoted_lambda_application_is_application_node() {
 
 #[test]
 fn quoted_function_is_function_node() {
-    let expected = Node::Function(Function::new(
+    let expected = Node::Function(Box::new(Function::new(
         NodeId(0),
         Visibility::Private,
         ApplicationStrategy::Eager,
@@ -374,19 +353,16 @@ fn quoted_function_is_function_node() {
                 Parameter::new("z".to_owned(), Type::Any, Arity::Unary),
             ],
             Type::Any,
-            Box::new(Node::Application(Application::new(
+            Node::Application(Box::new(Application::new(
                 NodeId(0),
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("bar".to_owned()),
-                ))),
+                Node::Identifier(Identifier::new(NodeId(0), Path::Simple("bar".to_owned()))),
                 vec![Node::ConstantValue(ConstantValue::new(
                     NodeId(0),
                     ConstantVariant::Numeric(Number::Integer("42".to_owned())),
                 ))],
             ))),
         ),
-    ));
+    )));
     let actual = quote! {
         @node Function
         (function foo [x y z] (bar 42))
@@ -396,7 +372,7 @@ fn quoted_function_is_function_node() {
 
 #[test]
 fn quoted_function_with_types_is_function_node() {
-    let expected = Node::Function(Function::new(
+    let expected = Node::Function(Box::new(Function::new(
         NodeId(0),
         Visibility::Private,
         ApplicationStrategy::Eager,
@@ -409,19 +385,16 @@ fn quoted_function_with_types_is_function_node() {
                 Parameter::new("z".to_owned(), Type::Integer, Arity::Variadic),
             ],
             Type::Boolean,
-            Box::new(Node::Application(Application::new(
+            Node::Application(Box::new(Application::new(
                 NodeId(0),
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("bar".to_owned()),
-                ))),
+                Node::Identifier(Identifier::new(NodeId(0), Path::Simple("bar".to_owned()))),
                 vec![Node::ConstantValue(ConstantValue::new(
                     NodeId(0),
                     ConstantVariant::Numeric(Number::Integer("42".to_owned())),
                 ))],
             ))),
         ),
-    ));
+    )));
     let actual = quote! {
         @node Function
         (0: private eager function foo [(x: any) (y: Bar) (z: int...)] -> bool
@@ -432,7 +405,7 @@ fn quoted_function_with_types_is_function_node() {
 
 #[test]
 fn quoted_public_function_is_function_node() {
-    let expected = Node::Function(Function::new(
+    let expected = Node::Function(Box::new(Function::new(
         NodeId(0),
         Visibility::Public,
         ApplicationStrategy::Eager,
@@ -441,12 +414,12 @@ fn quoted_public_function_is_function_node() {
             NodeId(0),
             Vec::new(),
             Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
+            Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
                 ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-            ))),
+            )),
         ),
-    ));
+    )));
     let actual = quote! {
         @node Function
         (0: public eager function foo [] -> any 0: 42)
@@ -456,7 +429,7 @@ fn quoted_public_function_is_function_node() {
 
 #[test]
 fn quoted_function_with_lambda_type_is_function_node() {
-    let expected = Node::Function(Function::new(
+    let expected = Node::Function(Box::new(Function::new(
         NodeId(0),
         Visibility::Private,
         ApplicationStrategy::Eager,
@@ -467,28 +440,25 @@ fn quoted_function_with_lambda_type_is_function_node() {
                 Parameter::new("x".to_owned(), Type::Any, Arity::Unary),
                 Parameter::new(
                     "y".to_owned(),
-                    Type::Lambda(LambdaType::new(
+                    Type::Lambda(Box::new(LambdaType::new(
                         vec![Type::Integer, Type::Boolean],
-                        Box::new(Type::Symbol("Test".to_owned())),
-                    )),
+                        Type::Symbol("Test".to_owned()),
+                    ))),
                     Arity::Unary,
                 ),
                 Parameter::new("z".to_owned(), Type::Integer, Arity::Variadic),
             ],
-            Type::Lambda(LambdaType::new(vec![], Box::new(Type::Integer))),
-            Box::new(Node::Application(Application::new(
+            Type::Lambda(Box::new(LambdaType::new(vec![], Type::Integer))),
+            Node::Application(Box::new(Application::new(
                 NodeId(0),
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("bar".to_owned()),
-                ))),
+                Node::Identifier(Identifier::new(NodeId(0), Path::Simple("bar".to_owned()))),
                 vec![Node::ConstantValue(ConstantValue::new(
                     NodeId(0),
                     ConstantVariant::Numeric(Number::Integer("42".to_owned())),
                 ))],
             ))),
         ),
-    ));
+    )));
     let actual = quote! {
         @node Function
         (0: private eager function foobar
@@ -500,7 +470,7 @@ fn quoted_function_with_lambda_type_is_function_node() {
 
 #[test]
 fn quoted_lazy_function_is_function_node() {
-    let expected = Node::Function(Function::new(
+    let expected = Node::Function(Box::new(Function::new(
         NodeId(0),
         Visibility::Private,
         ApplicationStrategy::Lazy,
@@ -509,12 +479,12 @@ fn quoted_lazy_function_is_function_node() {
             NodeId(0),
             Vec::new(),
             Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
+            Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
                 ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-            ))),
+            )),
         ),
-    ));
+    )));
     let actual = quote! {
         @node Function
         (0: private lazy function foo [] -> any 0: 42)
@@ -524,7 +494,7 @@ fn quoted_lazy_function_is_function_node() {
 
 #[test]
 fn quoted_public_lazy_function_is_function_node() {
-    let expected = Node::Function(Function::new(
+    let expected = Node::Function(Box::new(Function::new(
         NodeId(0),
         Visibility::Public,
         ApplicationStrategy::Lazy,
@@ -533,12 +503,12 @@ fn quoted_public_lazy_function_is_function_node() {
             NodeId(0),
             Vec::new(),
             Type::Any,
-            Box::new(Node::ConstantValue(ConstantValue::new(
+            Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
                 ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-            ))),
+            )),
         ),
-    ));
+    )));
     let actual = quote! {
         @node Function
         (0: public lazy function foo [] -> any 0: 42)
@@ -548,9 +518,9 @@ fn quoted_public_lazy_function_is_function_node() {
 
 #[test]
 fn quoted_function_application_is_application_node() {
-    let expected = Node::Application(Application::new(
+    let expected = Node::Application(Box::new(Application::new(
         NodeId(0),
-        Box::new(Node::Function(Function::new(
+        Node::Function(Box::new(Function::new(
             NodeId(0),
             Visibility::Private,
             ApplicationStrategy::Lazy,
@@ -559,17 +529,14 @@ fn quoted_function_application_is_application_node() {
                 NodeId(1),
                 vec![Parameter::new("x".to_owned(), Type::Any, Arity::Unary)],
                 Type::Any,
-                Box::new(Node::Identifier(Identifier::new(
-                    NodeId(0),
-                    Path::Simple("x".to_owned()),
-                ))),
+                Node::Identifier(Identifier::new(NodeId(0), Path::Simple("x".to_owned()))),
             ),
         ))),
         vec![Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
         ))],
-    ));
+    )));
     let actual = quote! {
         ((@node Function (0: private lazy function foo [x] -> any 1: x)) 42)
     };
@@ -599,15 +566,15 @@ fn quoted_internal_function_is_internal_function_node() {
 
 #[test]
 fn quoted_constant_is_constant_node() {
-    let expected = Node::Constant(Constant::new(
+    let expected = Node::Constant(Box::new(Constant::new(
         NodeId(0),
         Visibility::Private,
         "foo".to_owned(),
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-        ))),
-    ));
+        )),
+    )));
     let actual = quote! {
         @node Constant
         (constant foo 42)
@@ -617,15 +584,15 @@ fn quoted_constant_is_constant_node() {
 
 #[test]
 fn quoted_public_constant_is_constant_node() {
-    let expected = Node::Constant(Constant::new(
+    let expected = Node::Constant(Box::new(Constant::new(
         NodeId(0),
         Visibility::Public,
         "foo".to_owned(),
-        Box::new(Node::ConstantValue(ConstantValue::new(
+        Node::ConstantValue(ConstantValue::new(
             NodeId(0),
             ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-        ))),
-    ));
+        )),
+    )));
     let actual = quote! {
         @node Constant
         (0: public constant foo 42)
@@ -648,10 +615,10 @@ fn quoted_module_is_module_node() {
                 NodeId(0),
                 Vec::new(),
                 Type::Any,
-                Box::new(Node::ConstantValue(ConstantValue::new(
+                Node::ConstantValue(ConstantValue::new(
                     NodeId(0),
                     ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-                ))),
+                )),
             ),
         )],
         vec![InternalFunction::new(
@@ -666,10 +633,10 @@ fn quoted_module_is_module_node() {
             NodeId(0),
             Visibility::Private,
             "y".to_owned(),
-            Box::new(Node::ConstantValue(ConstantValue::new(
+            Node::ConstantValue(ConstantValue::new(
                 NodeId(0),
                 ConstantVariant::Numeric(Number::Integer("42".to_owned())),
-            ))),
+            )),
         )],
     ));
     let actual = quote! {
@@ -709,34 +676,34 @@ fn quoted_static_module_is_module_node() {
 #[test]
 fn lambda_type_is_quoted_correctly() {
     assert_eq!(
-        Type::Lambda(LambdaType::new(Vec::default(), Box::new(Type::Integer))),
+        Type::Lambda(Box::new(LambdaType::new(Vec::default(), Type::Integer))),
         quote!(@type (-> int))
     );
     assert_eq!(
-        Type::Lambda(LambdaType::new(
+        Type::Lambda(Box::new(LambdaType::new(
             vec![Type::Integer],
-            Box::new(Type::Integer)
-        )),
+            Type::Integer
+        ))),
         quote!(@type (int -> int))
     );
     assert_eq!(
-        Type::Lambda(LambdaType::new(
+        Type::Lambda(Box::new(LambdaType::new(
             vec![Type::Integer, Type::Integer],
-            Box::new(Type::Integer)
-        )),
+            Type::Integer
+        ))),
         quote!(@type (int int -> int))
     );
     assert_eq!(
-        Type::Lambda(LambdaType::new(
+        Type::Lambda(Box::new(LambdaType::new(
             vec![
                 Type::Integer,
-                Type::Lambda(LambdaType::new(
+                Type::Lambda(Box::new(LambdaType::new(
                     vec![Type::Integer],
-                    Box::new(Type::Integer)
-                ))
+                    Type::Integer
+                )))
             ],
-            Box::new(Type::Integer)
-        )),
+            Type::Integer
+        ))),
         quote!(@type ((int (int -> int)) -> int))
     );
 }

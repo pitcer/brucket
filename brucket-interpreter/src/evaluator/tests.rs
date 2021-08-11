@@ -105,7 +105,7 @@ fn test_evaluated_lambda_expression_without_parameters_is_closure_value() -> Tes
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         Vec::new(),
-        Box::new(quote!(x)),
+        quote!(x),
         environment!("x" => Value::Numeric(Numeric::Integer(42))),
     ));
     let actual = evaluator.evaluate_with_variables(
@@ -130,7 +130,7 @@ fn test_evaluated_lambda_expression_with_parameter_is_closure_value() -> TestRes
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         quote!(@parameters [y]),
-        Box::new(quote!(y)),
+        quote!(y),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
@@ -151,7 +151,7 @@ fn test_evaluated_lambda_expression_with_parameters_is_closure_value() -> TestRe
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         quote!(@parameters [y z a]),
-        Box::new(quote!(y)),
+        quote!(y),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
@@ -255,7 +255,7 @@ fn test_evaluated_module_expression_is_module_value() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(quote!(42)),
+                    quote!(42),
                     Environment::default(),
             ))
         },
@@ -278,11 +278,7 @@ fn test_evaluated_function_expression_is_closure_value() -> TestResult {
     let mut evaluator = Evaluator::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Eager,
-        Closure::new(
-            quote!(@parameters [x]),
-            Box::new(quote!(42)),
-            Environment::default(),
-        ),
+        Closure::new(quote!(@parameters [x]), quote!(42), Environment::default()),
     );
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
@@ -302,7 +298,7 @@ fn test_evaluated_lambda_expression_with_variadic_parameter_is_closure_value() -
     let mut evaluator = Evaluator::default();
     let expected = Value::Closure(Closure::new(
         quote!(@parameters [(x: any) (y: any) (z: any...)]),
-        Box::new(quote!(x)),
+        quote!(x),
         Environment::default(),
     ));
     let actual = evaluator.evaluate_with_variables(
@@ -353,7 +349,7 @@ fn test_private_members_are_not_included_in_module_environment() -> TestResult {
                 ApplicationStrategy::Eager,
                 Closure::new(
                     Vec::new(),
-                    Box::new(quote!(42)),
+                    quote!(42),
                     Environment::default(),
             )),
             "baar" => Value::Numeric(Numeric::Integer(42))
@@ -388,7 +384,7 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
     let mut evaluator = Evaluator::default();
     let expected = Value::FunctionClosure(
         ApplicationStrategy::Lazy,
-        Closure::new(Vec::new(), Box::new(quote!(42)), Environment::default()),
+        Closure::new(Vec::new(), quote!(42), Environment::default()),
     );
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
@@ -406,7 +402,7 @@ fn test_evaluated_lazy_function_expression_is_lazy_function_closure_value() -> T
 #[test]
 fn test_evaluated_lazy_identity_function_application_expression_is_thunk_value() -> TestResult {
     let mut evaluator = Evaluator::default();
-    let expected = Value::Thunk(Box::new(quote!(42)), Environment::default());
+    let expected = Value::Thunk(quote!(42), Environment::default());
     let actual = evaluator.evaluate_with_variables(
         &Variables(maplit::hashmap! {
             NodeId(1) => NodeVariables::default(),

@@ -60,22 +60,22 @@ impl TranslationState {
 
     #[inline]
     pub fn increment_let(&mut self) {
-        self.let_count += 1
+        self.let_count += 1;
     }
 
     #[inline]
     pub fn increment_if(&mut self) {
-        self.if_count += 1
+        self.if_count += 1;
     }
 
     #[inline]
     pub fn increment_lambda(&mut self) {
-        self.lambda_count += 1
+        self.lambda_count += 1;
     }
 
     #[inline]
     pub fn increment_typedef(&mut self) {
-        self.typedef_count += 1
+        self.typedef_count += 1;
     }
 
     #[inline]

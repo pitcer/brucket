@@ -1,5 +1,3 @@
-use brucket_ast::constant_value::{Boolean, ConstantVariant};
-use brucket_ast::lambda::{Arity, Parameter};
 use brucket_ast::quote;
 
 use super::*;
@@ -67,30 +65,9 @@ fn test_let_variables_are_analyzed_correctly() -> TestResult {
 
 #[test]
 fn lambda_variables_are_analyzed_correctly() -> TestResult {
-    let node = Node::Lambda(Lambda::new(
-        NodeId(0),
-        vec![Parameter::new(
-            "foo".to_owned(),
-            Type::Integer,
-            Arity::Unary,
-        )],
-        Type::Integer,
-        Box::new(Node::If(If::new(
-            NodeId(1),
-            Box::new(Node::ConstantValue(ConstantValue::new(
-                NodeId(2),
-                ConstantVariant::Boolean(Boolean::True),
-            ))),
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(3),
-                Path::Simple("foo".to_owned()),
-            ))),
-            Box::new(Node::Identifier(Identifier::new(
-                NodeId(4),
-                Path::Simple("bar".to_owned()),
-            ))),
-        ))),
-    ));
+    let node = quote! {
+        (0: lambda [(foo: int)] -> int (1: if (2: true) (3: foo) (4: bar)))
+    };
     let expected_node_variables = NodeVariables::new(
         HashMap::default(),
         maplit::hashset! {

@@ -162,7 +162,9 @@ impl Parser {
                 self.parse_application(identifier, tokens)
             }
             Token::Operator(operator) => match operator {
-                Operator::ThickArrowRight => self.create_lambda(tokens).map(Node::Lambda),
+                Operator::ThickArrowRight => self
+                    .create_lambda(tokens)
+                    .map(|lambda| Node::Lambda(Box::new(lambda))),
                 _ => Err(Cow::from(format!("Invalid operator: {:?}", operator))),
             },
             _ => Err(Cow::from(format!("Invalid token: {:?}", token))),
@@ -179,7 +181,9 @@ impl Parser {
         match *keyword {
             Keyword::Let => self.create_let(tokens),
             Keyword::If => self.create_if(tokens),
-            Keyword::Lambda => self.create_lambda(tokens).map(Node::Lambda),
+            Keyword::Lambda => self
+                .create_lambda(tokens)
+                .map(|lambda| Node::Lambda(Box::new(lambda))),
             Keyword::Module => self.create_module(Vec::new(), tokens),
             Keyword::Function => self.create_function(Vec::new(), tokens),
             Keyword::Constant => self.create_constant(Vec::new(), tokens),
@@ -187,11 +191,10 @@ impl Parser {
     }
 
     fn parse_application(&mut self, identifier: Node, tokens: &mut Tokens) -> NodeResult {
-        let identifier = Box::from(identifier);
         let arguments = self.parse_arguments(tokens)?;
         let node_id = self.create_node_id();
         let application = Application::new(node_id, identifier, arguments);
-        Ok(Node::Application(application))
+        Ok(Node::Application(Box::new(application)))
     }
 
     fn create_let(&mut self, tokens: &mut Tokens) -> NodeResult {
@@ -211,8 +214,8 @@ impl Parser {
                 return Err(Cow::from("Invalid let expression"));
             }
             let node_id = self.create_node_id();
-            let let_node = Let::new(node_id, name, value_type, Box::new(value), Box::new(then));
-            Ok(Node::Let(let_node))
+            let let_node = Let::new(node_id, name, value_type, value, then);
+            Ok(Node::Let(Box::new(let_node)))
         } else {
             Err(Cow::from("Invalid let expression: end of tokens"))
         }
@@ -226,13 +229,8 @@ impl Parser {
             return Err(Cow::from("Invalid if expression"));
         }
         let node_id = self.create_node_id();
-        let if_node = If::new(
-            node_id,
-            Box::new(condition),
-            Box::new(if_true_then),
-            Box::new(if_false_then),
-        );
-        Ok(Node::If(if_node))
+        let if_node = If::new(node_id, condition, if_true_then, if_false_then);
+        Ok(Node::If(Box::new(if_node)))
     }
 
     fn parse_modifiers(&mut self, first_modifier: Modifier, tokens: &mut Tokens) -> NodeResult {
@@ -303,7 +301,7 @@ impl Parser {
             identifier,
             lambda,
         );
-        Ok(Node::Function(function))
+        Ok(Node::Function(Box::new(function)))
     }
 
     fn create_internal_function(
@@ -338,7 +336,7 @@ impl Parser {
             return Err(Cow::from("Invalid lambda expression"));
         }
         let node_id = self.create_node_id();
-        let lambda = Lambda::new(node_id, parameters, return_type, Box::new(body));
+        let lambda = Lambda::new(node_id, parameters, return_type, body);
         Ok(lambda)
     }
 
@@ -371,9 +369,9 @@ impl Parser {
                 PrimitiveType::Unit => Ok(Type::Unit),
             },
             Token::Symbol(symbol) => Ok(Type::Symbol(symbol)),
-            Token::Parenthesis(Parenthesis::Open('(')) => {
-                self.parse_lambda_type(tokens).map(Type::Lambda)
-            }
+            Token::Parenthesis(Parenthesis::Open('(')) => self
+                .parse_lambda_type(tokens)
+                .map(|lambda| Type::Lambda(Box::new(lambda))),
             _ => Err(Cow::from("Invalid type token")),
         }
     }
@@ -389,7 +387,7 @@ impl Parser {
         }
         let return_type = self.parse_type(tokens)?;
         if let Some(Token::Parenthesis(Parenthesis::Close(')'))) = tokens.next() {
-            Ok(LambdaType::new(parameters_types, Box::new(return_type)))
+            Ok(LambdaType::new(parameters_types, return_type))
         } else {
             Err(Cow::from("Missing close parenthesis in lambda type"))
         }
@@ -410,9 +408,9 @@ impl Parser {
             }
             let member = self.parse_first_token(token, tokens)?;
             match member {
-                Node::Function(function) => functions.push(function),
+                Node::Function(function) => functions.push(*function),
                 Node::InternalFunction(function) => internal_functions.push(function),
-                Node::Constant(constant) => constants.push(constant),
+                Node::Constant(constant) => constants.push(*constant),
                 _ => return Err(Cow::from(format!("Invalid module member: {:?}", member))),
             }
         }
@@ -482,8 +480,8 @@ impl Parser {
             }
         }
         let node_id = self.create_node_id();
-        let constant = Constant::new(node_id, visibility, identifier, Box::from(value));
-        Ok(Node::Constant(constant))
+        let constant = Constant::new(node_id, visibility, identifier, value);
+        Ok(Node::Constant(Box::new(constant)))
     }
 
     fn parse_identifier(tokens: &mut Tokens) -> ParseResult<String> {
@@ -513,7 +511,7 @@ impl Parser {
                 break;
             }
             let parameter = self.parse_parameter(token, tokens)?;
-            parameters.push(parameter)
+            parameters.push(parameter);
         }
         Ok(parameters)
     }

@@ -65,15 +65,15 @@ impl Translator {
         match node {
             Node::ConstantValue(value) => self.translate_constant_value(value, environment),
             Node::Identifier(identifier) => self.translate_identifier(&identifier, environment),
-            Node::Application(application) => self.translate_application(application, environment),
-            Node::Let(let_expression) => self.translate_let(let_expression, environment),
-            Node::If(if_expression) => self.translate_if(if_expression, environment),
-            Node::Lambda(lambda) => self.translate_lambda(lambda, environment),
-            Node::Function(function) => self.translate_function(function, environment),
+            Node::Application(application) => self.translate_application(*application, environment),
+            Node::Let(let_expression) => self.translate_let(*let_expression, environment),
+            Node::If(if_expression) => self.translate_if(*if_expression, environment),
+            Node::Lambda(lambda) => self.translate_lambda(*lambda, environment),
+            Node::Function(function) => self.translate_function(*function, environment),
             Node::InternalFunction(function) => {
                 self.translate_internal_function(function, environment)
             }
-            Node::Constant(constant) => self.translate_constant(constant, environment),
+            Node::Constant(constant) => self.translate_constant(*constant, environment),
             Node::Module(module) => self.translate_module(module, environment),
         }
     }
@@ -100,11 +100,11 @@ impl Translator {
         lambda_type: &LambdaType,
         state: &mut TranslationState,
     ) -> TranslatorResult<CType> {
-        let return_type = self.translate_type(&*lambda_type.return_type, state)?;
+        let return_type = self.translate_type(&lambda_type.return_type, state)?;
         let parameters_types = lambda_type
             .parameters_types
             .iter()
-            .map(|parameter_type| self.translate_type(&parameter_type, state))
+            .map(|parameter_type| self.translate_type(parameter_type, state))
             .collect::<Result<Vec<CType>, TranslatorError>>()?;
         let typedef_count = state.typedef_count;
         let type_name = format!("__$type_{}", typedef_count);
@@ -187,7 +187,7 @@ impl Translator {
         application: Application,
         environment: &mut Environment,
     ) -> TranslatorResult<Translation> {
-        let translation_result = self.translate_node(*application.identifier, environment)?;
+        let translation_result = self.translate_node(application.identifier, environment)?;
 
         if let CExpression::NamedReference(name) = translation_result.result_expression {
             let mut instructions = translation_result.preceding_instructions;
@@ -242,15 +242,15 @@ impl Translator {
         let_node: Let,
         environment: &mut Environment,
     ) -> TranslatorResult<Translation> {
-        let value = self.translate_node(*let_node.value, environment)?;
+        let value = self.translate_node(let_node.value, environment)?;
         let variable = Variable::new(let_node.name.clone(), value.result_type.clone());
 
         let variable_defined = environment.state.contains_variable(&variable);
         let mut then = if variable_defined {
-            self.translate_node(*let_node.then, environment)?
+            self.translate_node(let_node.then, environment)?
         } else {
             environment.state.push_variable(variable);
-            let next = self.translate_node(*let_node.then, environment)?;
+            let next = self.translate_node(let_node.then, environment)?;
             environment.state.pop_variable();
             next
         };
@@ -309,9 +309,9 @@ impl Translator {
         if_node: If,
         environment: &mut Environment,
     ) -> TranslatorResult<Translation> {
-        let condition_translation = self.translate_node(*if_node.condition, environment)?;
-        let if_body_translation = self.translate_node(*if_node.if_true, environment)?;
-        let else_body_translation = self.translate_node(*if_node.if_false, environment)?;
+        let condition_translation = self.translate_node(if_node.condition, environment)?;
+        let if_body_translation = self.translate_node(if_node.if_true, environment)?;
+        let else_body_translation = self.translate_node(if_node.if_false, environment)?;
 
         let if_count = environment.state.if_count;
         let function_name = format!("__$if_{}", if_count);
@@ -411,7 +411,7 @@ impl Translator {
 
         let lambda_type = environment.types.get(&lambda)?;
         if let Type::Lambda(ref lambda_type) = *lambda_type {
-            let return_type = self.translate_type(&*lambda_type.return_type, state)?;
+            let return_type = self.translate_type(&lambda_type.return_type, state)?;
             let mut parameters = free_parameters
                 .iter()
                 .map(|parameter| parameter.parameter_type.clone())
@@ -419,7 +419,7 @@ impl Translator {
             let mut parameters_types = lambda_type
                 .parameters_types
                 .iter()
-                .map(|parameter_type| self.translate_type(&parameter_type, state))
+                .map(|parameter_type| self.translate_type(parameter_type, state))
                 .collect::<Result<Vec<CType>, TranslatorError>>()?;
             parameters_types.append(&mut parameters);
             let typedef_count = state.typedef_count;
@@ -451,9 +451,9 @@ impl Translator {
                 .collect();
             parameters.append(&mut free_parameters);
 
-            let body_type = environment.types.get(&*lambda.body)?;
+            let body_type = environment.types.get(&lambda.body)?;
             let body_c_type = self.translate_type(body_type, &mut environment.state)?;
-            let body_translation = self.translate_node(*lambda.body, environment)?;
+            let body_translation = self.translate_node(lambda.body, environment)?;
             let mut body = body_translation.preceding_instructions;
             body.push(Instruction::Return(body_translation.result_expression));
 

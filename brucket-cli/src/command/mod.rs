@@ -31,7 +31,7 @@ fn read_syntax_from_file(name: &str) -> Result<String, CommandError> {
 fn read_syntax_from_files(names: &[String]) -> Result<Vec<String>, CommandError> {
     names
         .iter()
-        .map(|name| read_syntax_from_file(&name))
+        .map(|name| read_syntax_from_file(name))
         .collect::<Result<Vec<String>, CommandError>>()
 }
 

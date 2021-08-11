@@ -63,13 +63,13 @@ pub mod quote_macro;
 pub enum Node {
     ConstantValue(ConstantValue),
     Identifier(Identifier),
-    Application(Application),
-    Let(Let),
-    If(If),
-    Lambda(Lambda),
-    Function(Function),
+    Application(Box<Application>),
+    Let(Box<Let>),
+    If(Box<If>),
+    Lambda(Box<Lambda>),
+    Function(Box<Function>),
     InternalFunction(InternalFunction),
-    Constant(Constant),
+    Constant(Box<Constant>),
     Module(Module),
 }
 
@@ -129,7 +129,7 @@ pub struct Identifier {
 #[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct Application {
     pub node_id: NodeId,
-    pub identifier: Box<Node>,
+    pub identifier: Node,
     pub arguments: Vec<Node>,
 }
 
@@ -138,16 +138,16 @@ pub struct Let {
     pub node_id: NodeId,
     pub name: String,
     pub value_type: Type,
-    pub value: Box<Node>,
-    pub then: Box<Node>,
+    pub value: Node,
+    pub then: Node,
 }
 
 #[derive(Debug, Clone, PartialEq, Constructor)]
 pub struct If {
     pub node_id: NodeId,
-    pub condition: Box<Node>,
-    pub if_true: Box<Node>,
-    pub if_false: Box<Node>,
+    pub condition: Node,
+    pub if_true: Node,
+    pub if_false: Node,
 }
 
 #[derive(Debug, Clone, PartialEq, Constructor)]
@@ -155,7 +155,7 @@ pub struct Constant {
     pub node_id: NodeId,
     pub visibility: Visibility,
     pub name: String,
-    pub value: Box<Node>,
+    pub value: Node,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -54,7 +54,7 @@ macro_rules! quote {
             $crate::NodeId($node_id),
             quote!(@visibility $visibility),
             stringify!($name).to_owned(),
-            Box::new(quote!($value)),
+            quote!($value),
         )
     };
 
@@ -127,8 +127,15 @@ macro_rules! quote {
     ((@node $node_type:ident $node:tt)) => {
         quote!(@node $node_type $node)
     };
-    (@node $node_type:ident $node:tt) => {
+    (@node ConstantValue $node:tt) => { quote!(@node_unboxed ConstantValue $node) };
+    (@node Identifier $node:tt) => { quote!(@node_unboxed Identifier $node) };
+    (@node InternalFunction $node:tt) => { quote!(@node_unboxed InternalFunction $node) };
+    (@node Module $node:tt) => { quote!(@node_unboxed Module $node) };
+    (@node_unboxed $node_type:ident $node:tt) => {
         $crate::Node::$node_type(quote!($node))
+    };
+    (@node $node_type:ident $node:tt) => {
+        $crate::Node::$node_type(Box::new(quote!($node)))
     };
 
     (@visibility public) => { $crate::Visibility::Public };
@@ -138,17 +145,21 @@ macro_rules! quote {
     (@strategy lazy) => { $crate::function::ApplicationStrategy::Lazy };
 
     ((lambda $parameters:tt $body:tt)) => {
-        $crate::Node::Lambda(quote!(@lambda 0 $parameters any $body))
+        $crate::Node::Lambda(Box::new(
+            quote!(@lambda 0 $parameters any $body)
+        ))
     };
     (($node_id:literal: lambda $parameters:tt -> $return_type:tt $body:tt)) => {
-        $crate::Node::Lambda(quote!(@lambda $node_id $parameters $return_type $body))
+        $crate::Node::Lambda(Box::new(
+            quote!(@lambda $node_id $parameters $return_type $body)
+        ))
     };
     (@lambda $node_id:literal $parameters:tt $return_type:tt $body:tt) => {
         $crate::lambda::Lambda::new(
             $crate::NodeId($node_id),
             quote!(@parameters $parameters),
             quote!(@type $return_type),
-            Box::new(quote!($body)),
+            quote!($body),
         )
     };
 
@@ -180,13 +191,13 @@ macro_rules! quote {
         quote!((0: let $name: $value_type $value $then))
     };
     (($node_id:literal: let $name:ident: $value_type:tt $value:tt $then:tt)) => {
-        $crate::Node::Let($crate::Let::new(
+        $crate::Node::Let(Box::new($crate::Let::new(
             $crate::NodeId($node_id),
             stringify!($name).to_owned(),
             quote!(@type $value_type),
-            Box::new(quote!($value)),
-            Box::new(quote!($then)),
-        ))
+            quote!($value),
+            quote!($then),
+        )))
     };
 
     (@type any) => { $crate::ast_type::Type::Any };
@@ -199,10 +210,10 @@ macro_rules! quote {
         quote!(@type (($($parameter_type)*) -> $return_type))
     };
     (@type (($($parameter_type:tt)*) -> $return_type:ident)) => {
-        $crate::ast_type::Type::Lambda($crate::ast_type::LambdaType::new(
+        $crate::ast_type::Type::Lambda(Box::new($crate::ast_type::LambdaType::new(
             vec![$(quote!(@type $parameter_type),)*],
-            Box::new(quote!(@type $return_type))
-        ))
+            quote!(@type $return_type)
+        )))
     };
     (@type $symbol:ident) => {
         $crate::ast_type::Type::Symbol(stringify!($symbol).to_owned())
@@ -212,12 +223,12 @@ macro_rules! quote {
         quote!((0: if $condition $if_true $if_false))
     };
     (($node_id:literal: if $condition:tt $if_true:tt $if_false:tt)) => {
-        $crate::Node::If($crate::If::new(
+        $crate::Node::If(Box::new($crate::If::new(
             $crate::NodeId($node_id),
-            Box::new(quote!($condition)),
-            Box::new(quote!($if_true)),
-            Box::new(quote!($if_false)),
-        ))
+            quote!($condition),
+            quote!($if_true),
+            quote!($if_false),
+        )))
     };
 
     (()) => {
@@ -235,18 +246,18 @@ macro_rules! quote {
     };
 
     ((($identifier:ident$(::$remaining:ident)+) $($argument:tt)*)) => {
-        $crate::Node::Application($crate::Application::new(
+        $crate::Node::Application(Box::new($crate::Application::new(
             $crate::NodeId(0),
-            Box::new(quote!(@complex_identifier $identifier $($remaining)+)),
+            quote!(@complex_identifier $identifier $($remaining)+),
             vec![$(quote!($argument),)*],
-        ))
+        )))
     };
     (($identifier:ident $($argument:tt)*)) => {
-        $crate::Node::Application($crate::Application::new(
+        $crate::Node::Application(Box::new($crate::Application::new(
             $crate::NodeId(0),
-            Box::new(quote!($identifier)),
+            quote!($identifier),
             vec![$(quote!($argument),)*],
-        ))
+        )))
     };
 
     ($constant_value:literal) => {
@@ -282,10 +293,10 @@ macro_rules! quote {
     };
 
     (($identifier:tt $($argument:tt)*)) => {
-        $crate::Node::Application($crate::Application::new(
+        $crate::Node::Application(Box::new($crate::Application::new(
             $crate::NodeId(0),
-            Box::new(quote!($identifier)),
+            quote!($identifier),
             vec![$(quote!($argument),)*],
-        ))
+        )))
     };
 }

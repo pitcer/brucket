@@ -7,7 +7,7 @@ pub struct Lambda {
     pub node_id: NodeId,
     pub parameters: Vec<Parameter>,
     pub return_type: Type,
-    pub body: Box<Node>,
+    pub body: Node,
 }
 
 #[derive(Debug, Clone, PartialEq, Constructor)]

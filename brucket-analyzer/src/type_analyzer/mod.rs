@@ -122,7 +122,7 @@ impl<'a> TypeAnalyzer<'a> {
     }
 
     fn analyze_application_types(&mut self, application: &'a Application) -> TypedResult {
-        let identifier = &*application.identifier;
+        let identifier = &application.identifier;
         let identifier_type = self.analyze_node_types(identifier)?;
         if let Type::Lambda(lambda_type) = identifier_type {
             for argument in &application.arguments {
@@ -130,15 +130,15 @@ impl<'a> TypeAnalyzer<'a> {
             }
             self.environment
                 .node_types
-                .insert(application, *lambda_type.return_type.clone());
-            Ok(*lambda_type.return_type)
+                .insert(application, lambda_type.return_type.clone());
+            Ok(lambda_type.return_type)
         } else {
             Err(Cow::from("Application identifier must evaluate to Lambda"))
         }
     }
 
     fn analyze_let_types(&mut self, let_node: &'a Let) -> TypedResult {
-        let value = &*let_node.value;
+        let value = &let_node.value;
         let value_type = self.analyze_node_types(value)?;
         let name = &let_node.name;
         let expected_value_type = &let_node.value_type;
@@ -150,7 +150,7 @@ impl<'a> TypeAnalyzer<'a> {
         }
         self.environment
             .insert_variable(name, Cow::Owned(value_type));
-        let then = &*let_node.then;
+        let then = &let_node.then;
         let then_type = self.analyze_node_types(then)?;
         self.environment.remove_variable(name);
         self.environment
@@ -160,8 +160,8 @@ impl<'a> TypeAnalyzer<'a> {
     }
 
     fn analyze_if_types(&mut self, if_node: &'a If) -> TypedResult {
-        let if_true = &*if_node.if_true;
-        let if_false = &*if_node.if_false;
+        let if_true = &if_node.if_true;
+        let if_false = &if_node.if_false;
         let then_type = self.analyze_node_types(if_true)?;
         let else_type = self.analyze_node_types(if_false)?;
         if then_type != else_type {
@@ -170,7 +170,7 @@ impl<'a> TypeAnalyzer<'a> {
                 then_type, else_type
             )));
         }
-        let condition = &*if_node.condition;
+        let condition = &if_node.condition;
         let condition_type = self.analyze_node_types(condition)?;
         if condition_type != Type::Boolean {
             return Err(Cow::from(format!(
@@ -192,7 +192,7 @@ impl<'a> TypeAnalyzer<'a> {
             self.environment
                 .insert_variable(name, Cow::Borrowed(parameter_type));
         }
-        let body = &*lambda.body;
+        let body = &lambda.body;
         let body_type = self.analyze_node_types(body)?;
         for parameter in parameters {
             self.environment.remove_variable(&*parameter.name);
@@ -203,8 +203,8 @@ impl<'a> TypeAnalyzer<'a> {
             .iter()
             .map(|parameter| parameter.parameter_type.clone())
             .collect::<Vec<Type>>();
-        let lambda_type = LambdaType::new(parameters_types, Box::new(body_type));
-        let lambda_type = Type::Lambda(lambda_type);
+        let lambda_type = LambdaType::new(parameters_types, body_type);
+        let lambda_type = Type::Lambda(Box::new(lambda_type));
         self.environment
             .node_types
             .insert(lambda, lambda_type.clone());

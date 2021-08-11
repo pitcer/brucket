@@ -9,7 +9,7 @@ pub enum Type {
     Integer,
     Float,
     String,
-    Lambda(LambdaType),
+    Lambda(Box<LambdaType>),
     Symbol(String),
 }
 
@@ -32,7 +32,7 @@ impl Display for Type {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Constructor)]
 pub struct LambdaType {
     pub parameters_types: Vec<Type>,
-    pub return_type: Box<Type>,
+    pub return_type: Type,
 }
 
 impl Display for LambdaType {

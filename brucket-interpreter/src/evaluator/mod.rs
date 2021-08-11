@@ -151,7 +151,7 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState<'_>,
     ) -> ValueResult {
-        let value = &*let_node.value;
+        let value = &let_node.value;
         let evaluated_value = self.evaluate_environment(value, environment, state)?;
         let evaluated_value = Rc::new(evaluated_value);
         let name = &let_node.name;
@@ -165,7 +165,7 @@ impl Evaluator {
             }
         }
         environment.insert(name.clone(), evaluated_value);
-        let then = &*let_node.then;
+        let then = &let_node.then;
         let result = self.evaluate_environment(then, environment, state);
         environment.remove(name);
         result
@@ -177,7 +177,7 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState<'_>,
     ) -> ValueResult {
-        let condition = &*if_node.condition;
+        let condition = &if_node.condition;
         let condition = self.evaluate_environment(condition, environment, state)?;
         if let Value::Boolean(value) = condition {
             let body = if value {
@@ -283,7 +283,7 @@ impl Evaluator {
         environment: &Environment,
         state: &EvaluatorState<'_>,
     ) -> ValueResult {
-        let identifier = &*application.identifier;
+        let identifier = &application.identifier;
         let identifier = self.evaluate_environment(identifier, environment, state)?;
         let arguments = &*application.arguments;
         match identifier {
@@ -337,16 +337,13 @@ impl Evaluator {
                     let argument = if let ApplicationStrategy::Eager = *application_strategy {
                         self.evaluate_environment(argument, environment, state)
                     } else {
-                        Ok(Value::Thunk(
-                            Box::new(argument.clone()),
-                            environment.clone(),
-                        ))
+                        Ok(Value::Thunk(argument.clone(), environment.clone()))
                     }?;
                     closure_environment.insert(name.clone(), Rc::new(argument));
                 }
                 Arity::Variadic => {
                     let list = self.create_pair_list(
-                        &application_strategy,
+                        application_strategy,
                         arguments_iterator,
                         environment,
                         state,
@@ -396,10 +393,7 @@ impl Evaluator {
                     let argument = if let ApplicationStrategy::Eager = *application_strategy {
                         self.evaluate_environment(argument, environment, state)
                     } else {
-                        Ok(Value::Thunk(
-                            Box::new(argument.clone()),
-                            environment.clone(),
-                        ))
+                        Ok(Value::Thunk(argument.clone(), environment.clone()))
                     }?;
                     closure_environment.insert(name.clone(), argument);
                 }
@@ -441,10 +435,7 @@ impl Evaluator {
             let argument = if let ApplicationStrategy::Eager = *application_strategy {
                 self.evaluate_environment(argument, environment, state)
             } else {
-                Ok(Value::Thunk(
-                    Box::new(argument.clone()),
-                    environment.clone(),
-                ))
+                Ok(Value::Thunk(argument.clone(), environment.clone()))
             }?;
             result = Value::Pair(Box::new(argument), Box::new(result));
         }
@@ -495,7 +486,7 @@ impl Evaluator {
         for constant in &module.constants {
             let visibility = &constant.visibility;
             let identifier = &constant.name;
-            let value = &*constant.value;
+            let value = &constant.value;
             let value = self.evaluate_environment(value, &constants_environment, state)?;
             let value = Rc::new(value);
             if let Visibility::Public = *visibility {

@@ -97,7 +97,7 @@ impl IndentedGenerator for VariableInstruction {
     fn generate_indented(self, state: &GeneratorState) -> GeneratorResult {
         let mut modifiers = self.modifiers.generate()?;
         if !modifiers.is_empty() {
-            modifiers.push(' ')
+            modifiers.push(' ');
         }
         Ok(format!(
             "{}{}{} {} = {};",
