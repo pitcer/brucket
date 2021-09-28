@@ -29,7 +29,7 @@ impl InternalEnvironment {
             "pair_new_internal" => Some(pair::new),
             "pair_first_internal" => Some(pair::first),
             "pair_second_internal" => Some(pair::second),
-            _ => None
+            _ => None,
         }
     }
 }
