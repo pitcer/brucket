@@ -10,7 +10,7 @@ use std::str::Chars;
 #[cfg(test)]
 mod tests;
 
-#[derive(Constructor)]
+#[derive(Default, Constructor)]
 pub struct Lexer;
 
 trait LexerCharacter {
