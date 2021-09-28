@@ -32,7 +32,6 @@ pub struct EvaluatorState<'a> {
 
 #[derive(Clone, Default, Constructor)]
 pub struct Evaluator {
-    pub internal_environment: InternalEnvironment,
     pub static_module_environment: Environment,
     pub module_environment: ModuleEnvironment,
 }
@@ -83,7 +82,7 @@ impl Evaluator {
                 Self::evaluate_lambda(&function.body, environment, state)?,
             )),
             Node::InternalFunction(ref internal_function) => {
-                self.evaluate_internal_function(internal_function, environment)
+                Self::evaluate_internal_function(internal_function, environment)
             }
             Node::Constant(ref constant) => {
                 self.evaluate_environment(&constant.value, environment, state)
@@ -122,24 +121,20 @@ impl Evaluator {
     }
 
     fn evaluate_internal_function(
-        &mut self,
         internal_function: &InternalFunction,
         environment: &Environment,
     ) -> ValueResult {
         let env = Environment::default();
         env.insert_all_weak(environment);
-        let function = self
-            .internal_environment
-            .get(&internal_function.name)
-            .ok_or(format!(
-                "Undefined internal identifier: {}",
-                internal_function.name
-            ))?;
+        let function = InternalEnvironment::get(&internal_function.name).ok_or(format!(
+            "Undefined internal identifier: {}",
+            internal_function.name
+        ))?;
         Ok(Value::InternalFunctionClosure(
             InternalFunctionClosure::new(
                 internal_function.application_strategy.clone(),
                 internal_function.parameters.clone(),
-                *function,
+                function,
                 env,
             ),
         ))
@@ -473,7 +468,7 @@ impl Evaluator {
         for internal_function in &module.internal_functions {
             let visibility = &internal_function.visibility;
             let identifier = &internal_function.name;
-            let closure = self.evaluate_internal_function(internal_function, environment)?;
+            let closure = Self::evaluate_internal_function(internal_function, environment)?;
             let closure = Rc::new(closure);
             if let Visibility::Public = *visibility {
                 module_environment.insert(identifier.clone(), Rc::clone(&closure));

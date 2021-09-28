@@ -8,51 +8,29 @@ mod pair;
 #[cfg(test)]
 mod tests;
 
-macro_rules! internal_environment_map {
-    ($($identifier:literal => $function:expr),*) => {
-        {
-            let mut map = InternalEnvironmentMap::new();
-            $(
-                map.insert($identifier, $function);
-            )*
-            map.shrink_to_fit();
-            map
-        }
-    };
-}
-
 pub type InternalFunction = fn(HashMap<String, Value>) -> ValueResult;
-pub type InternalEnvironmentMap = HashMap<&'static str, InternalFunction>;
 
-#[derive(Clone, Constructor)]
-pub struct InternalEnvironment {
-    map: InternalEnvironmentMap,
-}
-
-impl Default for InternalEnvironment {
-    fn default() -> Self {
-        let map = internal_environment_map! {
-            "add_internal" => add,
-            "subtract_internal" => subtract,
-            "multiply_internal" => multiply,
-            "divide_internal" => divide,
-            "remainder_internal" => remainder,
-            "is_equal_internal" => is_equal,
-            "is_greater_internal" => is_greater,
-            "is_greater_or_equal_internal" => is_greater_or_equal,
-            "is_less_internal" => is_less,
-            "is_less_or_equal_internal" => is_less_or_equal,
-            "pair_new_internal" => pair::new,
-            "pair_first_internal" => pair::first,
-            "pair_second_internal" => pair::second
-        };
-        Self::new(map)
-    }
-}
+#[derive(Default, Clone, Constructor)]
+pub struct InternalEnvironment;
 
 impl InternalEnvironment {
-    pub fn get(&mut self, identifier: &str) -> Option<&InternalFunction> {
-        self.map.get(identifier)
+    pub fn get(identifier: &str) -> Option<InternalFunction> {
+        match identifier {
+            "add_internal" => Some(add),
+            "subtract_internal" => Some(subtract),
+            "multiply_internal" => Some(multiply),
+            "divide_internal" => Some(divide),
+            "remainder_internal" => Some(remainder),
+            "is_equal_internal" => Some(is_equal),
+            "is_greater_internal" => Some(is_greater),
+            "is_greater_or_equal_internal" => Some(is_greater_or_equal),
+            "is_less_internal" => Some(is_less),
+            "is_less_or_equal_internal" => Some(is_less_or_equal),
+            "pair_new_internal" => Some(pair::new),
+            "pair_first_internal" => Some(pair::first),
+            "pair_second_internal" => Some(pair::second),
+            _ => None
+        }
     }
 }
 
