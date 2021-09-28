@@ -3,7 +3,6 @@ use crate::token::{
 };
 use derive_more::Constructor;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::iter::Peekable;
 use std::option::Option::Some;
 use std::str::Chars;
@@ -11,12 +10,8 @@ use std::str::Chars;
 #[cfg(test)]
 mod tests;
 
-type SymbolMap = HashMap<&'static str, Token>;
-
 #[derive(Constructor)]
-pub struct Lexer {
-    symbol_map: SymbolMap,
-}
+pub struct Lexer;
 
 trait LexerCharacter {
     fn is_comment(&self) -> bool;
@@ -74,47 +69,14 @@ type Characters<'a> = Peekable<Chars<'a>>;
 type TokenError = Cow<'static, str>;
 type TokenResult = Result<Option<Token>, TokenError>;
 
-impl Default for Lexer {
-    #[inline]
-    fn default() -> Self {
-        let symbol_map = maplit::hashmap! {
-            "true" => Token::Boolean(Boolean::True),
-            "false" => Token::Boolean(Boolean::False),
-            "null" => Token::Null,
-            "let" => Token::Keyword(Keyword::Let),
-            "if" => Token::Keyword(Keyword::If),
-            "lambda" => Token::Keyword(Keyword::Lambda),
-            "module" => Token::Keyword(Keyword::Module),
-            "function" => Token::Keyword(Keyword::Function),
-            "fun" => Token::Keyword(Keyword::Function),
-            "constant" => Token::Keyword(Keyword::Constant),
-            "const" => Token::Keyword(Keyword::Constant),
-            "->" => Token::Operator(Operator::SkinnyArrowRight),
-            "=>" => Token::Operator(Operator::ThickArrowRight),
-            "public" => Token::Modifier(Modifier::Public),
-            "pub" => Token::Modifier(Modifier::Public),
-            "private" => Token::Modifier(Modifier::Private),
-            "lazy" => Token::Modifier(Modifier::Lazy),
-            "static" => Token::Modifier(Modifier::Static),
-            "internal" => Token::Modifier(Modifier::Internal),
-            "boo" => Token::PrimitiveType(PrimitiveType::Boolean),
-            "int" => Token::PrimitiveType(PrimitiveType::Integer),
-            "flo" => Token::PrimitiveType(PrimitiveType::Float),
-            "str" => Token::PrimitiveType(PrimitiveType::String),
-            "any" => Token::PrimitiveType(PrimitiveType::Any),
-            "uni" => Token::PrimitiveType(PrimitiveType::Unit)
-        };
-        Self::new(symbol_map)
-    }
-}
-
 impl Lexer {
     #[inline]
+    #[allow(clippy::unused_self)]
     pub fn tokenize(&self, syntax: &str) -> Result<Vec<Token>, TokenError> {
         let mut result = Vec::new();
         let mut characters = syntax.chars().peekable();
         while let Some(current) = characters.next() {
-            let token = self.match_token(current, &mut characters)?;
+            let token = Self::match_token(current, &mut characters)?;
             if let Some(token) = token {
                 result.push(token);
             }
@@ -122,7 +84,7 @@ impl Lexer {
         Ok(result)
     }
 
-    fn match_token(&self, current: char, characters: &mut Characters<'_>) -> TokenResult {
+    fn match_token(current: char, characters: &mut Characters<'_>) -> TokenResult {
         match current {
             comment if comment.is_comment() => {
                 Self::skip_comment(characters);
@@ -147,9 +109,37 @@ impl Lexer {
             whitespace if whitespace.is_ascii_whitespace() => Ok(None),
             _ => {
                 let symbol = Self::tokenize_symbol(current, characters);
-                let token = self.symbol_map.get(symbol.as_str());
-                Ok(Some(token.map_or(Token::Symbol(symbol), Clone::clone)))
+                let token = Self::match_symbol_with_token(symbol);
+                Ok(Some(token))
             }
+        }
+    }
+
+    fn match_symbol_with_token(symbol: String) -> Token {
+        match symbol.as_str() {
+            "true" => Token::Boolean(Boolean::True),
+            "false" => Token::Boolean(Boolean::False),
+            "null" => Token::Null,
+            "let" => Token::Keyword(Keyword::Let),
+            "if" => Token::Keyword(Keyword::If),
+            "lambda" => Token::Keyword(Keyword::Lambda),
+            "module" => Token::Keyword(Keyword::Module),
+            "function" | "fun" => Token::Keyword(Keyword::Function),
+            "constant" | "const" => Token::Keyword(Keyword::Constant),
+            "->" => Token::Operator(Operator::SkinnyArrowRight),
+            "=>" => Token::Operator(Operator::ThickArrowRight),
+            "public" | "pub" => Token::Modifier(Modifier::Public),
+            "private" => Token::Modifier(Modifier::Private),
+            "lazy" => Token::Modifier(Modifier::Lazy),
+            "static" => Token::Modifier(Modifier::Static),
+            "internal" => Token::Modifier(Modifier::Internal),
+            "boo" => Token::PrimitiveType(PrimitiveType::Boolean),
+            "int" => Token::PrimitiveType(PrimitiveType::Integer),
+            "flo" => Token::PrimitiveType(PrimitiveType::Float),
+            "str" => Token::PrimitiveType(PrimitiveType::String),
+            "any" => Token::PrimitiveType(PrimitiveType::Any),
+            "uni" => Token::PrimitiveType(PrimitiveType::Unit),
+            _ => Token::Symbol(symbol),
         }
     }
 
